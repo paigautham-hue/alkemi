@@ -725,6 +725,29 @@ export const appRouter = router({
       }),
   }),
 
+  // Compliance
+  compliance: router({
+    check: protectedProcedure
+      .input(z.object({ formulationVersionId: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const complianceEngine = await import("./complianceEngine");
+        return await complianceEngine.checkFormulationCompliance(
+          ctx.user.organizationId,
+          input.formulationVersionId
+        );
+      }),
+    batchCheck: protectedProcedure
+      .input(z.object({ formulationVersionIds: z.array(z.string()) }))
+      .mutation(async ({ ctx, input }) => {
+        const complianceEngine = await import("./complianceEngine");
+        const results = await complianceEngine.batchCheckCompliance(
+          ctx.user.organizationId,
+          input.formulationVersionIds
+        );
+        return Object.fromEntries(results);
+      }),
+  }),
+
   // Analytics
   analytics: router({
     summary: protectedProcedure.query(async ({ ctx }) => {

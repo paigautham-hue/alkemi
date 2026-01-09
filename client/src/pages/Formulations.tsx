@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
-import { FlaskConical, Plus, Search } from "lucide-react";
+import { FlaskConical, Plus, Search, Shield } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Link } from "wouter";
@@ -89,9 +89,21 @@ export default function Formulations() {
                               {family.description || "No description provided"}
                             </CardDescription>
                           </div>
-                          <Button variant="ghost" size="sm">
-                            View
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button variant="ghost" size="sm">
+                              View
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                toast.info("Compliance check feature available in formulation editor");
+                              }}
+                            >
+                              <Shield className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       </CardHeader>
                       {family.targetApplication && (

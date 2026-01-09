@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { Loader2, Plus, Trash2, AlertCircle, CheckCircle2, ArrowLeft, Save } from "lucide-react";
+import { Loader2, Plus, Trash2, AlertCircle, CheckCircle2, ArrowLeft, Save, Shield } from "lucide-react";
 import { useState } from "react";
 import { useRoute, Link } from "wouter";
 import { toast } from "sonner";
@@ -26,6 +26,23 @@ export default function FormulationEditor() {
   const [percentage, setPercentage] = useState("");
   const [purpose, setPurpose] = useState("");
   const [selectedVersionId, setSelectedVersionId] = useState<string>("");
+  const [complianceResult, setComplianceResult] = useState<any>(null);
+  const [showComplianceDialog, setShowComplianceDialog] = useState(false);
+
+  const complianceCheckMutation = trpc.compliance.check.useMutation({
+    onSuccess: (data) => {
+      setComplianceResult(data);
+      setShowComplianceDialog(true);
+      if (data.isCompliant) {
+        toast.success("Formulation is compliant");
+      } else {
+        toast.warning(`Found ${data.violations.length} compliance issues`);
+      }
+    },
+    onError: (error) => {
+      toast.error(`Compliance check failed: ${error.message}`);
+    },
+  });
 
   // Queries
   const { data: family, isLoading: familyLoading } = trpc.formulations.getFamilyById.useQuery(
@@ -190,6 +207,22 @@ export default function FormulationEditor() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <Button 
+              variant="outline"
+              onClick={() => {
+                if (currentVersion) {
+                  complianceCheckMutation.mutate({ formulationVersionId: currentVersion.id });
+                }
+              }}
+              disabled={!currentVersion || complianceCheckMutation.isPending}
+            >
+              {complianceCheckMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Shield className="h-4 w-4 mr-2" />
+              )}
+              Check Compliance
+            </Button>
             <Button variant="outline" disabled>
               <Save className="h-4 w-4 mr-2" />
               Save Changes
@@ -504,6 +537,100 @@ export default function FormulationEditor() {
               <Button onClick={handleAddComponent} disabled={addComponent.isPending}>
                 {addComponent.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Add Component
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Compliance Results Dialog */}
+        <Dialog open={showComplianceDialog} onOpenChange={setShowComplianceDialog}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                {complianceResult?.isCompliant ? (
+                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                ) : (
+                  <AlertCircle className="h-5 w-5 text-red-600" />
+                )}
+                Compliance Check Results
+              </DialogTitle>
+              <DialogDescription>
+                {complianceResult?.rulesChecked || 0} rules checked
+              </DialogDescription>
+            </DialogHeader>
+
+            {complianceResult && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">Status:</span>
+                  <Badge
+                    variant={complianceResult.isCompliant ? "default" : "destructive"}
+                  >
+                    {complianceResult.overallStatus.toUpperCase()}
+                  </Badge>
+                </div>
+
+                {complianceResult.violations && complianceResult.violations.length > 0 ? (
+                  <div className="space-y-3">
+                    <h4 className="font-medium text-sm">Violations Found:</h4>
+                    {complianceResult.violations.map((violation: any, idx: number) => (
+                      <Card key={idx}>
+                        <CardContent className="pt-4">
+                          <div className="space-y-2">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Badge
+                                    variant={
+                                      violation.severity === "critical" || violation.severity === "error"
+                                        ? "destructive"
+                                        : "secondary"
+                                    }
+                                  >
+                                    {violation.severity}
+                                  </Badge>
+                                  <span className="font-medium text-sm">
+                                    {violation.ruleName}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-muted-foreground">
+                                  {violation.message}
+                                </p>
+                              </div>
+                            </div>
+                            {violation.affectedComponents && violation.affectedComponents.length > 0 && (
+                              <div className="mt-2">
+                                <span className="text-xs font-medium text-muted-foreground">
+                                  Affected components:
+                                </span>
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {violation.affectedComponents.map((comp: string, i: number) => (
+                                    <Badge key={i} variant="outline" className="text-xs">
+                                      {comp}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <CheckCircle2 className="h-12 w-12 text-green-600 mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground">
+                      No compliance violations found. This formulation meets all active regulatory requirements.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button onClick={() => setShowComplianceDialog(false)}>
+                Close
               </Button>
             </DialogFooter>
           </DialogContent>

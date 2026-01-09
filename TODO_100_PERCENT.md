@@ -134,3 +134,12 @@
 - [x] Add trial success rate chart
 - [x] Add formulation timeline chart
 - [x] Add summary statistics cards
+
+## Compliance Engine Implementation (Audit Gap) ✅ COMPLETE
+- [x] Create compliance engine service file
+- [x] Implement rule evaluation logic
+- [x] Create check_formulation_compliance() function
+- [x] Add compliance API endpoints
+- [x] Add compliance status display to Formulations page
+- [x] Add compliance check button to FormulationEditor
+- [x] Add compliance results dialog with violation details

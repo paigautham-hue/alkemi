@@ -197,3 +197,10 @@
 - [x] Add search results display with match reasons
 - [x] Add Search to navigation menu
 - [x] Add Search route to App.tsx
+
+## OAuth Sign-In Fix ✅ COMPLETE
+- [x] Investigate OAuth callback failure on published site
+- [x] Fix cookie configuration (sameSite and secure settings)
+- [x] Add better error logging to OAuth callback
+- [x] Ensure secure cookies for production HTTPS
+- [x] Use lax sameSite for local dev, none for production

@@ -2,13 +2,42 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
-import { Beaker, Building2, FlaskConical, Package } from "lucide-react";
+import { Beaker, Building2, FlaskConical, Package, Sparkles } from "lucide-react";
+import { toast } from "sonner";
+import { useState } from "react";
 import { Link } from "wouter";
 
 export default function Dashboard() {
-  const { data: materials } = trpc.materials.list.useQuery();
-  const { data: suppliers } = trpc.suppliers.list.useQuery();
-  const { data: formulations } = trpc.formulations.listFamilies.useQuery();
+  const { data: materials, refetch: refetchMaterials } = trpc.materials.list.useQuery();
+  const { data: suppliers, refetch: refetchSuppliers } = trpc.suppliers.list.useQuery();
+  const { data: formulations, refetch: refetchFormulations } = trpc.formulations.listFamilies.useQuery();
+  const [isSeeding, setIsSeeding] = useState(false);
+
+  const seedDemoData = trpc.demo.seedData.useMutation({
+    onSuccess: (data) => {
+      if (data.success) {
+        toast.success(data.message);
+        // Refresh all data
+        refetchMaterials();
+        refetchSuppliers();
+        refetchFormulations();
+      } else {
+        toast.error(data.message);
+      }
+      setIsSeeding(false);
+    },
+    onError: (error) => {
+      toast.error(`Failed to load demo data: ${error.message}`);
+      setIsSeeding(false);
+    },
+  });
+
+  const handleLoadDemoData = () => {
+    setIsSeeding(true);
+    seedDemoData.mutate();
+  };
+
+  const isEmpty = (materials?.length || 0) === 0 && (suppliers?.length || 0) === 0 && (formulations?.length || 0) === 0;
 
   const stats = [
     {
@@ -37,11 +66,23 @@ export default function Dashboard() {
   return (
     <DashboardLayout>
       <div className="space-y-8">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">ALKEMI™ Dashboard</h1>
-          <p className="text-muted-foreground mt-2">
-            Enterprise formulation intelligence platform for R&D teams
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">ALKEMI™ Dashboard</h1>
+            <p className="text-muted-foreground mt-2">
+              Enterprise formulation intelligence platform for R&D teams
+            </p>
+          </div>
+          {isEmpty && (
+            <Button 
+              onClick={handleLoadDemoData}
+              disabled={isSeeding}
+              size="lg"
+            >
+              <Sparkles className="mr-2 h-5 w-5" />
+              {isSeeding ? "Loading Demo Data..." : "Load Demo Data"}
+            </Button>
+          )}
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">

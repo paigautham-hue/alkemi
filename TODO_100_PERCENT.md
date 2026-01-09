@@ -143,3 +143,12 @@
 - [x] Add compliance status display to Formulations page
 - [x] Add compliance check button to FormulationEditor
 - [x] Add compliance results dialog with violation details
+
+## Demo Data Seeding System ✅ COMPLETE
+- [x] Create demo data seeding script (simplified)
+- [x] Add realistic materials (5 items)
+- [x] Add suppliers (3 companies)
+- [x] Add formulations (3 families with versions)
+- [x] Add API endpoint for seeding
+- [x] Add "Load Demo Data" button to Dashboard
+- [x] Auto-refresh data after seeding

@@ -748,6 +748,15 @@ export const appRouter = router({
       }),
   }),
 
+  // Demo Data
+  demo: router({
+    seedData: protectedProcedure
+      .mutation(async ({ ctx }) => {
+        const { seedDemoDataSimple } = await import("./seedDemoDataSimple");
+        return await seedDemoDataSimple(ctx.user.organizationId, ctx.user.id);
+      }),
+  }),
+
   // Analytics
   analytics: router({
     summary: protectedProcedure.query(async ({ ctx }) => {

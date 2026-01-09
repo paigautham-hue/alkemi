@@ -28,7 +28,14 @@ export function registerOAuthRoutes(app: Express) {
         return;
       }
 
+      // Get or create organization for this user
+      const organizationId = await db.getOrCreateOrganizationForUser(
+        userInfo.openId,
+        userInfo.name || null
+      );
+      
       await db.upsertUser({
+        organizationId,
         openId: userInfo.openId,
         name: userInfo.name || null,
         email: userInfo.email ?? null,

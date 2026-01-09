@@ -274,7 +274,13 @@ class SDKServer {
     if (!user) {
       try {
         const userInfo = await this.getUserInfoWithJwt(sessionCookie ?? "");
+        // Get or create organization for this user
+        const organizationId = await db.getOrCreateOrganizationForUser(
+          userInfo.openId,
+          userInfo.name || null
+        );
         await db.upsertUser({
+          organizationId,
           openId: userInfo.openId,
           name: userInfo.name || null,
           email: userInfo.email ?? null,
@@ -293,6 +299,7 @@ class SDKServer {
     }
 
     await db.upsertUser({
+      organizationId: user.organizationId,
       openId: user.openId,
       lastSignedIn: signedInAt,
     });

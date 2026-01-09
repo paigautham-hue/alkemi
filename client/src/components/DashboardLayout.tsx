@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, Package, Building2, FlaskConical, TestTube, Sparkles, MessageSquare, CheckSquare, BarChart3, FileText, Settings as SettingsIcon, Microscope, Grid3x3, Shield } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, Package, Building2, FlaskConical, TestTube, Sparkles, MessageSquare, CheckSquare, BarChart3, FileText, Settings as SettingsIcon, Microscope, Grid3x3, Shield, Search } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -29,6 +29,7 @@ import { Button } from "./ui/button";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
+  { icon: Search, label: "Search", path: "/search" },
   { icon: Package, label: "Materials", path: "/materials" },
   { icon: Building2, label: "Suppliers", path: "/suppliers" },
   { icon: FlaskConical, label: "Formulations", path: "/formulations" },

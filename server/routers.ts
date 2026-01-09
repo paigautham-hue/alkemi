@@ -6,6 +6,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import * as db from "./db";
 import * as predictionEngine from "./predictionEngine";
+import * as searchService from "./searchService";
 
 // ==========================================================
 // MIDDLEWARE FOR RBAC
@@ -799,6 +800,62 @@ export const appRouter = router({
           filename: `${family.code}_v${version.versionNumber}_Report.pdf`,
           data: pdfBuffer.toString("base64"),
         };
+      }),
+  }),
+
+  // Advanced Search
+  search: router({
+    unified: protectedProcedure
+      .input(
+        z.object({
+          query: z.string().optional(),
+          category: z.string().optional(),
+          supplierId: z.string().optional(),
+          minViscosity: z.number().optional(),
+          maxViscosity: z.number().optional(),
+          minDensity: z.number().optional(),
+          maxDensity: z.number().optional(),
+          complianceStatus: z.enum(["compliant", "non-compliant", "unknown"]).optional(),
+        })
+      )
+      .query(async ({ ctx, input }) => {
+        return await searchService.unifiedSearch(ctx.user.organizationId, input);
+      }),
+
+    materials: protectedProcedure
+      .input(
+        z.object({
+          query: z.string().optional(),
+          category: z.string().optional(),
+          supplierId: z.string().optional(),
+          minViscosity: z.number().optional(),
+          maxViscosity: z.number().optional(),
+          minDensity: z.number().optional(),
+          maxDensity: z.number().optional(),
+        })
+      )
+      .query(async ({ ctx, input }) => {
+        return await searchService.searchMaterials(ctx.user.organizationId, input);
+      }),
+
+    formulations: protectedProcedure
+      .input(
+        z.object({
+          query: z.string().optional(),
+        })
+      )
+      .query(async ({ ctx, input }) => {
+        return await searchService.searchFormulations(ctx.user.organizationId, input);
+      }),
+
+    documents: protectedProcedure
+      .input(
+        z.object({
+          query: z.string().optional(),
+        })
+      )
+      .query(async ({ ctx, input }) => {
+        return await searchService.searchDocuments(ctx.user.organizationId, input);
       }),
   }),
 

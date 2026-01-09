@@ -183,3 +183,17 @@
 - [x] Auto-trigger tour for first-time users (1.5s delay)
 - [x] Add tour completion tracking (localStorage)
 - [x] Add data-tour attributes to key elements
+
+## Advanced Search System ✅ COMPLETE
+- [x] Create backend search service with full-text search
+- [x] Add search across materials (name, code, CAS, category)
+- [x] Add search across formulations (name, code, description)
+- [x] Add search across documents (title, filename)
+- [x] Implement property filters (viscosity, density ranges)
+- [x] Implement supplier filter
+- [x] Implement category filter
+- [x] Create search API endpoints (unified, materials, formulations, documents)
+- [x] Build search UI component with input and filters
+- [x] Add search results display with match reasons
+- [x] Add Search to navigation menu
+- [x] Add Search route to App.tsx

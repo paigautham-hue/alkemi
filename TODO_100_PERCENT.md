@@ -167,3 +167,19 @@
 - [x] Create compliance report generator (service ready)
 - [x] Add Export PDF button to FormulationEditor
 - [x] Test PDF generation
+
+## Enhanced Demo Data ✅ COMPLETE
+- [x] Add demo predictions (2 properties: viscosity, density)
+- [x] Add demo trials with measurements
+- [x] Add demo test condition set
+- [x] Activate FDA compliance template in demo
+- [x] Add realistic measurement data
+
+## Guided Tour System ✅ COMPLETE
+- [x] Install Shepherd.js library
+- [x] Create tour configuration (11 steps)
+- [x] Add tour steps for key features
+- [x] Add "Start Tour" button to Dashboard
+- [x] Auto-trigger tour for first-time users (1.5s delay)
+- [x] Add tour completion tracking (localStorage)
+- [x] Add data-tour attributes to key elements

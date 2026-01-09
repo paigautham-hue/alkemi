@@ -160,12 +160,84 @@ export async function seedDemoDataSimple(organizationId: string, userId: string)
       createdBy: userId,
     });
 
+    // 5. Add test condition set
+    console.log("🧪 Seeding test conditions...");
+    const testConditionSet1 = await db.createTestConditionSet({
+      organizationId,
+      domainId: "default",
+      name: "Standard Testing Conditions",
+      description: "Room temperature testing",
+      isStandard: true,
+      createdBy: userId,
+      parameters: [
+        { parameterName: "temperature", parameterValue: "25", unit: "°C" },
+        { parameterName: "humidity", parameterValue: "50", unit: "%" },
+      ],
+    });
+
+    // 6. Add predictions for formulations
+    console.log("🔮 Seeding predictions...");
+    await db.createPrediction({
+      organizationId,
+      formulationVersionId: version1,
+      testConditionSetId: testConditionSet1,
+      propertyName: "viscosity",
+      predictedValue: 2500,
+      unit: "cP",
+      modelName: "hybrid_model",
+      modelVersion: "1.0",
+      requestedBy: userId,
+      featureImportance: [],
+    });
+
+    await db.createPrediction({
+      organizationId,
+      formulationVersionId: version1,
+      testConditionSetId: testConditionSet1,
+      propertyName: "density",
+      predictedValue: 1.05,
+      unit: "g/cm³",
+      modelName: "physics_model",
+      modelVersion: "1.0",
+      requestedBy: userId,
+      featureImportance: [],
+    });
+
+    // 7. Add trials with measurements
+    console.log("📊 Seeding trials...");
+    await db.createTrial({
+      organizationId,
+      formulationVersionId: version1,
+      testConditionSetId: testConditionSet1,
+      trialCode: "TRIAL-001",
+      conductedBy: "Demo User",
+      conductedAt: new Date(Date.now() - 86400000),
+      notes: "Demo trial showing excellent agreement with predictions",
+      measurements: [
+        {
+          propertyName: "viscosity",
+          measuredValue: "2480",
+          unit: "cP",
+        },
+        {
+          propertyName: "density",
+          measuredValue: "1.052",
+          unit: "g/cm³",
+        },
+      ],
+    });
+
+    // 8. Activate compliance template
+    console.log("🛡️ Activating compliance rules...");
+    const { activateComplianceTemplate } = await import("./complianceTemplates");
+    const complianceResult = await activateComplianceTemplate("fda-cosmetics-2024", organizationId);
+
     console.log("✅ Demo data seeding completed!");
-    console.log(`Created: 3 suppliers, 5 materials, 3 formulations`);
+    console.log(`Created: 3 suppliers, 5 materials, 3 formulations, 1 test condition set, 2 predictions, 1 trial, ${complianceResult.rulesCreated} compliance rules`);
 
     return {
       success: true,
-      message: "Demo data created successfully! You now have 3 suppliers, 5 materials, and 3 formulation families to explore.",
+      message: `Demo data created successfully! Includes 3 suppliers, 5 materials, 3 formulations, predictions, trials, and ${complianceResult.rulesCreated} FDA compliance rules.`,
     };
   } catch (error) {
     console.error("❌ Error seeding demo data:", error);

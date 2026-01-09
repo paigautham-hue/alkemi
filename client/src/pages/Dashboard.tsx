@@ -4,10 +4,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { trpc } from "@/lib/trpc";
 import { Beaker, Building2, FlaskConical, Package, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { createTour, hasTourBeenCompleted, markTourAsCompleted } from "@/lib/tour";
+import { MapIcon } from "lucide-react";
 
 export default function Dashboard() {
+  const { user } = useAuth();
   const { data: materials, refetch: refetchMaterials } = trpc.materials.list.useQuery();
   const { data: suppliers, refetch: refetchSuppliers } = trpc.suppliers.list.useQuery();
   const { data: formulations, refetch: refetchFormulations } = trpc.formulations.listFamilies.useQuery();
@@ -36,6 +40,23 @@ export default function Dashboard() {
     setIsSeeding(true);
     seedDemoData.mutate();
   };
+
+  const handleStartTour = () => {
+    const tour = createTour();
+    tour.on("complete", markTourAsCompleted);
+    tour.on("cancel", markTourAsCompleted);
+    tour.start();
+  };
+
+  useEffect(() => {
+    // Auto-start tour for first-time users after a delay
+    if (user && !hasTourBeenCompleted()) {
+      const timer = setTimeout(() => {
+        handleStartTour();
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [user]);
 
   const isEmpty = (materials?.length || 0) === 0 && (suppliers?.length || 0) === 0 && (formulations?.length || 0) === 0;
 
@@ -78,6 +99,7 @@ export default function Dashboard() {
               onClick={handleLoadDemoData}
               disabled={isSeeding}
               size="lg"
+              data-tour="load-demo-data"
             >
               <Sparkles className="mr-2 h-5 w-5" />
               {isSeeding ? "Loading Demo Data..." : "Load Demo Data"}
@@ -85,7 +107,7 @@ export default function Dashboard() {
           )}
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-3" data-tour="stats-cards">
           {stats.map((stat) => (
             <Link key={stat.title} href={stat.href}>
               <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
@@ -102,8 +124,8 @@ export default function Dashboard() {
           ))}
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card>
+        <div className="grid gap-4 md:grid-cols-2" data-tour="getting-started-section">
+          <Card data-tour="quick-actions">
             <CardHeader>
               <CardTitle>Quick Actions</CardTitle>
               <CardDescription>Common tasks and workflows</CardDescription>
@@ -132,8 +154,16 @@ export default function Dashboard() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Getting Started</CardTitle>
-              <CardDescription>Set up your formulation workspace</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Getting Started</CardTitle>
+                  <CardDescription>Set up your formulation workspace</CardDescription>
+                </div>
+                <Button variant="outline" size="sm" onClick={handleStartTour}>
+                  <MapIcon className="mr-2 h-4 w-4" />
+                  Start Tour
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div className="flex items-start gap-3">

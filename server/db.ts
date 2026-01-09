@@ -180,6 +180,7 @@ export async function getMaterials(organizationId: string, filters?: {
   search?: string;
   category?: string;
   domainId?: string;
+  supplierId?: string;
   isActive?: boolean;
 }) {
   const db = await getDb();
@@ -203,6 +204,10 @@ export async function getMaterials(organizationId: string, filters?: {
 
   if (filters?.domainId) {
     conditions.push(eq(materials.domainId, filters.domainId));
+  }
+
+  if (filters?.supplierId) {
+    conditions.push(eq(materials.supplierId, filters.supplierId));
   }
 
   if (filters?.isActive !== undefined) {
@@ -1290,4 +1295,187 @@ export async function deleteDocumentChunks(documentId: string) {
   await db
     .delete(documentChunks)
     .where(eq(documentChunks.documentId, documentId));
+}
+
+// ============================================================================
+// Trials Management
+// ============================================================================
+
+export async function createTrial(trial: {
+  organizationId: string;
+  formulationVersionId: string;
+  testConditionSetId: string;
+  trialCode: string;
+  conductedBy: string;
+  conductedAt: Date;
+  notes?: string;
+  measurements: Array<{
+    propertyName: string;
+    measuredValue: string;
+    unit?: string;
+    measurementError?: string;
+  }>;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { trials, trialMeasurements } = await import("../drizzle/schema");
+  
+  const trialId = nanoid();
+  
+  // Insert trial
+  await db.insert(trials).values({
+    id: trialId,
+    organizationId: trial.organizationId,
+    formulationVersionId: trial.formulationVersionId,
+    testConditionSetId: trial.testConditionSetId,
+    trialCode: trial.trialCode,
+    conductedBy: trial.conductedBy,
+    conductedAt: trial.conductedAt,
+    notes: trial.notes || undefined,
+  });
+  
+  // Insert measurements
+  if (trial.measurements.length > 0) {
+    await db.insert(trialMeasurements).values(
+      trial.measurements.map(m => ({
+        id: nanoid(),
+        trialId,
+        propertyName: m.propertyName,
+        measuredValue: m.measuredValue,
+        unit: m.unit || undefined,
+        measurementError: m.measurementError || undefined,
+      }))
+    );
+  }
+  
+  return trialId;
+}
+
+export async function listTrials(organizationId: string, filters?: {
+  formulationVersionId?: string;
+  testConditionSetId?: string;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const { trials } = await import("../drizzle/schema");
+  
+  const conditions = [eq(trials.organizationId, organizationId)];
+  
+  if (filters?.formulationVersionId) {
+    conditions.push(eq(trials.formulationVersionId, filters.formulationVersionId));
+  }
+  
+  if (filters?.testConditionSetId) {
+    conditions.push(eq(trials.testConditionSetId, filters.testConditionSetId));
+  }
+  
+  return await db
+    .select()
+    .from(trials)
+    .where(and(...conditions))
+    .orderBy(desc(trials.conductedAt));
+}
+
+export async function getTrialById(trialId: string, organizationId: string) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const { trials } = await import("../drizzle/schema");
+  
+  const [trial] = await db
+    .select()
+    .from(trials)
+    .where(and(eq(trials.id, trialId), eq(trials.organizationId, organizationId)))
+    .limit(1);
+  
+  return trial;
+}
+
+export async function getTrialMeasurements(trialId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const { trialMeasurements } = await import("../drizzle/schema");
+  
+  return await db
+    .select()
+    .from(trialMeasurements)
+    .where(eq(trialMeasurements.trialId, trialId));
+}
+
+export async function deleteTrial(trialId: string, organizationId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { trials } = await import("../drizzle/schema");
+  
+  await db
+    .delete(trials)
+    .where(and(eq(trials.id, trialId), eq(trials.organizationId, organizationId)));
+}
+
+export async function compareTrialWithPrediction(trialId: string, organizationId: string) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const { trials, predictions: predictionsTable } = await import("../drizzle/schema");
+  
+  // Get trial with measurements
+  const trial = await getTrialById(trialId, organizationId);
+  if (!trial) return null;
+  
+  const measurements = await getTrialMeasurements(trialId);
+  
+  // Get predictions for the same formulation and test conditions
+  const relatedPredictions = await db
+    .select()
+    .from(predictionsTable)
+    .where(
+      and(
+        eq(predictionsTable.organizationId, organizationId),
+        eq(predictionsTable.formulationVersionId, trial.formulationVersionId),
+        eq(predictionsTable.testConditionSetId, trial.testConditionSetId)
+      )
+    );
+  
+  // Match measurements with predictions
+  const comparisons = measurements.map(measurement => {
+    const matchingPrediction = relatedPredictions.find(
+      p => p.propertyName.toLowerCase() === measurement.propertyName.toLowerCase()
+    );
+    
+    if (!matchingPrediction) {
+      return {
+        propertyName: measurement.propertyName,
+        measuredValue: parseFloat(measurement.measuredValue),
+        predictedValue: null,
+        error: null,
+        percentError: null,
+        unit: measurement.unit,
+      };
+    }
+    
+    const measured = parseFloat(measurement.measuredValue);
+    const predicted = parseFloat(matchingPrediction.predictedValue);
+    const error = measured - predicted;
+    const percentError = (error / measured) * 100;
+    
+    return {
+      propertyName: measurement.propertyName,
+      measuredValue: measured,
+      predictedValue: predicted,
+      error,
+      percentError,
+      unit: measurement.unit,
+      predictionId: matchingPrediction.id,
+    };
+  });
+  
+  return {
+    trial,
+    measurements,
+    comparisons,
+  };
 }

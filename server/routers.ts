@@ -724,5 +724,196 @@ export const appRouter = router({
         return { success: true };
       }),
   }),
+
+  // DOE Generator
+  doe: router({
+    generateLHS: protectedProcedure
+      .input(
+        z.object({
+          factors: z.array(
+            z.object({
+              name: z.string(),
+              min: z.number(),
+              max: z.number(),
+              unit: z.string().optional(),
+            })
+          ),
+          numSamples: z.number().min(4).max(1000),
+          seed: z.number().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const doeGen = await import("./doeGenerator");
+        return doeGen.generateLatinHypercube(input.factors, input.numSamples, input.seed);
+      }),
+    generateFactorial: protectedProcedure
+      .input(
+        z.object({
+          factors: z.array(
+            z.object({
+              name: z.string(),
+              min: z.number(),
+              max: z.number(),
+              unit: z.string().optional(),
+            })
+          ),
+          levelsPerFactor: z.number().min(2).max(5).optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const doeGen = await import("./doeGenerator");
+        return doeGen.generateFullFactorial(input.factors, input.levelsPerFactor);
+      }),
+    generateFractional: protectedProcedure
+      .input(
+        z.object({
+          factors: z.array(
+            z.object({
+              name: z.string(),
+              min: z.number(),
+              max: z.number(),
+              unit: z.string().optional(),
+            })
+          ),
+          resolution: z.enum(["III", "IV", "V"]).optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const doeGen = await import("./doeGenerator");
+        return doeGen.generateFractionalFactorial(input.factors, input.resolution);
+      }),
+    generateCCD: protectedProcedure
+      .input(
+        z.object({
+          factors: z.array(
+            z.object({
+              name: z.string(),
+              min: z.number(),
+              max: z.number(),
+              unit: z.string().optional(),
+            })
+          ),
+          centerPoints: z.number().min(1).max(10).optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const doeGen = await import("./doeGenerator");
+        return doeGen.generateCentralComposite(input.factors, input.centerPoints);
+      }),
+  }),
+
+  // Supplier Intelligence
+  supplierIntelligence: router({
+    findAlternatives: protectedProcedure
+      .input(
+        z.object({
+          materialId: z.string().uuid(),
+          minSimilarity: z.number().min(0).max(1).optional(),
+          maxResults: z.number().min(1).max(20).optional(),
+        })
+      )
+      .query(async ({ ctx, input }) => {
+        const supplierIntel = await import("./supplierIntelligence");
+        return await supplierIntel.findMaterialAlternatives(
+          input.materialId,
+          ctx.user.organizationId,
+          {
+            minSimilarity: input.minSimilarity,
+            maxResults: input.maxResults,
+          }
+        );
+      }),
+    assessRisk: protectedProcedure
+      .input(z.object({ supplierId: z.string().uuid() }))
+      .query(async ({ ctx, input }) => {
+        const supplierIntel = await import("./supplierIntelligence");
+        return await supplierIntel.assessSupplierRisk(
+          input.supplierId,
+          ctx.user.organizationId
+        );
+      }),
+    findBackups: protectedProcedure
+      .input(z.object({ materialId: z.string().uuid() }))
+      .query(async ({ ctx, input }) => {
+        const supplierIntel = await import("./supplierIntelligence");
+        return await supplierIntel.findBackupSuppliers(
+          input.materialId,
+          ctx.user.organizationId
+        );
+      }),
+  }),
+
+  // Trials Management
+  trials: router({
+    list: protectedProcedure
+      .input(
+        z.object({
+          formulationVersionId: z.string().optional(),
+          testConditionSetId: z.string().optional(),
+        })
+      )
+      .query(async ({ ctx, input }) => {
+        return await db.listTrials(ctx.user.organizationId, input);
+      }),
+    create: protectedProcedure
+      .input(
+        z.object({
+          formulationVersionId: z.string().uuid(),
+          testConditionSetId: z.string().uuid(),
+          trialCode: z.string().min(1),
+          conductedAt: z.string().transform(str => new Date(str)),
+          notes: z.string().optional(),
+          measurements: z.array(
+            z.object({
+              propertyName: z.string(),
+              measuredValue: z.string(),
+              unit: z.string().optional(),
+              measurementError: z.string().optional(),
+            })
+          ),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const trialId = await db.createTrial({
+          organizationId: ctx.user.organizationId,
+          formulationVersionId: input.formulationVersionId,
+          testConditionSetId: input.testConditionSetId,
+          trialCode: input.trialCode,
+          conductedBy: ctx.user.id,
+          conductedAt: input.conductedAt,
+          notes: input.notes,
+          measurements: input.measurements,
+        });
+        return { success: true, trialId };
+      }),
+    get: protectedProcedure
+      .input(z.object({ trialId: z.string() }))
+      .query(async ({ ctx, input }) => {
+        const trial = await db.getTrialById(input.trialId, ctx.user.organizationId);
+        if (!trial) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Trial not found" });
+        }
+        const measurements = await db.getTrialMeasurements(input.trialId);
+        return { trial, measurements };
+      }),
+    compare: protectedProcedure
+      .input(z.object({ trialId: z.string() }))
+      .query(async ({ ctx, input }) => {
+        const comparison = await db.compareTrialWithPrediction(
+          input.trialId,
+          ctx.user.organizationId
+        );
+        if (!comparison) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Trial not found" });
+        }
+        return comparison;
+      }),
+    delete: protectedProcedure
+      .input(z.object({ trialId: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.deleteTrial(input.trialId, ctx.user.organizationId);
+        return { success: true };
+      }),
+  }),
 });
 export type AppRouter = typeof appRouter;

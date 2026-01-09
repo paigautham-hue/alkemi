@@ -16,6 +16,8 @@ import Approvals from "./pages/Approvals";
 import Analytics from "./pages/Analytics";
 import Documents from "@/pages/Documents";
 import Settings from "@/pages/Settings";
+import Trials from "@/pages/Trials";
+import DOE from "@/pages/DOE";
 
 function Router() {
   return (
@@ -27,6 +29,8 @@ function Router() {
       <Route path="/formulations/:id" component={FormulationEditor} />
       <Route path="/predictions" component={Predictions} />
       <Route path="/test-conditions" component={TestConditions} />
+      <Route path="/trials" component={Trials} />
+      <Route path="/doe" component={DOE} />
       <Route path="/debate" component={Debate} />
       <Route path="/approvals" component={Approvals} />
       <Route path="/analytics" component={Analytics} />

@@ -4,15 +4,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, GitBranch, TrendingDown, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import MaterialCreateDialog from "@/components/MaterialCreateDialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 
 export default function Materials() {
   const [search, setSearch] = useState("");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [alternativesDialogOpen, setAlternativesDialogOpen] = useState(false);
+  const [selectedMaterialId, setSelectedMaterialId] = useState<string | null>(null);
   const { data: materials, isLoading } = trpc.materials.list.useQuery({ search });
+  const { data: alternatives, isLoading: alternativesLoading } = trpc.supplierIntelligence.findAlternatives.useQuery(
+    { materialId: selectedMaterialId! },
+    { enabled: !!selectedMaterialId && alternativesDialogOpen }
+  );
 
   return (
     <DashboardLayout>
@@ -80,13 +88,26 @@ export default function Materials() {
                           : "-"}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toast.info("Edit functionality coming soon")}
-                        >
-                          Edit
-                        </Button>
+                        <div className="flex gap-2 justify-end">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedMaterialId(material.id);
+                              setAlternativesDialogOpen(true);
+                            }}
+                          >
+                            <GitBranch className="h-4 w-4 mr-1" />
+                            Alternatives
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toast.info("Edit functionality coming soon")}
+                          >
+                            Edit
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -109,6 +130,68 @@ export default function Materials() {
         </Card>
 
         <MaterialCreateDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
+
+        {/* Alternatives Dialog */}
+        <Dialog open={alternativesDialogOpen} onOpenChange={setAlternativesDialogOpen}>
+          <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Material Alternatives</DialogTitle>
+              <DialogDescription>
+                Similar materials that could be used as substitutes
+              </DialogDescription>
+            </DialogHeader>
+            {alternativesLoading ? (
+              <div className="text-center py-8">Loading alternatives...</div>
+            ) : alternatives && alternatives.length > 0 ? (
+              <div className="space-y-3">
+                {alternatives.map((alt, idx) => (
+                  <Card key={idx}>
+                    <CardContent className="pt-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <h4 className="font-semibold text-lg">
+                            {alt.materialCode} - {alt.materialName}
+                          </h4>
+                          {alt.tradeName && (
+                            <p className="text-sm text-muted-foreground">Trade Name: {alt.tradeName}</p>
+                          )}
+                          {alt.supplierName && (
+                            <p className="text-sm text-muted-foreground">Supplier: {alt.supplierName}</p>
+                          )}
+                        </div>
+                        <Badge variant="outline" className="text-lg">
+                          {(alt.similarityScore * 100).toFixed(0)}% Match
+                        </Badge>
+                      </div>
+                      
+                      {alt.costComparison && (
+                        <div className="flex items-center gap-2 mb-2 p-2 bg-green-50 border border-green-200 rounded">
+                          <TrendingDown className="h-4 w-4 text-green-600" />
+                          <span className="text-sm text-green-800">
+                            Cost savings: {alt.costComparison.savings!.toFixed(2)} ({alt.costComparison.savingsPercent!.toFixed(1)}%)
+                          </span>
+                        </div>
+                      )}
+                      
+                      {alt.riskFactors.length > 0 && (
+                        <div className="flex items-start gap-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                          <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5" />
+                          <div className="text-sm text-yellow-800">
+                            <strong>Risk Factors:</strong> {alt.riskFactors.join(", ")}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                No suitable alternatives found
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

@@ -28,7 +28,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Brain, TrendingUp, AlertCircle } from "lucide-react";
+import { Plus, Brain, TrendingUp, AlertCircle, Beaker, CheckCircle, XCircle } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 
 export default function Predictions() {
@@ -109,39 +109,139 @@ function PredictionCard({ prediction }: { prediction: any }) {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-6">
+          {/* LLM Prediction */}
           <div>
-            <h4 className="text-sm font-medium mb-2">Predicted Value</h4>
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold">
-                {predictedValue.toFixed(2)}
-              </span>
-              <span className="text-sm text-muted-foreground">
-                {prediction.unit}
-              </span>
+            <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+              <Brain className="h-4 w-4" />
+              AI-Powered Prediction
+            </h4>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <h5 className="text-sm font-medium mb-2">Predicted Value</h5>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold">
+                    {predictedValue.toFixed(2)}
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    {prediction.unit}
+                  </span>
+                </div>
+                {uncertaintyLower !== undefined && uncertaintyUpper !== undefined && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    95% CI: [{uncertaintyLower.toFixed(2)}, {uncertaintyUpper.toFixed(2)}]
+                  </p>
+                )}
+              </div>
+
+              {probabilityInSpec !== undefined && (
+                <div>
+                  <h5 className="text-sm font-medium mb-2">Probability in Spec</h5>
+                  <div className="flex items-baseline gap-2">
+                    <span className={`text-2xl font-bold ${getProbabilityColor(probabilityInSpec)}`}>
+                      {(probabilityInSpec * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {probabilityInSpec >= 0.9
+                      ? "High confidence"
+                      : probabilityInSpec >= 0.7
+                      ? "Moderate confidence"
+                      : "Low confidence"}
+                  </p>
+                </div>
+              )}
             </div>
-            {uncertaintyLower !== undefined && uncertaintyUpper !== undefined && (
-              <p className="text-sm text-muted-foreground mt-1">
-                95% CI: [{uncertaintyLower.toFixed(2)}, {uncertaintyUpper.toFixed(2)}]
-              </p>
-            )}
           </div>
 
-          {probabilityInSpec !== undefined && (
-            <div>
-              <h4 className="text-sm font-medium mb-2">Probability in Spec</h4>
-              <div className="flex items-baseline gap-2">
-                <span className={`text-2xl font-bold ${getProbabilityColor(probabilityInSpec)}`}>
-                  {(probabilityInSpec * 100).toFixed(1)}%
-                </span>
+          {/* Physics-Based Predictions */}
+          {prediction.physicsBasedPredictions && prediction.physicsBasedPredictions.length > 0 && (
+            <div className="border-t pt-4">
+              <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                <Beaker className="h-4 w-4" />
+                Physics-Based Calculations
+              </h4>
+              <div className="grid gap-3 md:grid-cols-2">
+                {prediction.physicsBasedPredictions.map((phys: any, idx: number) => (
+                  <div key={idx} className="rounded-lg border p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium capitalize">
+                        {phys.property.replace(/_/g, ' ')}
+                      </span>
+                      <Badge variant={phys.confidence === 'high' ? 'default' : phys.confidence === 'medium' ? 'secondary' : 'outline'}>
+                        {phys.confidence}
+                      </Badge>
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-xl font-bold">{phys.value}</span>
+                      <span className="text-xs text-muted-foreground">{phys.unit}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">{phys.method}</p>
+                  </div>
+                ))}
               </div>
-              <p className="text-sm text-muted-foreground mt-1">
-                {probabilityInSpec >= 0.9
-                  ? "High confidence"
-                  : probabilityInSpec >= 0.7
-                  ? "Moderate confidence"
-                  : "Low confidence"}
-              </p>
+            </div>
+          )}
+
+          {/* Compatibility Assessment */}
+          {prediction.compatibilityAssessment && (
+            <div className="border-t pt-4">
+              <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                <TrendingUp className="h-4 w-4" />
+                Compatibility Assessment
+              </h4>
+              <div className="rounded-lg border p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium">Overall Compatibility</span>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={prediction.compatibilityAssessment.level === 'excellent' ? 'default' : prediction.compatibilityAssessment.level === 'good' ? 'secondary' : 'outline'}>
+                      {prediction.compatibilityAssessment.level}
+                    </Badge>
+                    <span className="text-lg font-bold">{prediction.compatibilityAssessment.score}/100</span>
+                  </div>
+                </div>
+                {prediction.compatibilityAssessment.warnings.length > 0 && (
+                  <div className="space-y-1 mb-2">
+                    {prediction.compatibilityAssessment.warnings.map((warning: string, idx: number) => (
+                      <div key={idx} className="flex items-start gap-2 text-sm text-orange-600">
+                        <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                        <span>{warning}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {prediction.compatibilityAssessment.details.length > 0 && (
+                  <div className="space-y-1">
+                    {prediction.compatibilityAssessment.details.slice(0, 3).map((detail: string, idx: number) => (
+                      <div key={idx} className="flex items-start gap-2 text-xs text-muted-foreground">
+                        <CheckCircle className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                        <span>{detail}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Hansen Parameters */}
+          {prediction.hansenParameters && (
+            <div className="border-t pt-4">
+              <h4 className="text-sm font-medium mb-3">Hansen Solubility Parameters</h4>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="rounded-lg border p-3 text-center">
+                  <p className="text-xs text-muted-foreground mb-1">δD (Dispersion)</p>
+                  <p className="text-lg font-bold">{prediction.hansenParameters.hansenD.toFixed(2)}</p>
+                </div>
+                <div className="rounded-lg border p-3 text-center">
+                  <p className="text-xs text-muted-foreground mb-1">δP (Polar)</p>
+                  <p className="text-lg font-bold">{prediction.hansenParameters.hansenP.toFixed(2)}</p>
+                </div>
+                <div className="rounded-lg border p-3 text-center">
+                  <p className="text-xs text-muted-foreground mb-1">δH (H-bonding)</p>
+                  <p className="text-lg font-bold">{prediction.hansenParameters.hansenH.toFixed(2)}</p>
+                </div>
+              </div>
             </div>
           )}
         </div>

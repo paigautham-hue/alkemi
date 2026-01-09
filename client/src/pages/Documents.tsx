@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Upload, FileText, Download, Trash2, Search, Filter } from "lucide-react";
+import { Upload, FileText, Download, Trash2, Search, Filter, MessageSquare, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 const DOC_TYPES = [
@@ -37,6 +37,9 @@ export default function Documents() {
   });
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
+  const [ragDialogOpen, setRagDialogOpen] = useState(false);
+  const [ragQuestion, setRagQuestion] = useState("");
+  const [ragAnswer, setRagAnswer] = useState<{ answer: string; sources: any[] } | null>(null);
 
   const { data: documents, isLoading, refetch } = trpc.documents.list.useQuery(
     { search: searchQuery, docType: filterType === "all" ? undefined : filterType },
@@ -65,6 +68,24 @@ export default function Documents() {
       toast.error(`Delete failed: ${error.message}`);
     },
   });
+
+  const ragQueryMutation = trpc.documents.query.useMutation({
+    onSuccess: (data) => {
+      setRagAnswer(data);
+    },
+    onError: (error) => {
+      toast.error(`Query failed: ${error.message}`);
+    },
+  });
+
+  const handleRagQuery = () => {
+    if (!ragQuestion.trim()) {
+      toast.error("Please enter a question");
+      return;
+    }
+    setRagAnswer(null);
+    ragQueryMutation.mutate({ question: ragQuestion });
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -152,14 +173,19 @@ export default function Documents() {
             Manage technical documents, data sheets, and reports
           </p>
         </div>
-        <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Upload className="mr-2 h-4 w-4" />
-              Upload Document
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px]">
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setRagDialogOpen(true)}>
+            <MessageSquare className="mr-2 h-4 w-4" />
+            Ask About Documents
+          </Button>
+          <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Upload className="mr-2 h-4 w-4" />
+                Upload Document
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
               <DialogTitle>Upload Document</DialogTitle>
               <DialogDescription>
@@ -229,6 +255,7 @@ export default function Documents() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Search and Filter */}
@@ -327,6 +354,81 @@ export default function Documents() {
           ))}
         </div>
       )}
+
+      {/* RAG Query Dialog */}
+      <Dialog open={ragDialogOpen} onOpenChange={setRagDialogOpen}>
+        <DialogContent className="sm:max-w-[700px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5" />
+              Ask About Your Documents
+            </DialogTitle>
+            <DialogDescription>
+              Ask questions and get AI-powered answers from your document library
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="question">Your Question</Label>
+              <Textarea
+                id="question"
+                placeholder="e.g., What are the safety precautions for handling Material X?"
+                value={ragQuestion}
+                onChange={(e) => setRagQuestion(e.target.value)}
+                rows={3}
+              />
+            </div>
+            <Button 
+              onClick={handleRagQuery} 
+              disabled={ragQueryMutation.isPending}
+              className="w-full"
+            >
+              {ragQueryMutation.isPending ? "Searching..." : "Search Documents"}
+            </Button>
+            
+            {ragAnswer && (
+              <div className="space-y-4 mt-4 border-t pt-4">
+                <div>
+                  <h4 className="font-semibold mb-2">Answer:</h4>
+                  <div className="prose prose-sm max-w-none">
+                    <p className="text-sm whitespace-pre-wrap">{ragAnswer.answer}</p>
+                  </div>
+                </div>
+                {ragAnswer.sources.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold mb-2">Sources:</h4>
+                    <div className="space-y-2">
+                      {ragAnswer.sources.map((source, idx) => (
+                        <div key={idx} className="text-sm p-3 bg-muted rounded-lg">
+                          <div className="flex items-center gap-2 mb-1">
+                            <FileText className="h-4 w-4" />
+                            <span className="font-medium">{source.document.title}</span>
+                            <Badge variant="outline" className="ml-auto">
+                              Score: {(source.score * 100).toFixed(0)}%
+                            </Badge>
+                          </div>
+                          <p className="text-muted-foreground text-xs line-clamp-2">
+                            {source.chunk.content.substring(0, 150)}...
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setRagDialogOpen(false);
+              setRagQuestion("");
+              setRagAnswer(null);
+            }}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -148,6 +148,8 @@ export const materials = mysqlTable("materials", {
   density: decimal("density", { precision: 10, scale: 4 }),
   viscosity: decimal("viscosity", { precision: 10, scale: 2 }),
   molecularWeight: decimal("molecular_weight", { precision: 10, scale: 2 }),
+  refractiveIndex: decimal("refractive_index", { precision: 10, scale: 6 }),
+  glassTransitionTemp: decimal("glass_transition_temp", { precision: 10, scale: 2 }),
   
   // Hansen Solubility Parameters
   hansenD: decimal("hansen_d", { precision: 10, scale: 4 }),

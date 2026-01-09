@@ -1,4 +1,4 @@
-import { and, desc, eq, like, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, like, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser,
@@ -1222,4 +1222,72 @@ export async function updateOrganization(organizationId: string, data: { name?: 
     .update(organizations)
     .set({ ...data, updatedAt: new Date() })
     .where(eq(organizations.id, organizationId));
+}
+
+// ============================================================================
+// Document Chunks (RAG System)
+// ============================================================================
+
+export async function createDocumentChunk(chunk: {
+  documentId: string;
+  chunkIndex: number;
+  content: string;
+  embedding?: number[];
+  pageNumber?: number;
+  metadata?: Record<string, any>;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { documentChunks } = await import("../drizzle/schema");
+  
+  await db.insert(documentChunks).values({
+    id: nanoid(),
+    documentId: chunk.documentId,
+    chunkIndex: chunk.chunkIndex,
+    content: chunk.content,
+    embedding: chunk.embedding || undefined,
+    pageNumber: chunk.pageNumber || undefined,
+    metadata: chunk.metadata || undefined,
+  });
+}
+
+export async function getDocumentChunks(organizationId: string, documentIds?: string[]) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const { documentChunks } = await import("../drizzle/schema");
+  
+  // Get all chunks for documents in this organization
+  let conditions = [eq(documents.organizationId, organizationId)];
+  
+  // Filter by specific documents if provided
+  if (documentIds && documentIds.length > 0) {
+    conditions.push(inArray(documentChunks.documentId, documentIds));
+  }
+  
+  return await db
+    .select({
+      id: documentChunks.id,
+      documentId: documentChunks.documentId,
+      chunkIndex: documentChunks.chunkIndex,
+      content: documentChunks.content,
+      embedding: documentChunks.embedding,
+      pageNumber: documentChunks.pageNumber,
+      metadata: documentChunks.metadata,
+    })
+    .from(documentChunks)
+    .innerJoin(documents, eq(documentChunks.documentId, documents.id))
+    .where(and(...conditions));
+}
+
+export async function deleteDocumentChunks(documentId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { documentChunks } = await import("../drizzle/schema");
+  
+  await db
+    .delete(documentChunks)
+    .where(eq(documentChunks.documentId, documentId));
 }

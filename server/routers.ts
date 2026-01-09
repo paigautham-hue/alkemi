@@ -608,7 +608,70 @@ export const appRouter = router({
       .input(z.object({ documentId: z.string() }))
       .mutation(async ({ ctx, input }) => {
         await db.deleteDocument(input.documentId, ctx.user.organizationId);
+        // Also delete associated chunks
+        await db.deleteDocumentChunks(input.documentId);
         return { success: true };
+      }),
+    processForRAG: protectedProcedure
+      .input(z.object({ documentId: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        // Use native fetch (Node 18+)
+        const ragService = await import("./ragService");
+        
+        // Get document from database
+        const doc = await db.getDocumentById(input.documentId, ctx.user.organizationId);
+        if (!doc) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Document not found" });
+        }
+        
+        // Only process PDFs
+        if (!doc.mimeType?.includes("pdf")) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Only PDF documents can be processed" });
+        }
+        
+        // Download file from S3
+        const response = await fetch(doc.s3Url);
+        const buffer = Buffer.from(await response.arrayBuffer());
+        
+        // Process document (extract, chunk, embed)
+        const result = await ragService.processDocument(
+          input.documentId,
+          buffer,
+          ctx.user.organizationId
+        );
+        
+        return { success: true, ...result };
+      }),
+    query: protectedProcedure
+      .input(
+        z.object({
+          question: z.string(),
+          documentIds: z.array(z.string()).optional(),
+          maxChunks: z.number().optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const ragService = await import("./ragService");
+        
+        const result = await ragService.queryWithRAG(
+          input.question,
+          ctx.user.organizationId,
+          {
+            documentIds: input.documentIds,
+            maxChunks: input.maxChunks,
+          }
+        );
+        
+        // Populate document details in sources
+        for (const source of result.sources) {
+          const doc = await db.getDocumentById(source.chunk.documentId, ctx.user.organizationId);
+          if (doc) {
+            source.document.title = doc.title || '';
+            source.document.filename = doc.filename || '';
+          }
+        }
+        
+        return result;
       }),
   }),
 

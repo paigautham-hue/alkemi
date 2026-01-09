@@ -7,6 +7,7 @@
 
 import { invokeLLM } from "./_core/llm";
 import * as db from "./db";
+import * as physics from "./physicsModels";
 
 export interface PredictionRequest {
   organizationId: string;
@@ -36,6 +37,9 @@ export interface PredictionResult {
     contribution: number;
   }>;
   reasoning: string;
+  physicsBasedPredictions?: physics.PhysicsPredictionResult[];
+  compatibilityAssessment?: ReturnType<typeof physics.assessCompatibility>;
+  hansenParameters?: ReturnType<typeof physics.calculateFormulationHSP>;
 }
 
 /**
@@ -80,6 +84,27 @@ export async function predictProperty(
     })
   );
 
+  // 3.5 Run physics-based predictions
+  const physicsComponents: physics.FormulationComponent[] = materialsWithProperties.map(mp => ({
+    materialId: mp.component.materialId,
+    percentage: parseFloat(mp.component.percentage),
+    material: mp.material ? {
+      id: mp.material.id,
+      name: mp.material.name,
+      code: mp.material.code,
+      hansenD: mp.material.hansenD ? parseFloat(mp.material.hansenD) : null,
+      hansenP: mp.material.hansenP ? parseFloat(mp.material.hansenP) : null,
+      hansenH: mp.material.hansenH ? parseFloat(mp.material.hansenH) : null,
+      viscosity: mp.material.viscosity ? parseFloat(mp.material.viscosity) : null,
+      density: mp.material.density ? parseFloat(mp.material.density) : null,
+      refractiveIndex: mp.material.refractiveIndex ? parseFloat(mp.material.refractiveIndex) : null,
+      glassTransitionTemp: mp.material.glassTransitionTemp ? parseFloat(mp.material.glassTransitionTemp) : null,
+      molecularWeight: mp.material.molecularWeight ? parseFloat(mp.material.molecularWeight) : null,
+    } : undefined
+  }));
+
+  const physicsResults = physics.predictAllProperties(physicsComponents);
+
   // 4. Build context for LLM
   const formulationContext = buildFormulationContext(
     formulation,
@@ -108,6 +133,9 @@ export async function predictProperty(
   return {
     ...prediction,
     probabilityInSpec,
+    physicsBasedPredictions: physicsResults.predictions,
+    compatibilityAssessment: physicsResults.compatibility,
+    hansenParameters: physicsResults.hsp,
   };
 }
 

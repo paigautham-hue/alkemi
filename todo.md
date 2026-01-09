@@ -424,3 +424,63 @@
 - [x] Implement comprehensive metrics dashboard
 - [ ] Write comprehensive tests for all new features (deferred)
 - [ ] Final checkpoint and delivery
+
+
+## Phase 18: Enhanced Formulation Editor (Completed)
+- [x] Redesign FormulationEditor page with tabbed interface (Composition, Properties, History)
+- [x] Create component management table with add/remove
+- [x] Add material selector with search functionality
+- [x] Implement percentage input with real-time validation
+- [x] Add total percentage display with visual indicator (must sum to 100%)
+- [x] Add formulation properties section (target properties, notes)
+- [x] Implement version selector for switching between versions
+- [x] Add version history view with clickable version cards
+- [x] Create add component dialog with material selection and percentage input
+- [x] Add validation warnings when total percentage != 100%
+- [ ] Create component reordering functionality (deferred)
+- [ ] Implement version comparison view (deferred)
+- [ ] Add formulation cloning functionality (deferred)
+- [ ] Create formulation export to PDF/Excel (deferred)
+
+## Phase 19: Document Upload System
+- [ ] Add documents table integration to UI
+- [ ] Create document upload component with S3 integration
+- [ ] Add document type selector (TDS, MSDS, PDS, SOP, Report, Lab Notebook)
+- [ ] Implement file upload with progress tracking
+- [ ] Create documents list page with search and filtering
+- [ ] Add document viewer/download functionality
+- [ ] Implement document metadata editing
+- [ ] Add document deletion with confirmation
+
+## Phase 20: Supplier Risk Assessment
+- [ ] Create risk assessment algorithm
+- [ ] Add risk score calculation based on qualification status, delivery time, quality metrics
+- [ ] Implement risk level badges (low, medium, high, critical)
+- [ ] Add risk assessment history tracking
+- [ ] Create supplier performance metrics
+- [ ] Add automated risk alerts for critical suppliers
+- [ ] Implement risk mitigation recommendations
+
+## Phase 21: User Management & Organization Settings
+- [ ] Create users management page
+- [ ] Add user invitation system
+- [ ] Implement role assignment UI (admin, manager, chemist, viewer)
+- [ ] Create organization settings page
+- [ ] Add organization profile editing
+- [ ] Implement LLM provider allowlist/denylist UI
+- [ ] Add cost budget configuration UI
+- [ ] Create user activity log viewer
+
+## Phase 22: Final Testing & Polish
+- [ ] Write comprehensive tests for all new features
+- [ ] Test all creation dialogs end-to-end
+- [ ] Verify multi-tenant isolation across all features
+- [ ] Test approval workflow state transitions
+- [ ] Verify LLM cost tracking accuracy
+- [ ] Test prediction engine with various formulations
+- [ ] Verify debate engine synthesis quality
+- [ ] Add loading skeletons for all pages
+- [ ] Implement comprehensive error boundaries
+- [ ] Add helpful empty states with CTAs
+- [ ] Optimize database queries
+- [ ] Final checkpoint and delivery

@@ -29,6 +29,10 @@ import {
   predictions,
   predictionFeatures,
   llmAuditLog,
+  approvalRequests,
+  approvalReviews,
+  debateSessions,
+  documents,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { nanoid } from 'nanoid';
@@ -1082,4 +1086,78 @@ export async function getApprovalRequestsByFormulation(
   );
 
   return result as any[];
+}
+
+
+// ============================================================================
+// Documents Management
+// ============================================================================
+
+export async function createDocument(doc: {
+  organizationId: string;
+  title: string;
+  sourceType: "tds" | "msds" | "pds" | "sop" | "report" | "lab_notebook" | "other";
+  filename: string;
+  s3Key: string;
+  s3Url: string;
+  mimeType: string;
+  fileSizeBytes: number;
+  uploadedBy: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const [result] = await db.insert(documents).values([doc]);
+
+  return result.insertId;
+}
+
+export async function listDocuments(organizationId: string, filters?: { search?: string; sourceType?: string }) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const conditions = [eq(documents.organizationId, organizationId)];
+
+  if (filters?.search) {
+    conditions.push(
+      or(
+        like(documents.title, `%${filters.search}%`),
+        like(documents.filename, `%${filters.search}%`)
+      )!
+    );
+  }
+
+  if (filters?.sourceType) {
+    conditions.push(sql`${documents.sourceType} = ${filters.sourceType}`);
+  }
+
+  const results = await db
+    .select()
+    .from(documents)
+    .where(and(...conditions))
+    .orderBy(desc(documents.createdAt));
+    
+  return results;
+}
+
+export async function getDocumentById(documentId: string, organizationId: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const [doc] = await db
+    .select()
+    .from(documents)
+    .where(and(eq(documents.id, documentId), eq(documents.organizationId, organizationId)))
+    .limit(1);
+
+  return doc || null;
+}
+
+export async function deleteDocument(documentId: string, organizationId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db
+    .delete(documents)
+    .where(and(eq(documents.id, documentId), eq(documents.organizationId, organizationId)));
 }

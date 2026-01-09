@@ -552,7 +552,64 @@ export const appRouter = router({
           input.formulationVersionId
         );
       }),
+   }),
+
+  documents: router({
+    list: protectedProcedure
+      .input(
+        z.object({
+          search: z.string().optional(),
+          docType: z.string().optional(),
+        })
+      )
+      .query(async ({ ctx, input }) => {
+        return await db.listDocuments(ctx.user.organizationId, {
+          search: input.search,
+          sourceType: input.docType,
+        });
+      }),
+    upload: protectedProcedure
+      .input(
+        z.object({
+          title: z.string(),
+          docType: z.enum(["tds", "msds", "pds", "sop", "report", "lab_notebook", "other"]),
+          description: z.string().optional(),
+          filename: z.string(),
+          fileData: z.string(), // base64
+          mimeType: z.string(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        // Import storage helper
+        const { storagePut } = await import("./storage");
+
+        // Decode base64 and upload to S3
+        const base64Data = input.fileData.split(",")[1] || input.fileData;
+        const buffer = Buffer.from(base64Data, "base64");
+        const fileKey = `documents/${ctx.user.organizationId}/${Date.now()}-${input.filename}`;
+        const { url } = await storagePut(fileKey, buffer, input.mimeType);
+
+        // Save to database
+        await db.createDocument({
+          organizationId: ctx.user.organizationId,
+          title: input.title,
+          sourceType: input.docType,
+          filename: input.filename,
+          s3Key: fileKey,
+          s3Url: url,
+          mimeType: input.mimeType,
+          fileSizeBytes: buffer.length,
+          uploadedBy: ctx.user.id.toString(),
+        });
+
+        return { success: true, url };
+      }),
+    delete: protectedProcedure
+      .input(z.object({ documentId: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.deleteDocument(input.documentId, ctx.user.organizationId);
+        return { success: true };
+      }),
   }),
 });
-
 export type AppRouter = typeof appRouter;

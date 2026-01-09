@@ -484,3 +484,54 @@
 - [ ] Add helpful empty states with CTAs
 - [ ] Optimize database queries
 - [ ] Final checkpoint and delivery
+
+
+## Phase 19: Document Upload System (Completed)
+- [x] Create Documents page with list view
+- [x] Add document upload component with file selection
+- [x] Implement S3 file upload integration with storagePut
+- [x] Add document metadata form (title, type, description)
+- [x] Create document type selector (TDS, MSDS, PDS, SOP, Report, Lab Notebook, Other)
+- [x] Add document download functionality (opens in new tab)
+- [x] Implement document search and filtering by type
+- [x] Create document deletion with confirmation dialog
+- [x] Add Documents to navigation (10 pages total now)
+- [x] Display file size, upload date, and filename
+- [x] Add empty state with helpful message
+- [ ] Add document preview for PDFs (deferred)
+- [ ] Link documents to formulations and materials (deferred)
+
+## Phase 20: User Management & Organization Settings
+- [ ] Create Settings page with tabs
+- [ ] Add organization profile section
+- [ ] Create user list view with roles
+- [ ] Add user invitation dialog
+- [ ] Implement email invitation system
+- [ ] Add user role assignment UI
+- [ ] Create user deactivation functionality
+- [ ] Add organization domain management
+- [ ] Implement LLM provider preferences UI
+- [ ] Add cost budget configuration UI
+
+## Phase 21: Formulation Export
+- [ ] Add export button to formulation editor
+- [ ] Create PDF export functionality
+- [ ] Add Excel export functionality
+- [ ] Include composition table in exports
+- [ ] Add material properties to exports
+- [ ] Include test conditions in exports
+- [ ] Add prediction results to exports
+- [ ] Create branded export template
+- [ ] Add export history tracking
+
+## Phase 22: Final UI Polish
+- [ ] Add loading skeletons to all list pages
+- [ ] Implement empty states with helpful messages
+- [ ] Add error boundaries to all major components
+- [ ] Improve form validation messages
+- [ ] Add confirmation dialogs for destructive actions
+- [ ] Implement keyboard shortcuts for common actions
+- [ ] Add tooltips to complex UI elements
+- [ ] Improve mobile responsiveness
+- [ ] Add accessibility improvements (ARIA labels, focus management)
+- [ ] Final comprehensive testing

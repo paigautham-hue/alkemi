@@ -217,3 +217,8 @@
 - [x] Update SDK user sync to assign admin role
 - [x] Create comprehensive team onboarding documentation
 - [x] Document sign-in process for team members
+
+## Demo Data Seeding Fix ✅ COMPLETE
+- [x] Check suppliers table schema (country is varchar(2) for ISO codes)
+- [x] Fix seedDemoDataSimple.ts to use 2-letter country codes (US, DE)
+- [x] Ready for testing on published site

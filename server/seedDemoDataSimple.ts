@@ -17,7 +17,7 @@ export async function seedDemoDataSimple(organizationId: string, userId: string)
       name: "BASF Chemical Solutions",
       code: "BASF-001",
       contactEmail: "sales@basf-demo.com",
-      country: "United States",
+      country: "US",
       qualificationStatus: "qualified",
     });
 
@@ -26,7 +26,7 @@ export async function seedDemoDataSimple(organizationId: string, userId: string)
       name: "Dow Chemical Company",
       code: "DOW-002",
       contactEmail: "orders@dow-demo.com",
-      country: "United States",
+      country: "US",
       qualificationStatus: "qualified",
     });
 
@@ -35,7 +35,7 @@ export async function seedDemoDataSimple(organizationId: string, userId: string)
       name: "Evonik Industries",
       code: "EVONIK-003",
       contactEmail: "contact@evonik-demo.com",
-      country: "Germany",
+      country: "DE",
       qualificationStatus: "qualified",
     });
 

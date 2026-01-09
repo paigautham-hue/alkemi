@@ -133,13 +133,18 @@ export async function getUserByOpenId(openId: string) {
 
 /**
  * Get or create an organization for a user.
- * For the owner (first user), creates a default organization.
- * For other users, they must be invited to an existing organization.
+ * Automatically creates a personal organization for each new user.
  */
 export async function getOrCreateOrganizationForUser(userOpenId: string, userName: string | null): Promise<string> {
   const db = await getDb();
   if (!db) {
     throw new Error("Database not available");
+  }
+
+  // Check if user already has an organization
+  const existingUser = await getUserByOpenId(userOpenId);
+  if (existingUser?.organizationId) {
+    return existingUser.organizationId;
   }
 
   // Check if this is the owner
@@ -167,9 +172,18 @@ export async function getOrCreateOrganizationForUser(userOpenId: string, userNam
     return orgId;
   }
 
-  // For non-owner users, they must already have an organization assigned
-  // This will be handled through invitation flow later
-  throw new Error("User must be invited to an organization");
+  // For non-owner users, create a personal organization automatically
+  const orgId = crypto.randomUUID();
+  const orgSlug = `user-${userOpenId.substring(0, 8)}-${Date.now()}`;
+  const newOrg: InsertOrganization = {
+    id: orgId,
+    name: userName ? `${userName}'s Workspace` : "My Workspace",
+    slug: orgSlug,
+    settings: {},
+  };
+
+  await db.insert(organizations).values(newOrg);
+  return orgId;
 }
 
 // ==========================================================

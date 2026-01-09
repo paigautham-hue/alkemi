@@ -24,8 +24,13 @@ import {
   formulationComponents,
   InsertFormulationComponent,
   FormulationComponent,
+  testConditionSets,
+  testConditionParameters,
+  predictions,
+  predictionFeatures,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
+import { nanoid } from 'nanoid';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -466,4 +471,239 @@ export async function deleteFormulationComponent(id: string, organizationId: str
   await db
     .delete(formulationComponents)
     .where(and(eq(formulationComponents.id, id), eq(formulationComponents.organizationId, organizationId)));
+}
+
+
+// ==========================================================
+// TEST CONDITIONS MANAGEMENT
+// ==========================================================
+
+export async function createTestConditionSet(data: {
+  organizationId: string;
+  domainId: string;
+  name: string;
+  description?: string;
+  isStandard: boolean;
+  createdBy: string;
+  parameters: Array<{ parameterName: string; parameterValue: string; unit?: string }>;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const testConditionSetId = nanoid();
+  
+  await db.insert(testConditionSets).values({
+    id: testConditionSetId,
+    organizationId: data.organizationId,
+    domainId: data.domainId,
+    name: data.name,
+    description: data.description,
+    isStandard: data.isStandard,
+    createdBy: data.createdBy,
+  });
+
+  if (data.parameters.length > 0) {
+    await db.insert(testConditionParameters).values(
+      data.parameters.map(param => ({
+        id: nanoid(),
+        testConditionSetId,
+        parameterName: param.parameterName,
+        parameterValue: param.parameterValue,
+        unit: param.unit,
+      }))
+    );
+  }
+
+  return testConditionSetId;
+}
+
+export async function getTestConditionSets(organizationId: string, domainId?: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  if (domainId) {
+    return await db
+      .select()
+      .from(testConditionSets)
+      .where(
+        and(
+          eq(testConditionSets.organizationId, organizationId),
+          eq(testConditionSets.domainId, domainId)
+        )
+      );
+  }
+
+  return await db
+    .select()
+    .from(testConditionSets)
+    .where(eq(testConditionSets.organizationId, organizationId));
+}
+
+export async function getTestConditionSetById(id: string, organizationId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const sets = await db
+    .select()
+    .from(testConditionSets)
+    .where(
+      and(
+        eq(testConditionSets.id, id),
+        eq(testConditionSets.organizationId, organizationId)
+      )
+    )
+    .limit(1);
+
+  if (sets.length === 0) return undefined;
+
+  const parameters = await db
+    .select()
+    .from(testConditionParameters)
+    .where(eq(testConditionParameters.testConditionSetId, id));
+
+  return {
+    ...sets[0],
+    parameters,
+  };
+}
+
+export async function getTestConditionParameters(testConditionSetId: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db
+    .select()
+    .from(testConditionParameters)
+    .where(eq(testConditionParameters.testConditionSetId, testConditionSetId));
+}
+
+export async function deleteTestConditionSet(id: string, organizationId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db
+    .delete(testConditionSets)
+    .where(
+      and(
+        eq(testConditionSets.id, id),
+        eq(testConditionSets.organizationId, organizationId)
+      )
+    );
+}
+
+
+// ==========================================================
+// PREDICTIONS
+// ==========================================================
+
+export async function createPrediction(data: {
+  organizationId: string;
+  formulationVersionId: string;
+  testConditionSetId: string;
+  propertyName: string;
+  predictedValue: number;
+  unit: string;
+  uncertaintyLower?: number;
+  uncertaintyUpper?: number;
+  confidenceLevel?: number;
+  probabilityInSpec?: number;
+  modelName: string;
+  modelVersion: string;
+  requestedBy: string;
+  featureImportance: Array<{
+    featureName: string;
+    importance: number;
+    contribution: number;
+  }>;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const predictionId = nanoid();
+
+  await db.insert(predictions).values({
+    id: predictionId,
+    organizationId: data.organizationId,
+    formulationVersionId: data.formulationVersionId,
+    testConditionSetId: data.testConditionSetId,
+    propertyName: data.propertyName,
+    predictedValue: data.predictedValue.toString(),
+    unit: data.unit,
+    uncertaintyLower: data.uncertaintyLower?.toString(),
+    uncertaintyUpper: data.uncertaintyUpper?.toString(),
+    confidenceLevel: data.confidenceLevel?.toString(),
+    probabilityInSpec: data.probabilityInSpec?.toString(),
+    modelName: data.modelName,
+    modelVersion: data.modelVersion,
+    requestedBy: data.requestedBy,
+  });
+
+  if (data.featureImportance.length > 0) {
+    await db.insert(predictionFeatures).values(
+      data.featureImportance.map((feature) => ({
+        id: nanoid(),
+        predictionId,
+        featureName: feature.featureName,
+        importance: feature.importance.toString(),
+        contribution: feature.contribution.toString(),
+      }))
+    );
+  }
+
+  return predictionId;
+}
+
+export async function getPredictions(
+  organizationId: string,
+  formulationVersionId?: string
+) {
+  const db = await getDb();
+  if (!db) return [];
+
+  if (formulationVersionId) {
+    return await db
+      .select()
+      .from(predictions)
+      .where(
+        and(
+          eq(predictions.organizationId, organizationId),
+          eq(predictions.formulationVersionId, formulationVersionId)
+        )
+      )
+      .orderBy(desc(predictions.createdAt));
+  }
+
+  return await db
+    .select()
+    .from(predictions)
+    .where(eq(predictions.organizationId, organizationId))
+    .orderBy(desc(predictions.createdAt));
+}
+
+export async function getPredictionById(id: string, organizationId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const preds = await db
+    .select()
+    .from(predictions)
+    .where(
+      and(
+        eq(predictions.id, id),
+        eq(predictions.organizationId, organizationId)
+      )
+    )
+    .limit(1);
+
+  if (preds.length === 0) return undefined;
+
+  const features = await db
+    .select()
+    .from(predictionFeatures)
+    .where(eq(predictionFeatures.predictionId, id));
+
+  return {
+    ...preds[0],
+    features,
+  };
 }

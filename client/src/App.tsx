@@ -9,6 +9,8 @@ import Materials from "./pages/Materials";
 import Suppliers from "./pages/Suppliers";
 import Formulations from "./pages/Formulations";
 import FormulationEditor from "./pages/FormulationEditor";
+import TestConditions from "./pages/TestConditions";
+import Predictions from "./pages/Predictions";
 
 function Router() {
   return (
@@ -16,8 +18,10 @@ function Router() {
       <Route path="/" component={Dashboard} />
       <Route path="/materials" component={Materials} />
       <Route path="/suppliers" component={Suppliers} />
-      <Route path="/formulations" component={Formulations} />
-      <Route path="/formulations/:familyId" component={FormulationEditor} />
+        <Route path="/formulations" component={Formulations} />
+      <Route path="/formulations/:id" component={FormulationEditor} />
+      <Route path="/test-conditions" component={TestConditions} />
+      <Route path="/predictions" component={Predictions} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

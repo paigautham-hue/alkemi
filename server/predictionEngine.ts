@@ -1,0 +1,367 @@
+/**
+ * ALKEMI™ AI Prediction Engine
+ * 
+ * This module provides property prediction for formulations using LLM-based reasoning
+ * with uncertainty quantification, confidence intervals, and feature importance.
+ */
+
+import { invokeLLM } from "./_core/llm";
+import * as db from "./db";
+
+export interface PredictionRequest {
+  organizationId: string;
+  formulationVersionId: string;
+  testConditionSetId: string;
+  propertyName: string;
+  targetSpec?: {
+    min?: number;
+    max?: number;
+    unit?: string;
+  };
+  requestedBy: string;
+}
+
+export interface PredictionResult {
+  predictedValue: number;
+  unit: string;
+  uncertaintyLower: number;
+  uncertaintyUpper: number;
+  confidenceLevel: number;
+  probabilityInSpec?: number;
+  modelName: string;
+  modelVersion: string;
+  featureImportance: Array<{
+    featureName: string;
+    importance: number;
+    contribution: number;
+  }>;
+  reasoning: string;
+}
+
+/**
+ * Main prediction function that orchestrates the entire prediction pipeline
+ */
+export async function predictProperty(
+  request: PredictionRequest
+): Promise<PredictionResult> {
+  // 1. Fetch formulation details with components
+  const formulation = await db.getFormulationVersionById(
+    request.formulationVersionId,
+    request.organizationId
+  );
+  
+  if (!formulation) {
+    throw new Error("Formulation not found");
+  }
+
+  const components = await db.getFormulationComponents(
+    request.formulationVersionId,
+    request.organizationId
+  );
+
+  // 2. Fetch test conditions
+  const testConditions = await db.getTestConditionSetById(
+    request.testConditionSetId,
+    request.organizationId
+  );
+
+  if (!testConditions) {
+    throw new Error("Test conditions not found");
+  }
+
+  // 3. Fetch material properties for all components
+  const materialsWithProperties = await Promise.all(
+    components.map(async (comp) => {
+      const material = await db.getMaterialById(comp.component.materialId, request.organizationId);
+      return {
+        component: comp.component,
+        material,
+      };
+    })
+  );
+
+  // 4. Build context for LLM
+  const formulationContext = buildFormulationContext(
+    formulation,
+    materialsWithProperties,
+    testConditions
+  );
+
+  // 5. Invoke LLM for prediction with structured output
+  const prediction = await invokeLLMForPrediction(
+    formulationContext,
+    request.propertyName,
+    request.targetSpec
+  );
+
+  // 6. Calculate probability in spec if target spec provided
+  let probabilityInSpec: number | undefined;
+  if (request.targetSpec && (request.targetSpec.min !== undefined || request.targetSpec.max !== undefined)) {
+    probabilityInSpec = calculateProbabilityInSpec(
+      prediction.predictedValue,
+      prediction.uncertaintyLower,
+      prediction.uncertaintyUpper,
+      request.targetSpec
+    );
+  }
+
+  return {
+    ...prediction,
+    probabilityInSpec,
+  };
+}
+
+/**
+ * Build comprehensive context for LLM prediction
+ */
+function buildFormulationContext(
+  formulation: any,
+  components: any[],
+  testConditions: any
+): string {
+  const componentsList = components
+    .map((comp) => {
+      const mat = comp.material;
+      if (!mat) return null;
+
+      return `
+- ${mat.name} (${mat.code}): ${comp.percentage}%
+  * Category: ${mat.category || "N/A"}
+  * CAS: ${mat.casNumber || "N/A"}
+  * Density: ${mat.density || "N/A"}
+  * Viscosity: ${mat.viscosity || "N/A"}
+  * Molecular Weight: ${mat.molecularWeight || "N/A"}
+  * Hansen Parameters: δD=${mat.hansenD || "N/A"}, δP=${mat.hansenP || "N/A"}, δH=${mat.hansenH || "N/A"}
+      `.trim();
+    })
+    .filter(Boolean)
+    .join("\n\n");
+
+  const testConditionsList = testConditions.parameters
+    .map((param: any) => `- ${param.parameterName}: ${param.parameterValue}${param.unit ? " " + param.unit : ""}`)
+    .join("\n");
+
+  return `
+# Formulation Details
+
+**Formulation Code:** ${formulation.versionCode}
+**Description:** ${formulation.description || "No description"}
+**Branch Type:** ${formulation.branchType}
+
+## Components (Total: ${components.length})
+
+${componentsList}
+
+## Test Conditions
+
+${testConditionsList}
+
+## Additional Context
+
+- Domain: ${formulation.domainId}
+- Status: ${formulation.status}
+- Created: ${new Date(formulation.createdAt).toLocaleDateString()}
+  `.trim();
+}
+
+/**
+ * Invoke LLM with structured output for property prediction
+ */
+async function invokeLLMForPrediction(
+  formulationContext: string,
+  propertyName: string,
+  targetSpec?: { min?: number; max?: number; unit?: string }
+): Promise<Omit<PredictionResult, "probabilityInSpec">> {
+  const specContext = targetSpec
+    ? `\n\nTarget Specification:\n- Min: ${targetSpec.min !== undefined ? targetSpec.min : "N/A"}\n- Max: ${targetSpec.max !== undefined ? targetSpec.max : "N/A"}\n- Unit: ${targetSpec.unit || "N/A"}`
+    : "";
+
+  const systemPrompt = `You are an expert formulation chemist with deep knowledge of material science, polymer chemistry, and predictive modeling. Your task is to predict the value of a specific property for a given formulation based on its composition, material properties, and test conditions.
+
+You must provide:
+1. A predicted value for the property
+2. Uncertainty bounds (lower and upper confidence limits at 95% confidence level)
+3. Feature importance scores showing which components/factors contribute most
+4. Clear reasoning explaining your prediction
+
+Consider:
+- Synergistic and antagonistic effects between components
+- Impact of test conditions on the property
+- Material properties (Hansen parameters, viscosity, density, molecular weight)
+- Typical ranges for this property in the domain
+- Component percentages and their influence
+
+Be conservative with uncertainty estimates - it's better to have wider bounds than overconfident narrow ones.`;
+
+  const userPrompt = `${formulationContext}${specContext}
+
+Please predict the following property: **${propertyName}**
+
+Provide your prediction in the following structured format.`;
+
+  try {
+    const response = await invokeLLM({
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "property_prediction",
+          strict: true,
+          schema: {
+            type: "object",
+            properties: {
+              predictedValue: {
+                type: "number",
+                description: "The predicted value of the property",
+              },
+              unit: {
+                type: "string",
+                description: "The unit of measurement for the property",
+              },
+              uncertaintyLower: {
+                type: "number",
+                description: "Lower bound of 95% confidence interval",
+              },
+              uncertaintyUpper: {
+                type: "number",
+                description: "Upper bound of 95% confidence interval",
+              },
+              featureImportance: {
+                type: "array",
+                description: "List of features with their importance scores",
+                items: {
+                  type: "object",
+                  properties: {
+                    featureName: {
+                      type: "string",
+                      description: "Name of the feature (component or condition)",
+                    },
+                    importance: {
+                      type: "number",
+                      description: "Importance score (0-1, sum to 1)",
+                    },
+                    contribution: {
+                      type: "number",
+                      description: "Contribution to predicted value (can be positive or negative)",
+                    },
+                  },
+                  required: ["featureName", "importance", "contribution"],
+                  additionalProperties: false,
+                },
+              },
+              reasoning: {
+                type: "string",
+                description: "Detailed explanation of the prediction and key factors",
+              },
+            },
+            required: [
+              "predictedValue",
+              "unit",
+              "uncertaintyLower",
+              "uncertaintyUpper",
+              "featureImportance",
+              "reasoning",
+            ],
+            additionalProperties: false,
+          },
+        },
+      },
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content || typeof content !== 'string') {
+      throw new Error("No valid response from LLM");
+    }
+
+    const parsed = JSON.parse(content);
+
+    return {
+      predictedValue: parsed.predictedValue,
+      unit: parsed.unit,
+      uncertaintyLower: parsed.uncertaintyLower,
+      uncertaintyUpper: parsed.uncertaintyUpper,
+      confidenceLevel: 0.95, // 95% confidence interval
+      modelName: response.model || "gpt-4",
+      modelVersion: "1.0",
+      featureImportance: parsed.featureImportance,
+      reasoning: parsed.reasoning,
+    };
+  } catch (error) {
+    console.error("[PredictionEngine] LLM invocation failed:", error);
+    throw new Error(`Prediction failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+  }
+}
+
+/**
+ * Calculate probability that the predicted value falls within specification
+ * 
+ * Assumes normal distribution of prediction uncertainty
+ */
+function calculateProbabilityInSpec(
+  predictedValue: number,
+  uncertaintyLower: number,
+  uncertaintyUpper: number,
+  targetSpec: { min?: number; max?: number }
+): number {
+  // Estimate standard deviation from 95% confidence interval
+  // For normal distribution: 95% CI = mean ± 1.96 * σ
+  const sigma = (uncertaintyUpper - uncertaintyLower) / (2 * 1.96);
+
+  // Calculate z-scores for spec limits
+  const calculateZScore = (x: number) => (x - predictedValue) / sigma;
+
+  // Standard normal CDF approximation
+  const normalCDF = (z: number): number => {
+    const t = 1 / (1 + 0.2316419 * Math.abs(z));
+    const d = 0.3989423 * Math.exp((-z * z) / 2);
+    const p =
+      d *
+      t *
+      (0.3193815 +
+        t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+    return z > 0 ? 1 - p : p;
+  };
+
+  let probability = 1.0;
+
+  if (targetSpec.min !== undefined) {
+    const zMin = calculateZScore(targetSpec.min);
+    probability *= 1 - normalCDF(zMin);
+  }
+
+  if (targetSpec.max !== undefined) {
+    const zMax = calculateZScore(targetSpec.max);
+    probability *= normalCDF(zMax);
+  }
+
+  // Clamp to [0, 1] and round to 4 decimal places
+  return Math.max(0, Math.min(1, probability));
+}
+
+/**
+ * Store prediction result in database
+ */
+export async function storePrediction(
+  request: PredictionRequest,
+  result: PredictionResult
+): Promise<string> {
+  return await db.createPrediction({
+    organizationId: request.organizationId,
+    formulationVersionId: request.formulationVersionId,
+    testConditionSetId: request.testConditionSetId,
+    propertyName: request.propertyName,
+    predictedValue: result.predictedValue,
+    unit: result.unit,
+    uncertaintyLower: result.uncertaintyLower,
+    uncertaintyUpper: result.uncertaintyUpper,
+    confidenceLevel: result.confidenceLevel,
+    probabilityInSpec: result.probabilityInSpec,
+    modelName: result.modelName,
+    modelVersion: result.modelVersion,
+    requestedBy: request.requestedBy,
+    featureImportance: result.featureImportance,
+  });
+}

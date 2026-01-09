@@ -259,3 +259,127 @@
 - [x] Add trial_measurements table
 - [x] Run database migrations via SQL script
 - [x] Verify all 25 tables created successfully
+
+
+## Phase 5: Test Conditions Management (Completed)
+- [x] Add test conditions database helpers to db.ts
+- [x] Create testConditions tRPC router with CRUD operations
+- [x] Build TestConditionsPage with list view
+- [x] Create TestConditionSetCreateDialog component
+- [x] Add parameter management UI (add/remove parameters)
+- [x] Implement standard/non-standard flag
+- [x] Add domain filtering
+- [x] Add test condition set deletion
+- [ ] Write tests for test conditions API (deferred to final testing phase)
+
+## Phase 6: AI Prediction Engine (Completed)
+- [x] Create predictions database helpers
+- [x] Build prediction engine service with LLM integration
+- [x] Implement uncertainty quantification calculations (95% CI)
+- [x] Add feature importance extraction
+- [x] Create predictions tRPC router
+- [x] Build PredictionsPage with history view
+- [x] Create RunPredictionDialog with formulation and test condition selectors
+- [x] Add prediction results visualization with confidence intervals
+- [x] Implement probability_in_spec calculations
+- [x] Link all predictions to test condition sets
+- [ ] Write tests for prediction engine (deferred to final testing phase)
+
+## Phase 7: Intelligent LLM Router
+- [ ] Seed llm_models table with Anthropic, OpenAI, Google models
+- [ ] Create LLM router service with provider selection logic
+- [ ] Implement cost budget tracking (per-request, per-user-day, per-org-day)
+- [ ] Add content redaction for sensitive data
+- [ ] Create organization-level provider allowlist/denylist
+- [ ] Build LLM settings page for admins
+- [ ] Add cost analytics dashboard
+- [ ] Implement LLM audit logging
+- [ ] Write tests for LLM router and budget enforcement
+
+## Phase 8: Multi-LLM Debate Engine
+- [ ] Create debate engine service
+- [ ] Implement persona generation for chemistry experts
+- [ ] Build parallel LLM consultation system
+- [ ] Add cross-critique mechanism
+- [ ] Implement synthesis and consensus building
+- [ ] Create debate results visualization
+- [ ] Add debate history tracking
+- [ ] Build DebatePage UI for complex questions
+- [ ] Write tests for debate engine
+
+## Phase 9: Document RAG System
+- [ ] Create documents database helpers
+- [ ] Build document upload service with S3 integration
+- [ ] Implement PDF text extraction
+- [ ] Add document chunking logic
+- [ ] Integrate vector embedding generation (mock for now, real in production)
+- [ ] Create hybrid search (keyword + semantic)
+- [ ] Build DocumentsPage with upload and search
+- [ ] Add document viewer with source citation
+- [ ] Implement ingestion status tracking
+- [ ] Write tests for document processing
+
+## Phase 10: Versioned Compliance Engine
+- [ ] Create compliance database helpers
+- [ ] Seed compliance_sources with sample regulations
+- [ ] Seed compliance_datasets with sample data
+- [ ] Seed compliance_rules with versioned rules
+- [ ] Build compliance checking service
+- [ ] Create CompliancePage with rules management
+- [ ] Add formulation compliance checking UI
+- [ ] Implement compliance violation reporting
+- [ ] Add compliance history tracking
+- [ ] Write tests for compliance engine
+
+## Phase 11: Approval Workflow State Machine
+- [ ] Create approval workflow database helpers
+- [ ] Build approval state machine service
+- [ ] Implement state transitions (draft→submitted→in_review→approved/rejected)
+- [ ] Create ApprovalsPage with request list
+- [ ] Build ApprovalRequestDialog
+- [ ] Add review UI for managers/admins
+- [ ] Implement approval notifications
+- [ ] Add approval history and audit trail
+- [ ] Write tests for approval workflow
+
+## Phase 12: Supplier Intelligence & Risk Assessment
+- [ ] Add supplier risk scoring algorithm
+- [ ] Implement supplier performance tracking
+- [ ] Create supplier comparison tool
+- [ ] Add supplier qualification workflow
+- [ ] Build supplier analytics dashboard
+- [ ] Implement supplier alerts for risk changes
+- [ ] Write tests for supplier intelligence
+
+## Phase 13: Analytics Dashboards & Monitoring
+- [ ] Create analytics database helpers
+- [ ] Build organization-wide analytics dashboard
+- [ ] Add formulation success rate tracking
+- [ ] Implement prediction accuracy monitoring
+- [ ] Create LLM cost analytics with charts
+- [ ] Add user activity tracking
+- [ ] Build admin monitoring dashboard
+- [ ] Implement real-time notifications for critical events
+- [ ] Write tests for analytics
+
+## Phase 14: Data Digitization Pipeline
+- [ ] Create digitization workflow UI
+- [ ] Add scan upload interface
+- [ ] Implement OCR integration (mock for now)
+- [ ] Build data extraction UI
+- [ ] Add review and validation interface
+- [ ] Implement batch processing
+- [ ] Create digitization queue management
+- [ ] Write tests for digitization pipeline
+
+## Phase 15: Final Testing & Polish
+- [ ] Run comprehensive integration tests
+- [ ] Test all CRUD operations end-to-end
+- [ ] Verify multi-tenant isolation across all features
+- [ ] Test RBAC permissions for all roles
+- [ ] Add loading states and error handling everywhere
+- [ ] Implement proper empty states
+- [ ] Add helpful tooltips and documentation
+- [ ] Optimize database queries
+- [ ] Add proper indexes for performance
+- [ ] Final UI polish and consistency check

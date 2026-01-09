@@ -5,6 +5,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import * as db from "./db";
+import * as predictionEngine from "./predictionEngine";
 
 // ==========================================================
 // MIDDLEWARE FOR RBAC
@@ -303,6 +304,121 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         await db.deleteFormulationComponent(input.id, ctx.user.organizationId);
         return { success: true };
+      }),
+  }),
+
+  // ==========================================================
+  // TEST CONDITIONS
+  // ==========================================================
+  testConditions: router({
+    list: protectedProcedure
+      .input(z.object({
+        domainId: z.string().uuid().optional(),
+      }).optional())
+      .query(async ({ ctx, input }) => {
+        return db.getTestConditionSets(ctx.user.organizationId, input?.domainId);
+      }),
+
+    getById: protectedProcedure
+      .input(z.object({ id: z.string().uuid() }))
+      .query(async ({ ctx, input }) => {
+        const testConditionSet = await db.getTestConditionSetById(input.id, ctx.user.organizationId);
+        if (!testConditionSet) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Test condition set not found" });
+        }
+        return testConditionSet;
+      }),
+
+    create: protectedProcedure
+      .input(z.object({
+        domainId: z.string().uuid(),
+        name: z.string().min(1),
+        description: z.string().optional(),
+        isStandard: z.boolean().default(false),
+        parameters: z.array(z.object({
+          parameterName: z.string().min(1),
+          parameterValue: z.string().min(1),
+          unit: z.string().optional(),
+        })),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const id = await db.createTestConditionSet({
+          ...input,
+          organizationId: ctx.user.organizationId,
+          createdBy: ctx.user.id,
+        });
+        return { id };
+      }),
+
+    delete: adminProcedure
+      .input(z.object({ id: z.string().uuid() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.deleteTestConditionSet(input.id, ctx.user.organizationId);
+        return { success: true };
+      }),
+  }),
+
+  // ==========================================================
+  // PREDICTIONS
+  // ==========================================================
+  predictions: router({
+    list: protectedProcedure
+      .input(z.object({
+        formulationVersionId: z.string().uuid().optional(),
+      }).optional())
+      .query(async ({ ctx, input }) => {
+        return db.getPredictions(ctx.user.organizationId, input?.formulationVersionId);
+      }),
+
+    getById: protectedProcedure
+      .input(z.object({ id: z.string().uuid() }))
+      .query(async ({ ctx, input }) => {
+        const prediction = await db.getPredictionById(input.id, ctx.user.organizationId);
+        if (!prediction) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Prediction not found" });
+        }
+        return prediction;
+      }),
+
+    runPrediction: protectedProcedure
+      .input(z.object({
+        formulationVersionId: z.string().uuid(),
+        testConditionSetId: z.string().uuid(),
+        propertyName: z.string().min(1),
+        targetSpec: z.object({
+          min: z.number().optional(),
+          max: z.number().optional(),
+          unit: z.string().optional(),
+        }).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Run prediction
+        const result = await predictionEngine.predictProperty({
+          organizationId: ctx.user.organizationId,
+          formulationVersionId: input.formulationVersionId,
+          testConditionSetId: input.testConditionSetId,
+          propertyName: input.propertyName,
+          targetSpec: input.targetSpec,
+          requestedBy: ctx.user.id,
+        });
+
+        // Store prediction in database
+        const predictionId = await predictionEngine.storePrediction(
+          {
+            organizationId: ctx.user.organizationId,
+            formulationVersionId: input.formulationVersionId,
+            testConditionSetId: input.testConditionSetId,
+            propertyName: input.propertyName,
+            targetSpec: input.targetSpec,
+            requestedBy: ctx.user.id,
+          },
+          result
+        );
+
+        return {
+          id: predictionId,
+          ...result,
+        };
       }),
   }),
 });

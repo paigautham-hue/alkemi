@@ -421,6 +421,48 @@ export const appRouter = router({
         };
       }),
   }),
+
+  // Debate Engine Router
+  debate: router({
+    conduct: protectedProcedure
+      .input(
+        z.object({
+          question: z.string().min(10),
+          context: z.string().optional(),
+          domain: z.string().optional(),
+          numParticipants: z.number().min(2).max(5).default(3),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const debateEngine = await import("./debateEngine");
+        
+        const result = await debateEngine.conductDebate({
+          organizationId: ctx.user.organizationId,
+          userId: ctx.user.id,
+          question: input.question,
+          context: input.context,
+          domain: input.domain,
+          numParticipants: input.numParticipants,
+        });
+
+        // Store debate session
+        await db.createDebateSession({
+          organizationId: ctx.user.organizationId,
+          userId: ctx.user.id,
+          question: input.question,
+          context: input.context,
+          domain: input.domain,
+          numParticipants: input.numParticipants,
+          result,
+        });
+
+        return result;
+      }),
+
+    list: protectedProcedure.query(async ({ ctx }) => {
+      return await db.getDebateSessions(ctx.user.organizationId);
+    }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

@@ -9,8 +9,9 @@ import Materials from "./pages/Materials";
 import Suppliers from "./pages/Suppliers";
 import Formulations from "./pages/Formulations";
 import FormulationEditor from "./pages/FormulationEditor";
-import TestConditions from "./pages/TestConditions";
 import Predictions from "./pages/Predictions";
+import TestConditions from "./pages/TestConditions";
+import Debate from "./pages/Debate";
 
 function Router() {
   return (
@@ -20,8 +21,9 @@ function Router() {
       <Route path="/suppliers" component={Suppliers} />
         <Route path="/formulations" component={Formulations} />
       <Route path="/formulations/:id" component={FormulationEditor} />
-      <Route path="/test-conditions" component={TestConditions} />
       <Route path="/predictions" component={Predictions} />
+      <Route path="/test-conditions" component={TestConditions} />
+      <Route path="/debate" component={Debate} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

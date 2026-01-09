@@ -904,3 +904,48 @@ export async function getLLMAuditLogs(
 
   return logs;
 }
+
+
+// ==========================================================
+// DEBATE SESSIONS
+// ==========================================================
+
+export async function createDebateSession(data: {
+  organizationId: string;
+  userId: string;
+  question: string;
+  context?: string;
+  domain?: string;
+  numParticipants: number;
+  result: any;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const id = nanoid();
+
+  // Note: debateSessions table will be imported after schema update
+  await db.execute(
+    sql`INSERT INTO debate_sessions (id, organization_id, user_id, question, context, domain, num_participants, result, created_at) 
+        VALUES (${id}, ${data.organizationId}, ${data.userId}, ${data.question}, ${data.context || null}, ${data.domain || null}, ${data.numParticipants}, ${JSON.stringify(data.result)}, NOW())`
+  );
+
+  return id;
+}
+
+export async function getDebateSessions(organizationId: string, userId?: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  let query = sql`SELECT * FROM debate_sessions WHERE organization_id = ${organizationId}`;
+  
+  if (userId) {
+    query = sql`${query} AND user_id = ${userId}`;
+  }
+
+  query = sql`${query} ORDER BY created_at DESC LIMIT 50`;
+
+  const result = await db.execute(query);
+
+  return result as any[];
+}

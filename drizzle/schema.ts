@@ -628,3 +628,20 @@ export type InsertTrial = typeof trials.$inferInsert;
 
 export type TrialMeasurement = typeof trialMeasurements.$inferSelect;
 export type InsertTrialMeasurement = typeof trialMeasurements.$inferInsert;
+
+
+// Debate Sessions Table
+export const debateSessions = mysqlTable("debate_sessions", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  organizationId: varchar("organization_id", { length: 36 }).notNull().references(() => organizations.id),
+  userId: varchar("user_id", { length: 36 }).notNull().references(() => users.id),
+  question: text("question").notNull(),
+  context: text("context"),
+  domain: varchar("domain", { length: 255 }),
+  numParticipants: int("num_participants").notNull(),
+  result: json("result").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type DebateSession = typeof debateSessions.$inferSelect;
+export type InsertDebateSession = typeof debateSessions.$inferInsert;

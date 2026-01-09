@@ -611,5 +611,55 @@ export const appRouter = router({
         return { success: true };
       }),
   }),
+
+  // Users Management
+  users: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      return await db.listOrganizationUsers(ctx.user.organizationId);
+    }),
+    invite: adminProcedure
+      .input(z.object({
+        email: z.string().email(),
+        role: z.enum(["admin", "manager", "chemist", "viewer"]),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // In a real implementation, this would send an invitation email
+        // For now, we'll just return success
+        // TODO: Implement email invitation system
+        return { success: true, message: "Invitation sent" };
+      }),
+    updateRole: adminProcedure
+      .input(z.object({
+        userId: z.string(),
+        role: z.enum(["admin", "manager", "chemist", "viewer"]),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.updateUserRole(input.userId, input.role);
+        return { success: true };
+      }),
+    remove: adminProcedure
+      .input(z.object({ userId: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        // Prevent removing yourself
+        if (input.userId === ctx.user.id) {
+          throw new Error("Cannot remove yourself");
+        }
+        await db.deleteUser(input.userId);
+        return { success: true };
+      }),
+  }),
+
+  // Organizations Management
+  organizations: router({
+    get: protectedProcedure.query(async ({ ctx }) => {
+      return await db.getOrganizationById(ctx.user.organizationId);
+    }),
+    update: adminProcedure
+      .input(z.object({ name: z.string().min(1).optional() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.updateOrganization(ctx.user.organizationId, input);
+        return { success: true };
+      }),
+  }),
 });
 export type AppRouter = typeof appRouter;

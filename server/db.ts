@@ -1161,3 +1161,65 @@ export async function deleteDocument(documentId: string, organizationId: string)
     .delete(documents)
     .where(and(eq(documents.id, documentId), eq(documents.organizationId, organizationId)));
 }
+
+
+// ============================================================================
+// Users Management
+// ============================================================================
+
+export async function listOrganizationUsers(organizationId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db
+    .select()
+    .from(users)
+    .where(eq(users.organizationId, organizationId))
+    .orderBy(users.createdAt);
+}
+
+export async function updateUserRole(userId: string, role: "admin" | "manager" | "chemist" | "viewer") {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db
+    .update(users)
+    .set({ role, updatedAt: new Date() })
+    .where(eq(users.id, userId));
+}
+
+export async function deleteUser(userId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db
+    .delete(users)
+    .where(eq(users.id, userId));
+}
+
+// ============================================================================
+// Organizations Management
+// ============================================================================
+
+export async function getOrganizationById(organizationId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db
+    .select()
+    .from(organizations)
+    .where(eq(organizations.id, organizationId))
+    .limit(1);
+  
+  return result[0];
+}
+
+export async function updateOrganization(organizationId: string, data: { name?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db
+    .update(organizations)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(organizations.id, organizationId));
+}

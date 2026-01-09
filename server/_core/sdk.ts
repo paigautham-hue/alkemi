@@ -279,12 +279,22 @@ class SDKServer {
           userInfo.openId,
           userInfo.name || null
         );
+        // Determine role based on email (super admin check)
+        const SUPER_ADMIN_EMAILS = [
+          "paigautham@gmail.com",
+          "gpai@msn.com",
+          "gautham@manipalgroup.info"
+        ];
+        const normalizedEmail = userInfo.email?.toLowerCase().trim();
+        const role = normalizedEmail && SUPER_ADMIN_EMAILS.includes(normalizedEmail) ? "admin" : "chemist";
+        
         await db.upsertUser({
           organizationId,
           openId: userInfo.openId,
           name: userInfo.name || null,
           email: userInfo.email ?? null,
           loginMethod: userInfo.loginMethod ?? userInfo.platform ?? null,
+          role,
           lastSignedIn: signedInAt,
         });
         user = await db.getUserByOpenId(userInfo.openId);

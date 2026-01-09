@@ -4,9 +4,22 @@ import * as db from "../db";
 import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
 
+// Super admin email whitelist
+const SUPER_ADMIN_EMAILS = [
+  "paigautham@gmail.com",
+  "gpai@msn.com",
+  "gautham@manipalgroup.info"
+];
+
 function getQueryParam(req: Request, key: string): string | undefined {
   const value = req.query[key];
   return typeof value === "string" ? value : undefined;
+}
+
+function determineUserRole(email: string | null | undefined): "admin" | "chemist" {
+  if (!email) return "chemist";
+  const normalizedEmail = email.toLowerCase().trim();
+  return SUPER_ADMIN_EMAILS.includes(normalizedEmail) ? "admin" : "chemist";
 }
 
 export function registerOAuthRoutes(app: Express) {
@@ -34,14 +47,22 @@ export function registerOAuthRoutes(app: Express) {
         userInfo.name || null
       );
       
+      // Determine role based on email
+      const role = determineUserRole(userInfo.email);
+      
       await db.upsertUser({
         organizationId,
         openId: userInfo.openId,
         name: userInfo.name || null,
         email: userInfo.email ?? null,
         loginMethod: userInfo.loginMethod ?? userInfo.platform ?? null,
+        role,
         lastSignedIn: new Date(),
       });
+      
+      if (role === "admin") {
+        console.log(`[OAuth] Super admin logged in: ${userInfo.email}`);
+      }
 
       const sessionToken = await sdk.createSessionToken(userInfo.openId, {
         name: userInfo.name || "",

@@ -463,6 +463,96 @@ export const appRouter = router({
       return await db.getDebateSessions(ctx.user.organizationId);
     }),
   }),
+
+  // Approval Workflow Router
+  approvals: router({
+    create: protectedProcedure
+      .input(
+        z.object({
+          formulationVersionId: z.string(),
+          reviewers: z.array(z.string()),
+          comments: z.string().optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const approvalWorkflow = await import("./approvalWorkflow");
+        
+        const requestId = await approvalWorkflow.createApprovalRequest({
+          organizationId: ctx.user.organizationId,
+          formulationVersionId: input.formulationVersionId,
+          requestedBy: ctx.user.id,
+          reviewers: input.reviewers,
+          comments: input.comments,
+        });
+
+        return { id: requestId };
+      }),
+
+    review: protectedProcedure
+      .input(
+        z.object({
+          approvalRequestId: z.string(),
+          action: z.enum(["approve", "reject", "request_revision"]),
+          comments: z.string(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const approvalWorkflow = await import("./approvalWorkflow");
+        
+        await approvalWorkflow.reviewApproval({
+          approvalRequestId: input.approvalRequestId,
+          reviewerId: ctx.user.id,
+          action: input.action,
+          comments: input.comments,
+        });
+
+        return { success: true };
+      }),
+
+    resubmit: protectedProcedure
+      .input(
+        z.object({
+          approvalRequestId: z.string(),
+          comments: z.string(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const approvalWorkflow = await import("./approvalWorkflow");
+        
+        await approvalWorkflow.resubmitAfterRevision(
+          input.approvalRequestId,
+          ctx.user.id,
+          input.comments
+        );
+
+        return { success: true };
+      }),
+
+    listPending: protectedProcedure.query(async ({ ctx }) => {
+      return await db.getPendingApprovalRequests(ctx.user.organizationId);
+    }),
+
+    listMyRequests: protectedProcedure.query(async ({ ctx }) => {
+      return await db.getPendingApprovalRequests(
+        ctx.user.organizationId,
+        ctx.user.id
+      );
+    }),
+
+    getHistory: protectedProcedure
+      .input(z.object({ approvalRequestId: z.string() }))
+      .query(async ({ input }) => {
+        return await db.getApprovalReviews(input.approvalRequestId);
+      }),
+
+    getByFormulation: protectedProcedure
+      .input(z.object({ formulationVersionId: z.string() }))
+      .query(async ({ input }) => {
+        return await db.getApprovalRequestsByFormulation(
+          input.formulationVersionId
+        );
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

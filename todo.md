@@ -383,3 +383,44 @@
 - [ ] Optimize database queries
 - [ ] Add proper indexes for performance
 - [ ] Final UI polish and consistency check
+
+
+## Phase 15: Approval Workflow State Machine (Completed)
+- [x] Add approval workflow database helpers
+- [x] Create approval workflow state machine service
+- [x] Implement state transitions (draft→submitted→in_review→approved/rejected)
+- [x] Add review comment system
+- [x] Create approval request API endpoints (create, review, resubmit, listPending, listMyRequests, getHistory, getByFormulation)
+- [x] Build approval workflow UI components
+- [x] Add approval status badges with icons
+- [x] Create review dialog for managers/admins with approve/reject/request_revision actions
+- [x] Implement revision request flow
+- [x] Add Approvals page to navigation
+- [x] Create tabs for pending reviews and my requests
+
+## Phase 16: Enhanced Formulation Editor
+- [ ] Build component selector with material search
+- [ ] Add drag-and-drop component reordering
+- [ ] Implement real-time composition validation (sum to 100%)
+- [ ] Add percentage input with automatic recalculation
+- [ ] Create version comparison view (side-by-side)
+- [ ] Build formulation lineage visualization
+- [ ] Add formulation export to CSV/Excel
+- [ ] Implement formulation cloning
+- [ ] Add formulation notes and comments
+- [ ] Create formulation print view
+
+## Phase 17: Analytics Dashboard & Final Polish (Completed)
+- [x] Create analytics page layout with 3 tabs (Overview, AI Usage, Formulations)
+- [x] Add LLM usage statistics and request tracking
+- [x] Add cost analytics with budget visualization
+- [x] Create prediction accuracy tracking (85% success rate)
+- [x] Add formulation statistics (families, test conditions, predictions)
+- [x] Implement material usage analytics
+- [x] Add supplier performance metrics (qualified suppliers tracking)
+- [x] Create system activity overview
+- [x] Add cost budget status with progress bars
+- [x] Add Analytics page to navigation
+- [x] Implement comprehensive metrics dashboard
+- [ ] Write comprehensive tests for all new features (deferred)
+- [ ] Final checkpoint and delivery

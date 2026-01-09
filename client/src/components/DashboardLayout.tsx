@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, Package, Building2, FlaskConical, TestTube, Sparkles, MessageSquare } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, Package, Building2, FlaskConical, TestTube, Sparkles, MessageSquare, CheckSquare, BarChart3 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -35,6 +35,8 @@ const menuItems = [
   { icon: TestTube, label: "Test Conditions", path: "/test-conditions" },
   { icon: Sparkles, label: "Predictions", path: "/predictions" },
   { icon: MessageSquare, label: "AI Debate", path: "/debate" },
+  { icon: CheckSquare, label: "Approvals", path: "/approvals" },
+  { icon: BarChart3, label: "Analytics", path: "/analytics" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";

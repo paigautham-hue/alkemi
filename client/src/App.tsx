@@ -12,6 +12,8 @@ import FormulationEditor from "./pages/FormulationEditor";
 import Predictions from "./pages/Predictions";
 import TestConditions from "./pages/TestConditions";
 import Debate from "./pages/Debate";
+import Approvals from "./pages/Approvals";
+import Analytics from "./pages/Analytics";
 
 function Router() {
   return (
@@ -24,6 +26,8 @@ function Router() {
       <Route path="/predictions" component={Predictions} />
       <Route path="/test-conditions" component={TestConditions} />
       <Route path="/debate" component={Debate} />
+      <Route path="/approvals" component={Approvals} />
+      <Route path="/analytics" component={Analytics} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

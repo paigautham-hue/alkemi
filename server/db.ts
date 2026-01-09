@@ -949,3 +949,137 @@ export async function getDebateSessions(organizationId: string, userId?: string)
 
   return result as any[];
 }
+
+
+// ==========================================================
+// APPROVAL WORKFLOW
+// ==========================================================
+
+export async function createApprovalRequest(data: {
+  id: string;
+  organizationId: string;
+  formulationVersionId: string;
+  requestedBy: string;
+  status: string;
+  reviewers: string[];
+  submittedAt: Date;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.execute(
+    sql`INSERT INTO approval_requests (id, organization_id, formulation_version_id, requested_by, status, reviewers, submitted_at, created_at) 
+        VALUES (${data.id}, ${data.organizationId}, ${data.formulationVersionId}, ${data.requestedBy}, ${data.status}, ${JSON.stringify(data.reviewers)}, ${data.submittedAt}, NOW())`
+  );
+
+  return data.id;
+}
+
+export async function getApprovalRequest(id: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.execute(
+    sql`SELECT * FROM approval_requests WHERE id = ${id}`
+  );
+
+  return (result as any[])[0] || null;
+}
+
+export async function updateApprovalRequestStatus(id: string, status: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.execute(
+    sql`UPDATE approval_requests SET status = ${status}, updated_at = NOW() WHERE id = ${id}`
+  );
+}
+
+export async function completeApprovalRequest(id: string, completedAt: Date) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.execute(
+    sql`UPDATE approval_requests SET completed_at = ${completedAt}, updated_at = NOW() WHERE id = ${id}`
+  );
+}
+
+export async function createApprovalReview(data: {
+  id: string;
+  approvalRequestId: string;
+  reviewerId: string;
+  action: string;
+  comments: string;
+  reviewedAt: Date;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.execute(
+    sql`INSERT INTO approval_reviews (id, approval_request_id, reviewer_id, action, comments, reviewed_at, created_at) 
+        VALUES (${data.id}, ${data.approvalRequestId}, ${data.reviewerId}, ${data.action}, ${data.comments}, ${data.reviewedAt}, NOW())`
+  );
+
+  return data.id;
+}
+
+export async function getApprovalReviews(approvalRequestId: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const result = await db.execute(
+    sql`SELECT ar.*, u.name as reviewer_name 
+        FROM approval_reviews ar 
+        LEFT JOIN users u ON ar.reviewer_id = u.id 
+        WHERE ar.approval_request_id = ${approvalRequestId} 
+        ORDER BY ar.reviewed_at ASC`
+  );
+
+  return result as any[];
+}
+
+export async function getPendingApprovalRequests(
+  organizationId: string,
+  reviewerId?: string
+) {
+  const db = await getDb();
+  if (!db) return [];
+
+  let query = sql`SELECT ar.*, 
+                         fv.version_name as formulation_version_name,
+                         ff.product_name as formulation_product_name,
+                         u.name as requested_by_name
+                  FROM approval_requests ar
+                  LEFT JOIN formulation_versions fv ON ar.formulation_version_id = fv.id
+                  LEFT JOIN formulation_families ff ON fv.family_id = ff.id
+                  LEFT JOIN users u ON ar.requested_by = u.id
+                  WHERE ar.organization_id = ${organizationId}
+                  AND ar.status IN ('submitted', 'in_review', 'revision_requested')`;
+
+  if (reviewerId) {
+    query = sql`${query} AND JSON_CONTAINS(ar.reviewers, '"${reviewerId}"')`;
+  }
+
+  query = sql`${query} ORDER BY ar.submitted_at DESC`;
+
+  const result = await db.execute(query);
+
+  return result as any[];
+}
+
+export async function getApprovalRequestsByFormulation(
+  formulationVersionId: string
+) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const result = await db.execute(
+    sql`SELECT ar.*, u.name as requested_by_name
+        FROM approval_requests ar
+        LEFT JOIN users u ON ar.requested_by = u.id
+        WHERE ar.formulation_version_id = ${formulationVersionId}
+        ORDER BY ar.submitted_at DESC`
+  );
+
+  return result as any[];
+}

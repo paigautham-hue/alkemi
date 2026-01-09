@@ -222,3 +222,10 @@
 - [x] Check suppliers table schema (country is varchar(2) for ISO codes)
 - [x] Fix seedDemoDataSimple.ts to use 2-letter country codes (US, DE)
 - [x] Ready for testing on published site
+
+## Demo Data Column Count Fix ✅ COMPLETE
+- [x] Count exact columns in suppliers table schema (14 columns)
+- [x] Check what createSupplier is actually inserting  
+- [x] Fix createSupplier to only insert provided fields explicitly
+- [x] Avoid spreading undefined fields that cause SQL errors
+- [ ] Test demo data loads all items successfully

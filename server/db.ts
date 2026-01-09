@@ -327,7 +327,25 @@ export async function createSupplier(supplier: InsertSupplier) {
   if (!db) throw new Error("Database not available");
 
   const id = crypto.randomUUID();
-  await db.insert(suppliers).values({ ...supplier, id });
+  // Only include fields that are actually provided
+  const insertData: any = {
+    id,
+    organizationId: supplier.organizationId,
+    code: supplier.code,
+    name: supplier.name,
+  };
+  
+  // Add optional fields only if provided
+  if (supplier.country !== undefined) insertData.country = supplier.country;
+  if (supplier.contactEmail !== undefined) insertData.contactEmail = supplier.contactEmail;
+  if (supplier.contactPhone !== undefined) insertData.contactPhone = supplier.contactPhone;
+  if (supplier.address !== undefined) insertData.address = supplier.address;
+  if (supplier.riskScore !== undefined) insertData.riskScore = supplier.riskScore;
+  if (supplier.qualificationStatus !== undefined) insertData.qualificationStatus = supplier.qualificationStatus;
+  if (supplier.notes !== undefined) insertData.notes = supplier.notes;
+  if (supplier.metadata !== undefined) insertData.metadata = supplier.metadata;
+  
+  await db.insert(suppliers).values(insertData);
   return id;
 }
 

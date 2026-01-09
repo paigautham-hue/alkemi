@@ -725,6 +725,41 @@ export const appRouter = router({
       }),
   }),
 
+  // Analytics
+  analytics: router({
+    summary: protectedProcedure.query(async ({ ctx }) => {
+      const analyticsService = await import("./analyticsService");
+      return await analyticsService.getAnalyticsSummary(ctx.user.organizationId);
+    }),
+    predictionAccuracy: protectedProcedure
+      .input(z.object({ days: z.number().min(7).max(365).optional() }))
+      .query(async ({ ctx, input }) => {
+        const analyticsService = await import("./analyticsService");
+        return await analyticsService.getPredictionAccuracyTrend(
+          ctx.user.organizationId,
+          input.days || 30
+        );
+      }),
+    trialSuccess: protectedProcedure
+      .input(z.object({ days: z.number().min(7).max(365).optional() }))
+      .query(async ({ ctx, input }) => {
+        const analyticsService = await import("./analyticsService");
+        return await analyticsService.getTrialSuccessMetrics(
+          ctx.user.organizationId,
+          input.days || 30
+        );
+      }),
+    formulationTimeline: protectedProcedure
+      .input(z.object({ days: z.number().min(7).max(365).optional() }))
+      .query(async ({ ctx, input }) => {
+        const analyticsService = await import("./analyticsService");
+        return await analyticsService.getFormulationTimeline(
+          ctx.user.organizationId,
+          input.days || 30
+        );
+      }),
+  }),
+
   // DOE Generator
   doe: router({
     generateLHS: protectedProcedure

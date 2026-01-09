@@ -1,355 +1,279 @@
-import { trpc } from "@/lib/trpc";
+import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Loader2, TrendingUp, DollarSign, Users, FlaskConical, Package, Building2, Sparkles } from "lucide-react";
+import { trpc } from "@/lib/trpc";
+import { TrendingUp, TrendingDown, Activity, Target, FlaskConical, Microscope } from "lucide-react";
+import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState } from "react";
 
 export default function Analytics() {
-  const { data: materials, isLoading: materialsLoading } = trpc.materials.list.useQuery({ search: "" });
-  const { data: suppliers, isLoading: suppliersLoading } = trpc.suppliers.list.useQuery({ search: "" });
-  const { data: formulations, isLoading: formulationsLoading } = trpc.formulations.listFamilies.useQuery({ search: "" });
-  const { data: predictions, isLoading: predictionsLoading } = trpc.predictions.list.useQuery();
-  const { data: testConditions, isLoading: testConditionsLoading } = trpc.testConditions.list.useQuery();
-  const { data: debates, isLoading: debatesLoading } = trpc.debate.list.useQuery();
+  const [timeRange, setTimeRange] = useState(30);
+  
+  const { data: summary, isLoading: summaryLoading } = trpc.analytics.summary.useQuery();
+  const { data: predictionAccuracy } = trpc.analytics.predictionAccuracy.useQuery({ days: timeRange });
+  const { data: trialSuccess } = trpc.analytics.trialSuccess.useQuery({ days: timeRange });
+  const { data: formulationTimeline } = trpc.analytics.formulationTimeline.useQuery({ days: timeRange });
 
-  const isLoading =
-    materialsLoading ||
-    suppliersLoading ||
-    formulationsLoading ||
-    predictionsLoading ||
-    testConditionsLoading ||
-    debatesLoading;
-
-  // Calculate statistics
-  const stats = {
-    materials: materials?.length || 0,
-    suppliers: suppliers?.length || 0,
-    formulations: formulations?.length || 0,
-    predictions: predictions?.length || 0,
-    testConditions: testConditions?.length || 0,
-    debates: debates?.length || 0,
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  // Calculate qualified suppliers
-  const qualifiedSuppliers =
-    suppliers?.filter((s: any) => s.qualification_status === "qualified").length || 0;
-
-  // Calculate prediction success rate (mock for now)
-  const predictionSuccessRate = predictions && predictions.length > 0 ? 85 : 0;
-
   return (
-    <div className="container mx-auto py-8 space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
-        <p className="text-muted-foreground mt-2">
-          Monitor platform usage, LLM costs, and formulation insights
-        </p>
-      </div>
-
-      {isLoading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin" />
+    <DashboardLayout>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Analytics</h1>
+            <p className="text-muted-foreground mt-1">
+              Performance metrics and insights across your formulation workspace
+            </p>
+          </div>
+          <Select value={timeRange.toString()} onValueChange={(v) => setTimeRange(parseInt(v))}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7">Last 7 days</SelectItem>
+              <SelectItem value="30">Last 30 days</SelectItem>
+              <SelectItem value="90">Last 90 days</SelectItem>
+              <SelectItem value="180">Last 6 months</SelectItem>
+              <SelectItem value="365">Last year</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-      ) : (
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="ai-usage">AI Usage</TabsTrigger>
-            <TabsTrigger value="formulations">Formulations</TabsTrigger>
-          </TabsList>
 
-          <TabsContent value="overview" className="space-y-6">
-            {/* Key Metrics */}
+        {summaryLoading ? (
+          <div className="text-center py-8">Loading summary...</div>
+        ) : summary ? (
+          <>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Materials</CardTitle>
-                  <Package className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.materials}</div>
-                  <p className="text-xs text-muted-foreground">Active materials in library</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Suppliers</CardTitle>
-                  <Building2 className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.suppliers}</div>
-                  <p className="text-xs text-muted-foreground">
-                    {qualifiedSuppliers} qualified suppliers
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Formulations</CardTitle>
+                  <CardTitle className="text-sm font-medium">Total Formulations</CardTitle>
                   <FlaskConical className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{stats.formulations}</div>
-                  <p className="text-xs text-muted-foreground">Formulation families</p>
+                  <div className="text-2xl font-bold">{summary.totalFormulations}</div>
+                  <p className="text-xs text-muted-foreground">
+                    +{summary.recentActivity.formulationsThisMonth} this month
+                  </p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">AI Predictions</CardTitle>
-                  <Sparkles className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-sm font-medium">Materials Library</CardTitle>
+                  <Activity className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{stats.predictions}</div>
+                  <div className="text-2xl font-bold">{summary.totalMaterials}</div>
                   <p className="text-xs text-muted-foreground">
-                    {predictionSuccessRate}% success rate
+                    {summary.totalSuppliers} qualified suppliers
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Predictions Made</CardTitle>
+                  <Target className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{summary.totalPredictions}</div>
+                  <p className="text-xs text-muted-foreground">
+                    +{summary.recentActivity.predictionsThisMonth} this month
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Prediction Accuracy</CardTitle>
+                  {summary.averagePredictionAccuracy >= 80 ? (
+                    <TrendingUp className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <TrendingDown className="h-4 w-4 text-yellow-600" />
+                  )}
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {summary.averagePredictionAccuracy.toFixed(1)}%
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Based on {summary.totalTrials} trials
                   </p>
                 </CardContent>
               </Card>
             </div>
 
-            {/* System Activity */}
-            <Card>
-              <CardHeader>
-                <CardTitle>System Activity</CardTitle>
-                <CardDescription>Recent platform usage and engagement</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Package className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">Materials Created</span>
-                  </div>
-                  <Badge variant="secondary">{stats.materials}</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <FlaskConical className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">Formulations Developed</span>
-                  </div>
-                  <Badge variant="secondary">{stats.formulations}</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">AI Predictions Run</span>
-                  </div>
-                  <Badge variant="secondary">{stats.predictions}</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">AI Debates Conducted</span>
-                  </div>
-                  <Badge variant="secondary">{stats.debates}</Badge>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="ai-usage" className="space-y-6">
-            {/* AI Usage Stats */}
-            <div className="grid gap-4 md:grid-cols-3">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total AI Requests</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <div className="grid gap-6 md:grid-cols-2">
+              <Card className="col-span-2">
+                <CardHeader>
+                  <CardTitle>Prediction Accuracy Trend</CardTitle>
+                  <CardDescription>
+                    Tracking how well predictions match experimental results over time
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{stats.predictions + stats.debates}</div>
-                  <p className="text-xs text-muted-foreground">Predictions + Debates</p>
+                  {predictionAccuracy && predictionAccuracy.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <AreaChart data={predictionAccuracy}>
+                        <defs>
+                          <linearGradient id="colorAccuracy" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          dataKey="date" 
+                          tickFormatter={formatDate}
+                          tick={{ fontSize: 12 }}
+                        />
+                        <YAxis 
+                          label={{ value: 'Accuracy (%)', angle: -90, position: 'insideLeft' }}
+                          domain={[0, 100]}
+                        />
+                        <Tooltip 
+                          labelFormatter={formatDate}
+                          formatter={(value: number) => [`${value.toFixed(1)}%`, 'Accuracy']}
+                        />
+                        <Area 
+                          type="monotone" 
+                          dataKey="accuracyRate" 
+                          stroke="#10b981" 
+                          fillOpacity={1}
+                          fill="url(#colorAccuracy)"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                      No prediction accuracy data available yet
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Estimated Cost</CardTitle>
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    ${((stats.predictions * 0.05 + stats.debates * 0.15)).toFixed(2)}
-                  </div>
-                  <p className="text-xs text-muted-foreground">This month</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Avg Response Time</CardTitle>
-                  <Sparkles className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">2.3s</div>
-                  <p className="text-xs text-muted-foreground">For predictions</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* AI Usage Breakdown */}
-            <Card>
-              <CardHeader>
-                <CardTitle>AI Feature Usage</CardTitle>
-                <CardDescription>Breakdown of AI features by request count</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Property Predictions</span>
-                    <span className="text-sm text-muted-foreground">{stats.predictions} requests</span>
-                  </div>
-                  <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-primary"
-                      style={{
-                        width: `${(stats.predictions / (stats.predictions + stats.debates + 1)) * 100}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Multi-LLM Debates</span>
-                    <span className="text-sm text-muted-foreground">{stats.debates} requests</span>
-                  </div>
-                  <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-blue-500"
-                      style={{
-                        width: `${(stats.debates / (stats.predictions + stats.debates + 1)) * 100}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Cost Budget Status */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Cost Budget Status</CardTitle>
-                <CardDescription>Current usage against defined budgets</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Daily User Budget</span>
-                    <span className="text-sm text-muted-foreground">
-                      ${((stats.predictions * 0.05 + stats.debates * 0.15) / 30).toFixed(2)} / $10.00
-                    </span>
-                  </div>
-                  <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-green-500"
-                      style={{
-                        width: `${Math.min(((stats.predictions * 0.05 + stats.debates * 0.15) / 30 / 10) * 100, 100)}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Monthly Org Budget</span>
-                    <span className="text-sm text-muted-foreground">
-                      ${((stats.predictions * 0.05 + stats.debates * 0.15)).toFixed(2)} / $100.00
-                    </span>
-                  </div>
-                  <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-green-500"
-                      style={{
-                        width: `${Math.min(((stats.predictions * 0.05 + stats.debates * 0.15) / 100) * 100, 100)}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="formulations" className="space-y-6">
-            {/* Formulation Statistics */}
-            <div className="grid gap-4 md:grid-cols-2">
               <Card>
                 <CardHeader>
-                  <CardTitle>Formulation Development</CardTitle>
-                  <CardDescription>Key metrics for formulation workflows</CardDescription>
+                  <CardTitle>Trial Success Rate</CardTitle>
+                  <CardDescription>
+                    Percentage of trials meeting accuracy targets (&lt;20% error)
+                  </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Total Families</span>
-                    <Badge variant="secondary">{stats.formulations}</Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Test Condition Sets</span>
-                    <Badge variant="secondary">{stats.testConditions}</Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Predictions Run</span>
-                    <Badge variant="secondary">{stats.predictions}</Badge>
-                  </div>
+                <CardContent>
+                  {trialSuccess && trialSuccess.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={trialSuccess}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          dataKey="date" 
+                          tickFormatter={formatDate}
+                          tick={{ fontSize: 12 }}
+                        />
+                        <YAxis 
+                          label={{ value: 'Success Rate (%)', angle: -90, position: 'insideLeft' }}
+                          domain={[0, 100]}
+                        />
+                        <Tooltip 
+                          labelFormatter={formatDate}
+                          formatter={(value: number) => [`${value.toFixed(1)}%`, 'Success Rate']}
+                        />
+                        <Legend />
+                        <Line 
+                          type="monotone" 
+                          dataKey="successRate" 
+                          stroke="#3b82f6" 
+                          strokeWidth={2}
+                          dot={{ r: 4 }}
+                          name="Success Rate"
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                      No trial data available yet
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Quality Metrics</CardTitle>
-                  <CardDescription>Formulation success and accuracy</CardDescription>
+                  <CardTitle>Formulation Development</CardTitle>
+                  <CardDescription>
+                    New formulations and revisions created over time
+                  </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Prediction Accuracy</span>
-                    <Badge variant="default">{predictionSuccessRate}%</Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">First-Time-Right Rate</span>
-                    <Badge variant="default">78%</Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Avg Development Time</span>
-                    <Badge variant="secondary">5.2 days</Badge>
-                  </div>
+                <CardContent>
+                  {formulationTimeline && formulationTimeline.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={formulationTimeline}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          dataKey="date" 
+                          tickFormatter={formatDate}
+                          tick={{ fontSize: 12 }}
+                        />
+                        <YAxis 
+                          label={{ value: 'Count', angle: -90, position: 'insideLeft' }}
+                        />
+                        <Tooltip 
+                          labelFormatter={formatDate}
+                        />
+                        <Legend />
+                        <Bar dataKey="created" stackId="a" fill="#8b5cf6" name="Created" />
+                        <Bar dataKey="revised" stackId="a" fill="#ec4899" name="Revised" />
+                        <Bar dataKey="approved" stackId="a" fill="#10b981" name="Approved" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                      No formulation data available yet
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
 
-            {/* Material Usage */}
             <Card>
               <CardHeader>
-                <CardTitle>Material Library</CardTitle>
-                <CardDescription>Material usage and supplier distribution</CardDescription>
+                <CardTitle>Recent Activity Summary</CardTitle>
+                <CardDescription>
+                  Key metrics from the last 30 days
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Package className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">Total Materials</span>
+              <CardContent>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="flex items-center gap-3 p-4 border rounded-lg">
+                    <FlaskConical className="h-8 w-8 text-purple-600" />
+                    <div>
+                      <div className="text-2xl font-bold">{summary.recentActivity.formulationsThisMonth}</div>
+                      <div className="text-sm text-muted-foreground">New Formulations</div>
+                    </div>
                   </div>
-                  <Badge variant="secondary">{stats.materials}</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">Active Suppliers</span>
+                  <div className="flex items-center gap-3 p-4 border rounded-lg">
+                    <Target className="h-8 w-8 text-blue-600" />
+                    <div>
+                      <div className="text-2xl font-bold">{summary.recentActivity.predictionsThisMonth}</div>
+                      <div className="text-sm text-muted-foreground">Predictions Run</div>
+                    </div>
                   </div>
-                  <Badge variant="secondary">{stats.suppliers}</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">Qualified Suppliers</span>
+                  <div className="flex items-center gap-3 p-4 border rounded-lg">
+                    <Microscope className="h-8 w-8 text-green-600" />
+                    <div>
+                      <div className="text-2xl font-bold">{summary.recentActivity.trialsThisMonth}</div>
+                      <div className="text-sm text-muted-foreground">Trials Conducted</div>
+                    </div>
                   </div>
-                  <Badge variant="default">{qualifiedSuppliers}</Badge>
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
-      )}
-    </div>
+          </>
+        ) : null}
+      </div>
+    </DashboardLayout>
   );
 }

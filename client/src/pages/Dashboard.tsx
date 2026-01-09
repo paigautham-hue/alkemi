@@ -59,6 +59,8 @@ export default function Dashboard() {
   }, [user]);
 
   const isEmpty = (materials?.length || 0) === 0 && (suppliers?.length || 0) === 0 && (formulations?.length || 0) === 0;
+  const isAdmin = user?.role === 'admin';
+  const showDemoButton = isEmpty || isAdmin; // Always show for admins
 
   const stats = [
     {
@@ -94,7 +96,7 @@ export default function Dashboard() {
               Enterprise formulation intelligence platform for R&D teams
             </p>
           </div>
-          {isEmpty && (
+          {showDemoButton && (
             <Button 
               onClick={handleLoadDemoData}
               disabled={isSeeding}

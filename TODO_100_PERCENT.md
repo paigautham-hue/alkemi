@@ -229,3 +229,9 @@
 - [x] Fix createSupplier to only insert provided fields explicitly
 - [x] Avoid spreading undefined fields that cause SQL errors
 - [ ] Test demo data loads all items successfully
+
+## Load Demo Data Button Fix ✅ COMPLETE
+- [x] Check Dashboard.tsx button visibility logic (line 61: isEmpty check)
+- [x] Fix to always show button for admin users (added isAdmin check)
+- [x] Button now shows if isEmpty OR isAdmin
+- [ ] Test on published site

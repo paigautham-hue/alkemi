@@ -8,9 +8,11 @@ import { FlaskConical, Plus, Search } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Link } from "wouter";
+import FormulationFamilyCreateDialog from "@/components/FormulationFamilyCreateDialog";
 
 export default function Formulations() {
   const [search, setSearch] = useState("");
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const { data: families, isLoading } = trpc.formulations.listFamilies.useQuery({ search });
 
   const getConfidentialityColor = (level: string) => {
@@ -33,7 +35,7 @@ export default function Formulations() {
               Manage formulation families with version control and branching
             </p>
           </div>
-          <Button onClick={() => toast.info("Formulation creation dialog coming soon")}>
+          <Button onClick={() => setCreateDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Create Formulation
           </Button>
@@ -113,7 +115,7 @@ export default function Formulations() {
                 </p>
                 <Button
                   className="mt-4"
-                  onClick={() => toast.info("Formulation creation coming soon")}
+                  onClick={() => setCreateDialogOpen(true)}
                 >
                   <Plus className="mr-2 h-4 w-4" />
                   Create Your First Formulation
@@ -122,6 +124,11 @@ export default function Formulations() {
             )}
           </CardContent>
         </Card>
+
+        <FormulationFamilyCreateDialog
+          open={createDialogOpen}
+          onOpenChange={setCreateDialogOpen}
+        />
       </div>
     </DashboardLayout>
   );

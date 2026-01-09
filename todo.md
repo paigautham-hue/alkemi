@@ -215,3 +215,47 @@
 - [ ] Document API endpoints
 - [ ] Prepare demo data
 - [ ] Deliver application to user
+
+
+## Phase 4.1: Creation Dialogs and Enhanced UI (Current Focus)
+- [x] Create MaterialCreateDialog component with full form
+- [x] Add domain selector dropdown in material dialog
+- [x] Add supplier selector dropdown in material dialog
+- [x] Implement material creation with toast notifications
+- [x] Create SupplierCreateDialog component with full form
+- [x] Add country selector dropdown
+- [x] Add qualification status selector
+- [x] Implement supplier creation with toast notifications
+- [x] Create FormulationFamilyCreateDialog component
+- [x] Add domain selector for formulations
+- [x] Add confidentiality level selector
+- [x] Implement formulation family creation
+- [x] Seed database with 8 chemistry domains
+- [x] Integrate all creation dialogs into respective pages
+- [x] Add loading states for all mutations
+- [ ] Create FormulationVersionCreateDialog component
+- [ ] Add branch type selector
+- [ ] Add parent version selector for branching
+- [ ] Implement version creation with proper lineage
+- [ ] Add edit dialogs for all entities
+- [ ] Add delete confirmation dialogs
+
+
+## Phase 4.2: Expand Database Schema for AI and Advanced Features (Completed)
+- [x] Add test_condition_sets table
+- [x] Add test_condition_parameters table
+- [x] Add predictions table with uncertainty quantification fields
+- [x] Add prediction_features table for explainability
+- [x] Add llm_models table
+- [x] Add llm_audit_log table for cost tracking
+- [x] Add documents table for RAG system
+- [x] Add document_chunks table with vector embeddings
+- [x] Add compliance_sources table
+- [x] Add compliance_datasets table
+- [x] Add compliance_rules table (versioned)
+- [x] Add approval_requests table
+- [x] Add approval_reviews table
+- [x] Add trials table
+- [x] Add trial_measurements table
+- [x] Run database migrations via SQL script
+- [x] Verify all 25 tables created successfully

@@ -8,9 +8,11 @@ import { trpc } from "@/lib/trpc";
 import { Building2, Plus, Search } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import SupplierCreateDialog from "@/components/SupplierCreateDialog";
 
 export default function Suppliers() {
   const [search, setSearch] = useState("");
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const { data: suppliers, isLoading } = trpc.suppliers.list.useQuery({ search });
 
   const getStatusBadge = (status: string) => {
@@ -37,7 +39,7 @@ export default function Suppliers() {
               Manage supplier relationships and qualification status
             </p>
           </div>
-          <Button onClick={() => toast.info("Supplier creation dialog coming soon")}>
+          <Button onClick={() => setCreateDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Add Supplier
           </Button>
@@ -124,7 +126,7 @@ export default function Suppliers() {
                 <p className="text-muted-foreground mt-2">
                   Add suppliers to track qualification status and manage relationships
                 </p>
-                <Button className="mt-4" onClick={() => toast.info("Supplier creation coming soon")}>
+                <Button className="mt-4" onClick={() => setCreateDialogOpen(true)}>
                   <Plus className="mr-2 h-4 w-4" />
                   Add Your First Supplier
                 </Button>
@@ -132,6 +134,8 @@ export default function Suppliers() {
             )}
           </CardContent>
         </Card>
+
+        <SupplierCreateDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
       </div>
     </DashboardLayout>
   );

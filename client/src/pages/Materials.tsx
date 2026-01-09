@@ -7,9 +7,11 @@ import { trpc } from "@/lib/trpc";
 import { Plus, Search } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import MaterialCreateDialog from "@/components/MaterialCreateDialog";
 
 export default function Materials() {
   const [search, setSearch] = useState("");
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const { data: materials, isLoading } = trpc.materials.list.useQuery({ search });
 
   return (
@@ -22,7 +24,7 @@ export default function Materials() {
               Manage your materials library with properties and suppliers
             </p>
           </div>
-          <Button onClick={() => toast.info("Material creation dialog coming soon")}>
+          <Button onClick={() => setCreateDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Add Material
           </Button>
@@ -97,7 +99,7 @@ export default function Materials() {
                 <p className="text-muted-foreground mt-2">
                   Get started by adding your first material to the library
                 </p>
-                <Button className="mt-4" onClick={() => toast.info("Material creation coming soon")}>
+                <Button className="mt-4" onClick={() => setCreateDialogOpen(true)}>
                   <Plus className="mr-2 h-4 w-4" />
                   Add Your First Material
                 </Button>
@@ -105,6 +107,8 @@ export default function Materials() {
             )}
           </CardContent>
         </Card>
+
+        <MaterialCreateDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
       </div>
     </DashboardLayout>
   );

@@ -28,6 +28,7 @@ import {
   testConditionParameters,
   predictions,
   predictionFeatures,
+  llmAuditLog,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { nanoid } from 'nanoid';
@@ -706,4 +707,200 @@ export async function getPredictionById(id: string, organizationId: string) {
     ...preds[0],
     features,
   };
+}
+
+
+// ==========================================================
+// LLM AUDIT AND BUDGET TRACKING
+// ==========================================================
+
+export async function createLLMAuditLog(data: {
+  organizationId: string;
+  userId: string;
+  modelName: string;
+  purpose: string;
+  inputTokens: number;
+  outputTokens: number;
+  cost: number;
+  latencyMs: number;
+  success: boolean;
+  errorMessage?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const id = nanoid();
+
+  await db.insert(llmAuditLog).values({
+    id,
+    organizationId: data.organizationId,
+    userId: data.userId,
+    llmModelId: null,
+    promptHash: nanoid(16),
+    promptTokens: data.inputTokens,
+    completionTokens: data.outputTokens,
+    totalTokens: data.inputTokens + data.outputTokens,
+    estimatedCost: data.cost.toString(),
+    feature: data.purpose,
+    metadata: data.errorMessage ? { error: data.errorMessage, success: data.success } : { success: data.success },
+    latencyMs: data.latencyMs,
+  });
+
+  return id;
+}
+
+export async function getUserDailyLLMCost(userId: string): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const logs = await db
+    .select()
+    .from(llmAuditLog)
+    .where(
+      and(
+        eq(llmAuditLog.userId, userId),
+        sql`${llmAuditLog.createdAt} >= ${today.toISOString()}`
+      )
+    );
+
+  return logs.reduce((sum, log) => sum + parseFloat(log.estimatedCost || "0"), 0);
+}
+
+export async function getOrganizationDailyLLMCost(
+  organizationId: string
+): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const logs = await db
+    .select()
+    .from(llmAuditLog)
+    .where(
+      and(
+        eq(llmAuditLog.organizationId, organizationId),
+        sql`${llmAuditLog.createdAt} >= ${today.toISOString()}`
+      )
+    );
+
+  return logs.reduce((sum, log) => sum + parseFloat(log.estimatedCost || "0"), 0);
+}
+
+export async function getTopLLMUsersByOrganization(
+  organizationId: string,
+  limit: number = 10
+): Promise<Array<{ userId: string; userName: string; cost: number }>> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const logs = await db
+    .select()
+    .from(llmAuditLog)
+    .where(
+      and(
+        eq(llmAuditLog.organizationId, organizationId),
+        sql`${llmAuditLog.createdAt} >= ${today.toISOString()}`
+      )
+    );
+
+  // Group by user and sum costs
+  const userCosts = new Map<string, number>();
+  logs.forEach((log) => {
+    const current = userCosts.get(log.userId) || 0;
+    userCosts.set(log.userId, current + parseFloat(log.estimatedCost || "0"));
+  });
+
+  // Get user names
+  const userIds = Array.from(userCosts.keys());
+  const usersData = await db
+    .select()
+    .from(users)
+    .where(
+      and(
+        eq(users.organizationId, organizationId),
+        sql`${users.id} IN (${userIds.join(",")})`
+      )
+    );
+
+  const userMap = new Map(usersData.map((u) => [u.id, u.name || "Unknown"]));
+
+  // Sort by cost and limit
+  return Array.from(userCosts.entries())
+    .map(([userId, cost]) => ({
+      userId,
+      userName: userMap.get(userId) || "Unknown",
+      cost,
+    }))
+    .sort((a, b) => b.cost - a.cost)
+    .slice(0, limit);
+}
+
+export async function getOrganizationLLMSettings(organizationId: string): Promise<{
+  allowedProviders?: string[];
+  deniedProviders?: string[];
+  preferredModel?: string;
+} | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const orgs = await db
+    .select()
+    .from(organizations)
+    .where(eq(organizations.id, organizationId))
+    .limit(1);
+
+  if (orgs.length === 0) return undefined;
+
+  const org = orgs[0];
+
+  // Parse settings from organization metadata or return defaults
+  return {
+    allowedProviders: undefined, // Could be stored in org settings
+    deniedProviders: undefined,
+    preferredModel: undefined,
+  };
+}
+
+export async function getLLMAuditLogs(
+  organizationId: string,
+  options?: {
+    userId?: string;
+    startDate?: Date;
+    endDate?: Date;
+    limit?: number;
+  }
+) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const conditions = [eq(llmAuditLog.organizationId, organizationId)];
+
+  if (options?.userId) {
+    conditions.push(eq(llmAuditLog.userId, options.userId));
+  }
+
+  if (options?.startDate) {
+    conditions.push(sql`${llmAuditLog.createdAt} >= ${options.startDate.toISOString()}`);
+  }
+
+  if (options?.endDate) {
+    conditions.push(sql`${llmAuditLog.createdAt} <= ${options.endDate.toISOString()}`);
+  }
+
+  const logs = await db
+    .select()
+    .from(llmAuditLog)
+    .where(and(...conditions))
+    .orderBy(desc(llmAuditLog.createdAt))
+    .limit(options?.limit || 100);
+
+  return logs;
 }

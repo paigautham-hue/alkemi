@@ -727,6 +727,18 @@ export const appRouter = router({
 
   // Compliance
   compliance: router({
+    listTemplates: protectedProcedure.query(async () => {
+      const { getAvailableTemplates } = await import("./complianceTemplates");
+      return getAvailableTemplates();
+    }),
+
+    activateTemplate: protectedProcedure
+      .input(z.object({ templateId: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const { activateComplianceTemplate } = await import("./complianceTemplates");
+        return await activateComplianceTemplate(input.templateId, ctx.user.organizationId);
+      }),
+
     check: protectedProcedure
       .input(z.object({ formulationVersionId: z.string() }))
       .mutation(async ({ ctx, input }) => {
@@ -745,6 +757,48 @@ export const appRouter = router({
           input.formulationVersionIds
         );
         return Object.fromEntries(results);
+      }),
+  }),
+
+  // PDF Reports
+  reports: router({
+    generateFormulationPDF: protectedProcedure
+      .input(z.object({ versionId: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        // Fetch formulation data
+        const version = await db.getFormulationVersionById(input.versionId, ctx.user.organizationId);
+        if (!version) throw new TRPCError({ code: "NOT_FOUND", message: "Formulation not found" });
+        
+        const family = await db.getFormulationFamilyById(version.familyId, ctx.user.organizationId);
+        if (!family) throw new TRPCError({ code: "NOT_FOUND", message: "Family not found" });
+        
+        const components = await db.getFormulationComponents(input.versionId, ctx.user.organizationId);
+        
+        const { generateFormulationReport } = await import("./pdfReports");
+        const pdfBuffer = await generateFormulationReport({
+          family: {
+            name: family.name,
+            code: family.code,
+            description: family.description || undefined,
+            targetApplication: family.targetApplication || undefined,
+          },
+          version: {
+            versionNumber: version.versionNumber,
+            status: version.status,
+            createdAt: version.createdAt,
+          },
+          components: components.map((c: any) => ({
+            materialName: c.materialName || "Unknown",
+            materialCode: c.materialCode || "",
+            weightPercent: c.weightPercent,
+            purpose: c.purpose || undefined,
+          })),
+        });
+        
+        return {
+          filename: `${family.code}_v${version.versionNumber}_Report.pdf`,
+          data: pdfBuffer.toString("base64"),
+        };
       }),
   }),
 

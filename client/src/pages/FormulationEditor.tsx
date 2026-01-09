@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { Loader2, Plus, Trash2, AlertCircle, CheckCircle2, ArrowLeft, Save, Shield } from "lucide-react";
+import { Loader2, Plus, Trash2, AlertCircle, CheckCircle2, ArrowLeft, Save, Shield, Download } from "lucide-react";
 import { useState } from "react";
 import { useRoute, Link } from "wouter";
 import { toast } from "sonner";
@@ -28,6 +28,29 @@ export default function FormulationEditor() {
   const [selectedVersionId, setSelectedVersionId] = useState<string>("");
   const [complianceResult, setComplianceResult] = useState<any>(null);
   const [showComplianceDialog, setShowComplianceDialog] = useState(false);
+
+  const generatePDF = trpc.reports.generateFormulationPDF.useMutation({
+    onSuccess: (data) => {
+      // Convert base64 to blob and download
+      const byteCharacters = atob(data.data);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = data.filename;
+      link.click();
+      window.URL.revokeObjectURL(url);
+      toast.success("PDF report generated successfully");
+    },
+    onError: (error) => {
+      toast.error(`Failed to generate PDF: ${error.message}`);
+    },
+  });
 
   const complianceCheckMutation = trpc.compliance.check.useMutation({
     onSuccess: (data) => {
@@ -222,6 +245,22 @@ export default function FormulationEditor() {
                 <Shield className="h-4 w-4 mr-2" />
               )}
               Check Compliance
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (currentVersion) {
+                  generatePDF.mutate({ versionId: currentVersion.id });
+                }
+              }}
+              disabled={!currentVersion || generatePDF.isPending}
+            >
+              {generatePDF.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              Export PDF
             </Button>
             <Button variant="outline" disabled>
               <Save className="h-4 w-4 mr-2" />

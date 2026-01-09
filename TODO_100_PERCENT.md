@@ -152,3 +152,18 @@
 - [x] Add API endpoint for seeding
 - [x] Add "Load Demo Data" button to Dashboard
 - [x] Auto-refresh data after seeding
+
+## Compliance Rule Templates ✅ COMPLETE
+- [x] Create compliance template definitions (FDA, EU Cosmetics, REACH, California Prop 65)
+- [x] Add template activation API endpoint
+- [x] Add template management UI (Compliance Templates page)
+- [x] Add one-click activation button
+- [x] Add Compliance navigation menu item
+
+## PDF Report Generation ✅ COMPLETE
+- [x] Install PDF generation library (pdfkit)
+- [x] Create formulation report generator
+- [x] Create trial report generator (service ready)
+- [x] Create compliance report generator (service ready)
+- [x] Add Export PDF button to FormulationEditor
+- [x] Test PDF generation

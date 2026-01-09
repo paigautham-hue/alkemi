@@ -13,6 +13,7 @@ import Predictions from "./pages/Predictions";
 import TestConditions from "./pages/TestConditions";
 import Debate from "./pages/Debate";
 import Approvals from "./pages/Approvals";
+import ComplianceTemplates from "./pages/ComplianceTemplates";
 import Analytics from "./pages/Analytics";
 import Documents from "@/pages/Documents";
 import Settings from "@/pages/Settings";
@@ -32,7 +33,8 @@ function Router() {
       <Route path="/trials" component={Trials} />
       <Route path="/doe" component={DOE} />
       <Route path="/debate" component={Debate} />
-      <Route path="/approvals" component={Approvals} />
+        <Route path="/approvals" component={Approvals} />
+        <Route path="/compliance-templates" component={ComplianceTemplates} />
       <Route path="/analytics" component={Analytics} />
       <Route path="/documents" component={Documents} />
       <Route path="/settings" component={Settings} />

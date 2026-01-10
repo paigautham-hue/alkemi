@@ -10,6 +10,11 @@ export async function seedDemoDataSimple(organizationId: string, userId: string)
   try {
     console.log("🌱 Starting simplified demo data seeding...");
 
+    // 0. Get or create default domain
+    console.log("🏷️ Setting up domain...");
+    const domainId = await db.getOrCreateDefaultDomain(organizationId);
+    console.log(`Using domain: ${domainId}`);
+
     // 1. Seed Suppliers (5 companies)
     console.log("📦 Seeding suppliers...");
     const supplier1 = await db.createSupplier({
@@ -43,7 +48,7 @@ export async function seedDemoDataSimple(organizationId: string, userId: string)
     console.log("🧪 Seeding materials...");
     const material1 = await db.createMaterial({
       organizationId,
-      domainId: "default",
+      domainId,
       name: "Epoxy Resin DER 331",
       code: "RESIN-EP-001",
       casNumber: "25068-38-6",
@@ -55,7 +60,7 @@ export async function seedDemoDataSimple(organizationId: string, userId: string)
 
     const material2 = await db.createMaterial({
       organizationId,
-      domainId: "default",
+      domainId,
       name: "Acrylic Resin AC-2000",
       code: "RESIN-AC-002",
       casNumber: "25133-97-5",
@@ -67,7 +72,7 @@ export async function seedDemoDataSimple(organizationId: string, userId: string)
 
     const material3 = await db.createMaterial({
       organizationId,
-      domainId: "default",
+      domainId,
       name: "Titanium Dioxide R-706",
       code: "PIG-TIO2-001",
       casNumber: "13463-67-7",
@@ -78,7 +83,7 @@ export async function seedDemoDataSimple(organizationId: string, userId: string)
 
     const material4 = await db.createMaterial({
       organizationId,
-      domainId: "default",
+      domainId,
       name: "Butyl Acetate",
       code: "SOLV-BA-001",
       casNumber: "123-86-4",
@@ -90,7 +95,7 @@ export async function seedDemoDataSimple(organizationId: string, userId: string)
 
     const material5 = await db.createMaterial({
       organizationId,
-      domainId: "default",
+      domainId,
       name: "BYK-333 Wetting Agent",
       code: "ADD-WET-001",
       casNumber: "proprietary",
@@ -104,7 +109,7 @@ export async function seedDemoDataSimple(organizationId: string, userId: string)
     console.log("⚗️ Seeding formulations...");
     const family1 = await db.createFormulationFamily({
       organizationId,
-      domainId: "default",
+      domainId,
       name: "Industrial Epoxy Coating",
       code: "IND-EP-100",
       description: "High-performance epoxy coating for industrial equipment",
@@ -114,7 +119,7 @@ export async function seedDemoDataSimple(organizationId: string, userId: string)
 
     const family2 = await db.createFormulationFamily({
       organizationId,
-      domainId: "default",
+      domainId,
       name: "Architectural Acrylic Paint",
       code: "ARCH-AC-200",
       description: "Water-based acrylic paint for walls",
@@ -124,7 +129,7 @@ export async function seedDemoDataSimple(organizationId: string, userId: string)
 
     const family3 = await db.createFormulationFamily({
       organizationId,
-      domainId: "default",
+      domainId,
       name: "Automotive Clear Coat",
       code: "AUTO-PU-300",
       description: "High-gloss polyurethane clear coat",
@@ -164,7 +169,7 @@ export async function seedDemoDataSimple(organizationId: string, userId: string)
     console.log("🧪 Seeding test conditions...");
     const testConditionSet1 = await db.createTestConditionSet({
       organizationId,
-      domainId: "default",
+      domainId,
       name: "Standard Testing Conditions",
       description: "Room temperature testing",
       isStandard: true,
@@ -210,7 +215,7 @@ export async function seedDemoDataSimple(organizationId: string, userId: string)
       formulationVersionId: version1,
       testConditionSetId: testConditionSet1,
       trialCode: "TRIAL-001",
-      conductedBy: "Demo User",
+      conductedBy: userId, // Must be a valid user ID (foreign key)
       conductedAt: new Date(Date.now() - 86400000),
       notes: "Demo trial showing excellent agreement with predictions",
       measurements: [

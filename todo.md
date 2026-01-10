@@ -213,7 +213,7 @@
 - [ ] Generate deployment documentation
 - [ ] Create user guide
 - [ ] Document API endpoints
-- [ ] Prepare demo data
+- [x] Prepare demo data (Load Demo Data button + Reset Workspace)
 - [ ] Deliver application to user
 
 

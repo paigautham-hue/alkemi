@@ -878,19 +878,54 @@ export const appRouter = router({
       try {
         const database = await db.getDb();
         if (!database) throw new Error("Database not available");
+        
+        // Import trials table
+        const { trials, trialMeasurements, complianceRules, predictionFeatures } = await import("../drizzle/schema");
 
         const orgId = ctx.user.organizationId;
         
         // Delete all data in reverse dependency order
-        // Skip tables that don't have organizationId field
-        await database.delete(formulationComponents).where(eq(formulationComponents.organizationId, orgId));
-        await database.delete(formulationVersions).where(eq(formulationVersions.organizationId, orgId));
-        await database.delete(formulationFamilies).where(eq(formulationFamilies.organizationId, orgId));
+        // Child tables first, then parent tables
+        // 1. Trial measurements (depends on trials)
+        const trialsList = await database.select({ id: trials.id }).from(trials).where(eq(trials.organizationId, orgId));
+        if (trialsList.length > 0) {
+          for (const t of trialsList) {
+            await database.delete(trialMeasurements).where(eq(trialMeasurements.trialId, t.id));
+          }
+        }
+        // 2. Trials (depends on formulation versions, test conditions)
+        await database.delete(trials).where(eq(trials.organizationId, orgId));
+        // 3. Prediction features (depends on predictions)
+        const predsList = await database.select({ id: predictions.id }).from(predictions).where(eq(predictions.organizationId, orgId));
+        if (predsList.length > 0) {
+          for (const p of predsList) {
+            await database.delete(predictionFeatures).where(eq(predictionFeatures.predictionId, p.id));
+          }
+        }
+        // 4. Predictions (depends on formulation versions, test conditions)
         await database.delete(predictions).where(eq(predictions.organizationId, orgId));
+        // 5. Formulation components (depends on formulation versions, materials)
+        await database.delete(formulationComponents).where(eq(formulationComponents.organizationId, orgId));
+        // 6. Formulation versions (depends on formulation families)
+        await database.delete(formulationVersions).where(eq(formulationVersions.organizationId, orgId));
+        // 7. Formulation families
+        await database.delete(formulationFamilies).where(eq(formulationFamilies.organizationId, orgId));
+        // 8. Test condition parameters (depends on test condition sets)
+        await database.delete(testConditionParameters).where(
+          eq(testConditionParameters.testConditionSetId, 
+            database.select({ id: testConditionSets.id }).from(testConditionSets).where(eq(testConditionSets.organizationId, orgId))
+          )
+        ).catch(() => {}); // Ignore if no matching records
+        // 9. Test condition sets
         await database.delete(testConditionSets).where(eq(testConditionSets.organizationId, orgId));
+        // 10. Materials (depends on suppliers)
         await database.delete(materials).where(eq(materials.organizationId, orgId));
+        // 11. Suppliers
         await database.delete(suppliers).where(eq(suppliers.organizationId, orgId));
+        // 12. Documents
         await database.delete(documents).where(eq(documents.organizationId, orgId));
+        // 13. Compliance rules
+        await database.delete(complianceRules).where(eq(complianceRules.organizationId, orgId));
         
         return { success: true, message: "All workspace data cleared successfully" };
       } catch (error: any) {

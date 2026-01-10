@@ -255,41 +255,38 @@ export async function createMaterial(material: InsertMaterial) {
   const id = crypto.randomUUID();
   const now = new Date();
   
-  // Build insert object with ALL required fields including timestamps
-  // Drizzle ORM with MySQL inserts DEFAULT keyword for columns with defaultNow()
-  // which causes SQL errors. We must explicitly set timestamps.
-  const insertData: any = {
+  // CRITICAL: Drizzle ORM with MySQL inserts SQL DEFAULT keyword for columns not in values object.
+  // MySQL doesn't support DEFAULT as a value in INSERT statements like PostgreSQL does.
+  // We MUST provide explicit values (or null) for ALL columns to prevent DEFAULT keyword.
+  await db.insert(materials).values({
     id,
     organizationId: material.organizationId,
     domainId: material.domainId,
     code: material.code,
     name: material.name,
-    tradeName: material.tradeName,
-    category: material.category,
-    // Explicitly set timestamps to avoid DEFAULT keyword issue
+    // Nullable columns must be explicitly set to null or a value
+    tradeName: material.tradeName || null,
+    category: material.category || null,
+    casNumber: material.casNumber || null,
+    supplierId: material.supplierId || null,
+    supplierProductCode: material.supplierProductCode || null,
+    density: material.density || null,
+    viscosity: material.viscosity || null,
+    molecularWeight: material.molecularWeight || null,
+    refractiveIndex: material.refractiveIndex || null,
+    glassTransitionTemp: material.glassTransitionTemp || null,
+    hansenD: material.hansenD || null,
+    hansenP: material.hansenP || null,
+    hansenH: material.hansenH || null,
+    regulatoryStatus: material.regulatoryStatus || null,
+    costPerKg: material.costPerKg || null,
+    currency: material.currency || "USD",
+    metadata: material.metadata || null,
+    isActive: material.isActive !== undefined ? material.isActive : true,
+    // Timestamps must be explicitly set
     createdAt: now,
     updatedAt: now,
-  };
-  
-  // Add optional fields only if provided
-  if (material.casNumber) insertData.casNumber = material.casNumber;
-  if (material.supplierId) insertData.supplierId = material.supplierId;
-  if (material.supplierProductCode) insertData.supplierProductCode = material.supplierProductCode;
-  if (material.density) insertData.density = material.density;
-  if (material.viscosity) insertData.viscosity = material.viscosity;
-  if (material.molecularWeight) insertData.molecularWeight = material.molecularWeight;
-  if (material.refractiveIndex) insertData.refractiveIndex = material.refractiveIndex;
-  if (material.glassTransitionTemp) insertData.glassTransitionTemp = material.glassTransitionTemp;
-  if (material.hansenD) insertData.hansenD = material.hansenD;
-  if (material.hansenP) insertData.hansenP = material.hansenP;
-  if (material.hansenH) insertData.hansenH = material.hansenH;
-  if (material.regulatoryStatus) insertData.regulatoryStatus = material.regulatoryStatus;
-  if (material.costPerKg) insertData.costPerKg = material.costPerKg;
-  if (material.currency) insertData.currency = material.currency;
-  if (material.metadata) insertData.metadata = material.metadata;
-  if (material.isActive !== undefined) insertData.isActive = material.isActive;
-  
-  await db.insert(materials).values(insertData);
+  });
   return id;
 }
 
@@ -365,30 +362,27 @@ export async function createSupplier(supplier: InsertSupplier) {
   const id = crypto.randomUUID();
   const now = new Date();
   
-  // Build insert data with ALL required fields including timestamps
-  // Drizzle ORM with MySQL inserts DEFAULT keyword for columns with defaultNow()
-  // which causes SQL errors. We must explicitly set timestamps.
-  const insertData: any = {
+  // CRITICAL: Drizzle ORM with MySQL inserts SQL DEFAULT keyword for columns not in values object.
+  // MySQL doesn't support DEFAULT as a value in INSERT statements like PostgreSQL does.
+  // We MUST provide explicit values (or null) for ALL columns to prevent DEFAULT keyword.
+  await db.insert(suppliers).values({
     id,
     organizationId: supplier.organizationId,
     code: supplier.code,
     name: supplier.name,
+    // Nullable columns must be explicitly set to null or a value
+    country: supplier.country || null,
+    contactEmail: supplier.contactEmail || null,
+    contactPhone: supplier.contactPhone || null,
+    address: supplier.address || null,
+    riskScore: supplier.riskScore || "0.00",
     qualificationStatus: supplier.qualificationStatus || "pending",
-    // Explicitly set timestamps to avoid DEFAULT keyword issue
+    notes: supplier.notes || null,
+    metadata: supplier.metadata || null,
+    // Timestamps must be explicitly set
     createdAt: now,
     updatedAt: now,
-  };
-  
-  // Add optional fields only if explicitly provided
-  if (supplier.country) insertData.country = supplier.country;
-  if (supplier.contactEmail) insertData.contactEmail = supplier.contactEmail;
-  if (supplier.contactPhone) insertData.contactPhone = supplier.contactPhone;
-  if (supplier.address) insertData.address = supplier.address;
-  if (supplier.riskScore !== undefined) insertData.riskScore = supplier.riskScore;
-  if (supplier.notes) insertData.notes = supplier.notes;
-  if (supplier.metadata) insertData.metadata = supplier.metadata;
-  
-  await db.insert(suppliers).values(insertData);
+  });
   return id;
 }
 
@@ -420,6 +414,63 @@ export async function getDomains() {
   if (!db) return [];
 
   return db.select().from(domains).where(eq(domains.isActive, true));
+}
+
+/**
+ * Get or create a default domain for demo data seeding.
+ * This ensures materials and formulations have a valid domain reference.
+ */
+export async function getOrCreateDefaultDomain(organizationId: string): Promise<string> {
+  const database = await getDb();
+  if (!database) throw new Error("Database not available");
+
+  // First check if organization already has a domain
+  const existingDomains = await database
+    .select({ domainId: organizationDomains.domainId })
+    .from(organizationDomains)
+    .where(eq(organizationDomains.organizationId, organizationId))
+    .limit(1);
+
+  if (existingDomains.length > 0) {
+    return existingDomains[0].domainId;
+  }
+
+  // Check if default domain exists
+  const defaultDomain = await database
+    .select()
+    .from(domains)
+    .where(eq(domains.key, "default"))
+    .limit(1);
+
+  let domainId: string;
+  const now = new Date();
+
+  if (defaultDomain.length > 0) {
+    domainId = defaultDomain[0].id;
+  } else {
+    // Create default domain
+    domainId = nanoid();
+    await database.insert(domains).values({
+      id: domainId,
+      key: "default",
+      name: "General Chemistry",
+      description: "Default domain for general formulation work",
+      version: "1.0.0",
+      config: null,
+      isActive: true,
+      createdAt: now,
+    });
+  }
+
+  // Link domain to organization
+  await database.insert(organizationDomains).values({
+    organizationId,
+    domainId,
+    settings: null,
+    enabledAt: now,
+  });
+
+  return domainId;
 }
 
 export async function getOrganizationDomains(organizationId: string) {
@@ -490,17 +541,18 @@ export async function createFormulationFamily(family: InsertFormulationFamily) {
   const id = crypto.randomUUID();
   const now = new Date();
   
-  // Explicitly set all fields to avoid Drizzle DEFAULT keyword issue with MySQL
+  // CRITICAL: Drizzle ORM with MySQL inserts SQL DEFAULT keyword for columns not in values object.
+  // We MUST provide explicit values (or null) for ALL columns to prevent DEFAULT keyword.
   await db.insert(formulationFamilies).values({
     id,
     organizationId: family.organizationId,
     domainId: family.domainId,
     code: family.code,
     name: family.name,
-    description: family.description,
-    targetApplication: family.targetApplication,
+    description: family.description || null,
+    targetApplication: family.targetApplication || null,
     confidentialityLevel: family.confidentialityLevel || "internal",
-    metadata: family.metadata,
+    metadata: family.metadata || null,
     createdAt: now,
     updatedAt: now,
   });
@@ -538,20 +590,23 @@ export async function createFormulationVersion(version: InsertFormulationVersion
   const id = crypto.randomUUID();
   const now = new Date();
   
-  // Explicitly set all fields to avoid Drizzle DEFAULT keyword issue with MySQL
+  // CRITICAL: Drizzle ORM with MySQL inserts SQL DEFAULT keyword for columns not in values object.
+  // We MUST provide explicit values (or null) for ALL columns to prevent DEFAULT keyword.
   await db.insert(formulationVersions).values({
     id,
     organizationId: version.organizationId,
     familyId: version.familyId,
     versionNumber: version.versionNumber,
-    branchType: version.branchType,
-    parentVersionId: version.parentVersionId,
+    branchType: version.branchType || null,
+    parentVersionId: version.parentVersionId || null,
     status: version.status || "draft",
     createdBy: version.createdBy,
-    approvedBy: version.approvedBy,
-    approvedAt: version.approvedAt,
-    notes: version.notes,
-    metadata: version.metadata,
+    approvedBy: version.approvedBy || null,
+    approvedAt: version.approvedAt || null,
+    targetProperties: version.targetProperties || null,
+    notes: version.notes || null,
+    changeReason: version.changeReason || null,
+    metadata: version.metadata || null,
     createdAt: now,
     updatedAt: now,
   });
@@ -624,13 +679,14 @@ export async function createTestConditionSet(data: {
   
   const now = new Date();
   
-  // Explicitly set all fields to avoid Drizzle DEFAULT keyword issue with MySQL
+  // CRITICAL: Drizzle ORM with MySQL inserts SQL DEFAULT keyword for columns not in values object.
+  // We MUST provide explicit values (or null) for ALL columns to prevent DEFAULT keyword.
   await db.insert(testConditionSets).values({
     id: testConditionSetId,
     organizationId: data.organizationId,
     domainId: data.domainId,
     name: data.name,
-    description: data.description,
+    description: data.description || null,
     isStandard: data.isStandard,
     createdBy: data.createdBy,
     createdAt: now,
@@ -645,7 +701,7 @@ export async function createTestConditionSet(data: {
         parameterName: param.parameterName,
         parameterValue: param.parameterValue,
         createdAt: now,
-        unit: param.unit,
+        unit: param.unit || null,
       }))
     );
   }
@@ -758,7 +814,8 @@ export async function createPrediction(data: {
   const predictionId = nanoid();
   const now = new Date();
 
-  // Explicitly set all fields to avoid Drizzle DEFAULT keyword issue with MySQL
+  // CRITICAL: Drizzle ORM with MySQL inserts SQL DEFAULT keyword for columns not in values object.
+  // We MUST provide explicit values (or null) for ALL columns to prevent DEFAULT keyword.
   await db.insert(predictions).values({
     id: predictionId,
     organizationId: data.organizationId,
@@ -766,13 +823,13 @@ export async function createPrediction(data: {
     testConditionSetId: data.testConditionSetId,
     propertyName: data.propertyName,
     predictedValue: data.predictedValue.toString(),
-    unit: data.unit,
-    uncertaintyLower: data.uncertaintyLower?.toString(),
-    uncertaintyUpper: data.uncertaintyUpper?.toString(),
-    confidenceLevel: data.confidenceLevel?.toString(),
-    probabilityInSpec: data.probabilityInSpec?.toString(),
-    modelName: data.modelName,
-    modelVersion: data.modelVersion,
+    unit: data.unit || null,
+    uncertaintyLower: data.uncertaintyLower?.toString() || null,
+    uncertaintyUpper: data.uncertaintyUpper?.toString() || null,
+    confidenceLevel: data.confidenceLevel?.toString() || "0.95",
+    probabilityInSpec: data.probabilityInSpec?.toString() || null,
+    modelName: data.modelName || null,
+    modelVersion: data.modelVersion || null,
     requestedBy: data.requestedBy,
     createdAt: now,
   });
@@ -780,12 +837,11 @@ export async function createPrediction(data: {
   if (data.featureImportance.length > 0) {
     await db.insert(predictionFeatures).values(
       data.featureImportance.map((feature) => ({
-        createdAt: now,
         id: nanoid(),
         predictionId,
         featureName: feature.featureName,
         importance: feature.importance.toString(),
-        contribution: feature.contribution.toString(),
+        contribution: feature.contribution?.toString() || null,
       }))
     );
   }
@@ -1454,7 +1510,8 @@ export async function createTrial(trial: {
   const trialId = nanoid();
   const now = new Date();
   
-  // Insert trial - explicitly set all fields to avoid Drizzle DEFAULT keyword issue with MySQL
+  // CRITICAL: Drizzle ORM with MySQL inserts SQL DEFAULT keyword for columns not in values object.
+  // We MUST provide explicit values (or null) for ALL columns to prevent DEFAULT keyword.
   await db.insert(trials).values({
     id: trialId,
     organizationId: trial.organizationId,
@@ -1463,7 +1520,7 @@ export async function createTrial(trial: {
     trialCode: trial.trialCode,
     conductedBy: trial.conductedBy,
     conductedAt: trial.conductedAt,
-    notes: trial.notes || undefined,
+    notes: trial.notes || null,
     createdAt: now,
     updatedAt: now,
   });
@@ -1476,8 +1533,8 @@ export async function createTrial(trial: {
         trialId,
         propertyName: m.propertyName,
         measuredValue: m.measuredValue,
-        unit: m.unit || undefined,
-        measurementError: m.measurementError || undefined,
+        unit: m.unit || null,
+        measurementError: m.measurementError || null,
         createdAt: now,
       }))
     );

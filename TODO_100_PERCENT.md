@@ -261,3 +261,20 @@
 - [x] Rewrote createMaterial to only insert provided fields
 - [ ] Test demo data loads completely without errors
 - [ ] Verify mobile layout works on small screens
+
+
+## Drizzle ORM MySQL DEFAULT Keyword Fix (Root Cause) ✅ COMPLETE
+- [x] Identified root cause: Drizzle ORM with MySQL inserts SQL DEFAULT keyword for columns with defaultNow()
+- [x] MySQL doesn't support DEFAULT as a value in INSERT statements like PostgreSQL
+- [x] Fixed createSupplier - explicitly set createdAt and updatedAt timestamps
+- [x] Fixed createMaterial - explicitly set createdAt and updatedAt timestamps
+- [x] Fixed createFormulationFamily - explicitly set createdAt and updatedAt timestamps
+- [x] Fixed createFormulationVersion - explicitly set createdAt and updatedAt timestamps
+- [x] Fixed createFormulationComponent - explicitly set createdAt timestamp
+- [x] Fixed createTestConditionSet - explicitly set createdAt and updatedAt timestamps
+- [x] Fixed testConditionParameters insert - explicitly set createdAt timestamp
+- [x] Fixed createPrediction - explicitly set createdAt timestamp
+- [x] Fixed predictionFeatures insert - explicitly set createdAt timestamp
+- [x] Fixed createTrial - explicitly set createdAt and updatedAt timestamps
+- [x] Fixed trialMeasurements insert - explicitly set createdAt timestamp
+- [ ] Test demo data loads completely without SQL errors

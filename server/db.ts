@@ -253,8 +253,11 @@ export async function createMaterial(material: InsertMaterial) {
   if (!db) throw new Error("Database not available");
 
   const id = crypto.randomUUID();
+  const now = new Date();
   
-  // Build insert object with only provided fields to avoid SQL DEFAULT keyword issues
+  // Build insert object with ALL required fields including timestamps
+  // Drizzle ORM with MySQL inserts DEFAULT keyword for columns with defaultNow()
+  // which causes SQL errors. We must explicitly set timestamps.
   const insertData: any = {
     id,
     organizationId: material.organizationId,
@@ -263,6 +266,9 @@ export async function createMaterial(material: InsertMaterial) {
     name: material.name,
     tradeName: material.tradeName,
     category: material.category,
+    // Explicitly set timestamps to avoid DEFAULT keyword issue
+    createdAt: now,
+    updatedAt: now,
   };
   
   // Add optional fields only if provided
@@ -357,16 +363,20 @@ export async function createSupplier(supplier: InsertSupplier) {
   if (!db) throw new Error("Database not available");
 
   const id = crypto.randomUUID();
+  const now = new Date();
   
-  // Build insert data with only the fields we want to set
-  // For fields with schema defaults, either provide the value or omit entirely
+  // Build insert data with ALL required fields including timestamps
+  // Drizzle ORM with MySQL inserts DEFAULT keyword for columns with defaultNow()
+  // which causes SQL errors. We must explicitly set timestamps.
   const insertData: any = {
     id,
     organizationId: supplier.organizationId,
     code: supplier.code,
     name: supplier.name,
-    // Provide default values for fields that have schema defaults
-    qualificationStatus: supplier.qualificationStatus || "qualified",
+    qualificationStatus: supplier.qualificationStatus || "pending",
+    // Explicitly set timestamps to avoid DEFAULT keyword issue
+    createdAt: now,
+    updatedAt: now,
   };
   
   // Add optional fields only if explicitly provided
@@ -378,7 +388,6 @@ export async function createSupplier(supplier: InsertSupplier) {
   if (supplier.notes) insertData.notes = supplier.notes;
   if (supplier.metadata) insertData.metadata = supplier.metadata;
   
-  // Do NOT include createdAt or updatedAt - let database defaults handle them
   await db.insert(suppliers).values(insertData);
   return id;
 }
@@ -479,7 +488,22 @@ export async function createFormulationFamily(family: InsertFormulationFamily) {
   if (!db) throw new Error("Database not available");
 
   const id = crypto.randomUUID();
-  await db.insert(formulationFamilies).values({ ...family, id });
+  const now = new Date();
+  
+  // Explicitly set all fields to avoid Drizzle DEFAULT keyword issue with MySQL
+  await db.insert(formulationFamilies).values({
+    id,
+    organizationId: family.organizationId,
+    domainId: family.domainId,
+    code: family.code,
+    name: family.name,
+    description: family.description,
+    targetApplication: family.targetApplication,
+    confidentialityLevel: family.confidentialityLevel || "internal",
+    metadata: family.metadata,
+    createdAt: now,
+    updatedAt: now,
+  });
   return id;
 }
 
@@ -512,7 +536,25 @@ export async function createFormulationVersion(version: InsertFormulationVersion
   if (!db) throw new Error("Database not available");
 
   const id = crypto.randomUUID();
-  await db.insert(formulationVersions).values({ ...version, id });
+  const now = new Date();
+  
+  // Explicitly set all fields to avoid Drizzle DEFAULT keyword issue with MySQL
+  await db.insert(formulationVersions).values({
+    id,
+    organizationId: version.organizationId,
+    familyId: version.familyId,
+    versionNumber: version.versionNumber,
+    branchType: version.branchType,
+    parentVersionId: version.parentVersionId,
+    status: version.status || "draft",
+    createdBy: version.createdBy,
+    approvedBy: version.approvedBy,
+    approvedAt: version.approvedAt,
+    notes: version.notes,
+    metadata: version.metadata,
+    createdAt: now,
+    updatedAt: now,
+  });
   return id;
 }
 
@@ -536,7 +578,19 @@ export async function createFormulationComponent(component: InsertFormulationCom
   if (!db) throw new Error("Database not available");
 
   const id = crypto.randomUUID();
-  await db.insert(formulationComponents).values({ ...component, id });
+  const now = new Date();
+  
+  // Explicitly set all fields to avoid Drizzle DEFAULT keyword issue with MySQL
+  await db.insert(formulationComponents).values({
+    id,
+    organizationId: component.organizationId,
+    versionId: component.versionId,
+    materialId: component.materialId,
+    percentage: component.percentage,
+    role: component.role,
+    notes: component.notes,
+    createdAt: now,
+  });
   return id;
 }
 
@@ -568,6 +622,9 @@ export async function createTestConditionSet(data: {
 
   const testConditionSetId = nanoid();
   
+  const now = new Date();
+  
+  // Explicitly set all fields to avoid Drizzle DEFAULT keyword issue with MySQL
   await db.insert(testConditionSets).values({
     id: testConditionSetId,
     organizationId: data.organizationId,
@@ -576,6 +633,8 @@ export async function createTestConditionSet(data: {
     description: data.description,
     isStandard: data.isStandard,
     createdBy: data.createdBy,
+    createdAt: now,
+    updatedAt: now,
   });
 
   if (data.parameters.length > 0) {
@@ -585,6 +644,7 @@ export async function createTestConditionSet(data: {
         testConditionSetId,
         parameterName: param.parameterName,
         parameterValue: param.parameterValue,
+        createdAt: now,
         unit: param.unit,
       }))
     );
@@ -696,7 +756,9 @@ export async function createPrediction(data: {
   if (!db) throw new Error("Database not available");
 
   const predictionId = nanoid();
+  const now = new Date();
 
+  // Explicitly set all fields to avoid Drizzle DEFAULT keyword issue with MySQL
   await db.insert(predictions).values({
     id: predictionId,
     organizationId: data.organizationId,
@@ -712,11 +774,13 @@ export async function createPrediction(data: {
     modelName: data.modelName,
     modelVersion: data.modelVersion,
     requestedBy: data.requestedBy,
+    createdAt: now,
   });
 
   if (data.featureImportance.length > 0) {
     await db.insert(predictionFeatures).values(
       data.featureImportance.map((feature) => ({
+        createdAt: now,
         id: nanoid(),
         predictionId,
         featureName: feature.featureName,
@@ -1388,8 +1452,9 @@ export async function createTrial(trial: {
   const { trials, trialMeasurements } = await import("../drizzle/schema");
   
   const trialId = nanoid();
+  const now = new Date();
   
-  // Insert trial
+  // Insert trial - explicitly set all fields to avoid Drizzle DEFAULT keyword issue with MySQL
   await db.insert(trials).values({
     id: trialId,
     organizationId: trial.organizationId,
@@ -1399,6 +1464,8 @@ export async function createTrial(trial: {
     conductedBy: trial.conductedBy,
     conductedAt: trial.conductedAt,
     notes: trial.notes || undefined,
+    createdAt: now,
+    updatedAt: now,
   });
   
   // Insert measurements
@@ -1411,6 +1478,7 @@ export async function createTrial(trial: {
         measuredValue: m.measuredValue,
         unit: m.unit || undefined,
         measurementError: m.measurementError || undefined,
+        createdAt: now,
       }))
     );
   }

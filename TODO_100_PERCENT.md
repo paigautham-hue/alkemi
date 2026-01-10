@@ -242,3 +242,12 @@
 - [x] Rewrote to provide explicit value for qualificationStatus
 - [x] Omit createdAt/updatedAt entirely - let DB defaults handle
 - [ ] Test demo data loads without SQL errors
+
+## UX/UI Improvements ✅ COMPLETE
+- [x] Add Reset Workspace button next to Load Demo Data
+- [x] Implement clearAllData API endpoint (demo.clearAllData)
+- [x] Add Admin badge to sidebar footer (amber badge for super admins)
+- [x] Audit all 19 pages for navigation (home/back buttons)
+- [x] Verified FormulationEditor already has back button
+- [x] All pages use DashboardLayout with consistent navigation
+- [x] Created comprehensive UX_AUDIT_REPORT.md

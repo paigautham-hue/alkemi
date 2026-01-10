@@ -7,6 +7,19 @@ import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import * as db from "./db";
 import * as predictionEngine from "./predictionEngine";
 import * as searchService from "./searchService";
+import { eq } from "drizzle-orm";
+import { 
+  materials, 
+  suppliers, 
+  documents, 
+  formulationFamilies, 
+  formulationVersions, 
+  formulationComponents,
+  testConditionSets,
+  testConditionParameters,
+  predictions,
+  predictionFeatures
+} from "../drizzle/schema";
 
 // ==========================================================
 // MIDDLEWARE FOR RBAC
@@ -861,8 +874,32 @@ export const appRouter = router({
 
   // Demo Data
   demo: router({
-    seedData: protectedProcedure
-      .mutation(async ({ ctx }) => {
+    clearAllData: protectedProcedure.mutation(async ({ ctx }) => {
+      try {
+        const database = await db.getDb();
+        if (!database) throw new Error("Database not available");
+
+        const orgId = ctx.user.organizationId;
+        
+        // Delete all data in reverse dependency order
+        // Skip tables that don't have organizationId field
+        await database.delete(formulationComponents).where(eq(formulationComponents.organizationId, orgId));
+        await database.delete(formulationVersions).where(eq(formulationVersions.organizationId, orgId));
+        await database.delete(formulationFamilies).where(eq(formulationFamilies.organizationId, orgId));
+        await database.delete(predictions).where(eq(predictions.organizationId, orgId));
+        await database.delete(testConditionSets).where(eq(testConditionSets.organizationId, orgId));
+        await database.delete(materials).where(eq(materials.organizationId, orgId));
+        await database.delete(suppliers).where(eq(suppliers.organizationId, orgId));
+        await database.delete(documents).where(eq(documents.organizationId, orgId));
+        
+        return { success: true, message: "All workspace data cleared successfully" };
+      } catch (error: any) {
+        console.error("Clear data error:", error);
+        return { success: false, message: error.message };
+      }
+    }),
+    
+    seedData: protectedProcedure.mutation(async ({ ctx }) => {
         const { seedDemoDataSimple } = await import("./seedDemoDataSimple");
         return await seedDemoDataSimple(ctx.user.organizationId, ctx.user.id);
       }),

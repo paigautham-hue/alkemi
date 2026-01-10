@@ -16,6 +16,25 @@ export default function Dashboard() {
   const { data: suppliers, refetch: refetchSuppliers } = trpc.suppliers.list.useQuery();
   const { data: formulations, refetch: refetchFormulations } = trpc.formulations.listFamilies.useQuery();
   const [isSeeding, setIsSeeding] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
+
+  const clearAllData = trpc.demo.clearAllData.useMutation({
+    onSuccess: (data) => {
+      if (data.success) {
+        toast.success(data.message);
+        refetchMaterials();
+        refetchSuppliers();
+        refetchFormulations();
+      } else {
+        toast.error(data.message);
+      }
+      setIsClearing(false);
+    },
+    onError: (error) => {
+      toast.error(`Failed to clear data: ${error.message}`);
+      setIsClearing(false);
+    },
+  });
 
   const seedDemoData = trpc.demo.seedData.useMutation({
     onSuccess: (data) => {
@@ -39,6 +58,13 @@ export default function Dashboard() {
   const handleLoadDemoData = () => {
     setIsSeeding(true);
     seedDemoData.mutate();
+  };
+
+  const handleClearData = () => {
+    if (confirm("Are you sure you want to delete ALL workspace data? This cannot be undone.")) {
+      setIsClearing(true);
+      clearAllData.mutate();
+    }
   };
 
   const handleStartTour = () => {
@@ -97,15 +123,27 @@ export default function Dashboard() {
             </p>
           </div>
           {showDemoButton && (
-            <Button 
-              onClick={handleLoadDemoData}
-              disabled={isSeeding}
-              size="lg"
-              data-tour="load-demo-data"
-            >
-              <Sparkles className="mr-2 h-5 w-5" />
-              {isSeeding ? "Loading Demo Data..." : "Load Demo Data"}
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleLoadDemoData}
+                disabled={isSeeding || isClearing}
+                size="lg"
+                data-tour="load-demo-data"
+              >
+                <Sparkles className="mr-2 h-5 w-5" />
+                {isSeeding ? "Loading..." : "Load Demo Data"}
+              </Button>
+              {isAdmin && (
+                <Button 
+                  onClick={handleClearData}
+                  disabled={isSeeding || isClearing}
+                  size="lg"
+                  variant="outline"
+                >
+                  {isClearing ? "Clearing..." : "Reset Workspace"}
+                </Button>
+              )}
+            </div>
           )}
         </div>
 

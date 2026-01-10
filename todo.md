@@ -663,3 +663,24 @@
 - [ ] Add version selector for comparison
 - [ ] Test comparison with different formulation versions
 - [ ] Write tests for comparison service
+
+
+## Phase 27: Supplier Risk Assessment Dashboard
+- [ ] Create supplier risk assessment backend service
+- [ ] Implement risk scoring algorithm (qualification status, geographic factors, performance)
+- [ ] Add supplier alternatives recommendation engine with similarity scoring
+- [ ] Create tRPC procedures for risk assessment and alternatives
+- [ ] Build SupplierRiskDashboard UI component
+- [ ] Add risk factor visualization (charts, badges, indicators)
+- [ ] Create supplier comparison table
+- [ ] Add alternative suppliers recommendation panel
+- [ ] Enhance demo data with risk factors and supplier alternatives
+- [ ] Test dashboard with various risk scenarios
+
+
+## Phase 27: Supplier Risk Assessment Dashboard (Completed)
+- [x] Create supplier risk assessment backend service
+- [x] Add supplier alternatives recommendation engine
+- [x] Build SupplierRiskDashboard UI component
+- [x] Add navigation link to dashboard
+- [x] Test risk assessment and alternatives features

@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, Package, Building2, FlaskConical, TestTube, Sparkles, MessageSquare, CheckSquare, BarChart3, FileText, Settings as SettingsIcon, Microscope, Grid3x3, Shield, Search } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, Package, Building2, FlaskConical, TestTube, Sparkles, MessageSquare, CheckSquare, BarChart3, FileText, Settings as SettingsIcon, Microscope, Grid3x3, Shield, Search, AlertTriangle } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -32,6 +32,7 @@ const menuItems = [
   { icon: Search, label: "Search", path: "/search" },
   { icon: Package, label: "Materials", path: "/materials" },
   { icon: Building2, label: "Suppliers", path: "/suppliers" },
+  { icon: AlertTriangle, label: "Supplier Risk", path: "/supplier-risk" },
   { icon: FlaskConical, label: "Formulations", path: "/formulations" },
   { icon: TestTube, label: "Test Conditions", path: "/test-conditions" },
   { icon: Sparkles, label: "Predictions", path: "/predictions" },

@@ -221,6 +221,26 @@ export const appRouter = router({
         await db.deleteSupplier(input.id, ctx.user.organizationId);
         return { success: true };
       }),
+
+    assessRisk: protectedProcedure
+      .input(z.object({ id: z.string().uuid() }))
+      .query(async ({ ctx, input }) => {
+        const { assessSupplierRisk } = await import("./supplierRiskAssessment");
+        return assessSupplierRisk(input.id, ctx.user.organizationId);
+      }),
+
+    assessAllRisks: protectedProcedure
+      .query(async ({ ctx }) => {
+        const { assessAllSuppliers } = await import("./supplierRiskAssessment");
+        return assessAllSuppliers(ctx.user.organizationId);
+      }),
+
+    findAlternatives: protectedProcedure
+      .input(z.object({ materialId: z.string().uuid(), limit: z.number().optional() }))
+      .query(async ({ ctx, input }) => {
+        const { findAlternativeSuppliers } = await import("./supplierRiskAssessment");
+        return findAlternativeSuppliers(input.materialId, ctx.user.organizationId, input.limit);
+      }),
   }),
 
   // ==========================================================

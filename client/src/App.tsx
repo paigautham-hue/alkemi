@@ -7,6 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Dashboard from "./pages/Dashboard";
 import Materials from "./pages/Materials";
 import Suppliers from "./pages/Suppliers";
+import SupplierRiskDashboard from "./pages/SupplierRiskDashboard";
 import Formulations from "./pages/Formulations";
 import FormulationEditor from "./pages/FormulationEditor";
 import Predictions from "./pages/Predictions";
@@ -27,6 +28,7 @@ function Router() {
       <Route path="/" component={Dashboard} />
       <Route path="/materials" component={Materials} />
       <Route path="/suppliers" component={Suppliers} />
+      <Route path="/supplier-risk" component={SupplierRiskDashboard} />
         <Route path="/formulations" component={Formulations} />
       <Route path="/formulations/:id" component={FormulationEditor} />
       <Route path="/predictions" component={Predictions} />

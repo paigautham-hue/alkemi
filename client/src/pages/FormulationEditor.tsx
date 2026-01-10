@@ -17,7 +17,8 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ComplianceStatusDialog } from "@/components/ComplianceStatusDialog";
 import { ApprovalSubmitDialog } from "@/components/ApprovalSubmitDialog";
-import { Send } from "lucide-react";
+import { FormulationComparisonDialog } from "@/components/FormulationComparisonDialog";
+import { Send, GitCompare } from "lucide-react";
 
 export default function FormulationEditor() {
   const { user, loading: authLoading } = useAuth();
@@ -28,6 +29,8 @@ export default function FormulationEditor() {
   const [selectedMaterialId, setSelectedMaterialId] = useState<string>("");
   const [percentage, setPercentage] = useState("");
   const [purpose, setPurpose] = useState("");
+  const [showComparisonDialog, setShowComparisonDialog] = useState(false);
+  const [comparisonVersionId, setComparisonVersionId] = useState<string>("");
   const [selectedVersionId, setSelectedVersionId] = useState<string>("");
   const [showComplianceDialog, setShowComplianceDialog] = useState(false);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
@@ -227,6 +230,14 @@ export default function FormulationEditor() {
             >
               <Shield className="h-4 w-4 mr-2" />
               Check Compliance
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowComparisonDialog(true)}
+              disabled={!currentVersion || !versions || versions.length < 2}
+            >
+              <GitCompare className="h-4 w-4 mr-2" />
+              Compare Versions
             </Button>
             <Button
               variant="default"
@@ -590,6 +601,83 @@ export default function FormulationEditor() {
             onOpenChange={setShowApprovalDialog}
             onSuccess={() => {
               toast.success("Formulation submitted for approval!");
+            }}
+          />
+        )}
+
+        {/* Version Selector Dialog for Comparison */}
+        <Dialog open={showComparisonDialog && !comparisonVersionId} onOpenChange={(open) => {
+          if (!open) {
+            setShowComparisonDialog(false);
+            setComparisonVersionId("");
+          }
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Select Version to Compare</DialogTitle>
+              <DialogDescription>
+                Choose a version to compare with the current version ({currentVersion?.versionNumber})
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Select Version</Label>
+                <Select
+                  value={comparisonVersionId}
+                  onValueChange={(value) => {
+                    setComparisonVersionId(value);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a version" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {versions
+                      ?.filter((v) => v.id !== currentVersion?.id)
+                      .map((v) => (
+                        <SelectItem key={v.id} value={v.id}>
+                          Version {v.versionNumber} ({v.status})
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowComparisonDialog(false);
+                  setComparisonVersionId("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (comparisonVersionId) {
+                    // Dialog will auto-switch to comparison view
+                  }
+                }}
+                disabled={!comparisonVersionId}
+              >
+                Compare
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Formulation Comparison Dialog */}
+        {currentVersion && comparisonVersionId && (
+          <FormulationComparisonDialog
+            baseVersionId={currentVersion.id}
+            targetVersionId={comparisonVersionId}
+            open={showComparisonDialog && !!comparisonVersionId}
+            onOpenChange={(open) => {
+              if (!open) {
+                setShowComparisonDialog(false);
+                setComparisonVersionId("");
+              }
             }}
           />
         )}

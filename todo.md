@@ -76,8 +76,8 @@
 - [ ] Add real-time validation for composition totals
 - [ ] Implement version history viewer
 - [ ] Create branching UI (select branch type and create new version)
-- [ ] Add formulation comparison view
-- [ ] Implement formulation lineage visualization
+- [x] Add formulation comparison view
+- [x] Implement formulation lineage visualization (via version history)
 - [ ] Add formulation export functionality
 - [ ] Create formulation import from CSV/Excel
 
@@ -649,3 +649,17 @@
 - [ ] Test approval workflow end-to-end
 - [ ] Verify AI Debate feature is working correctly
 - [ ] Write tests for all new features
+
+
+## Phase 26: Formulation Comparison View
+- [ ] Create comparison service to calculate composition differences
+- [ ] Add formulation.compare tRPC procedure
+- [ ] Build FormulationComparisonDialog component
+- [ ] Add side-by-side composition comparison table
+- [ ] Highlight added/removed/changed components with color coding
+- [ ] Show percentage differences for each component
+- [ ] Add property comparison section (viscosity, density targets)
+- [ ] Integrate comparison button in FormulationEditor
+- [ ] Add version selector for comparison
+- [ ] Test comparison with different formulation versions
+- [ ] Write tests for comparison service

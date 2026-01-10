@@ -319,6 +319,22 @@ export const appRouter = router({
         await db.deleteFormulationComponent(input.id, ctx.user.organizationId);
         return { success: true };
       }),
+
+    compare: protectedProcedure
+      .input(
+        z.object({
+          baseVersionId: z.string().uuid(),
+          targetVersionId: z.string().uuid(),
+        })
+      )
+      .query(async ({ ctx, input }) => {
+        const formulationComparison = await import("./formulationComparison");
+        return await formulationComparison.compareFormulations(
+          input.baseVersionId,
+          input.targetVersionId,
+          ctx.user.organizationId
+        );
+      }),
   }),
 
   // ==========================================================

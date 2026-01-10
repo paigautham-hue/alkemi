@@ -166,6 +166,17 @@ export async function seedDemoDataSimple(organizationId: string, userId: string)
       createdBy: userId,
     });
 
+    // Add version 2.0 for Industrial Epoxy Coating (for comparison testing)
+    const version1_v2 = await db.createFormulationVersion({
+      organizationId,
+      familyId: family1, // Industrial Epoxy Coating family (family1)
+      versionNumber: "2.0",
+      parentVersionId: version1,
+      branchType: "revision",
+      status: "draft",
+      createdBy: userId,
+    });
+
     // 4.5 Add formulation components (materials in each formulation)
     console.log("🧪 Seeding formulation components...");
     // Industrial Epoxy Coating composition
@@ -242,6 +253,36 @@ export async function seedDemoDataSimple(organizationId: string, userId: string)
       materialId: material4, // Butyl Acetate
       percentage: "30.0",
       role: "solvent",
+    });
+
+    // Industrial Epoxy Coating v2.0 composition (modified formulation)
+    await db.createFormulationComponent({
+      organizationId,
+      versionId: version1_v2,
+      materialId: material1, // Epoxy Resin DER 331 - increased from 60% to 65%
+      percentage: "65.0",
+      role: "base",
+    });
+    await db.createFormulationComponent({
+      organizationId,
+      versionId: version1_v2,
+      materialId: material3, // Titanium Dioxide R-706 - reduced from 15% to 10%
+      percentage: "10.0",
+      role: "pigment",
+    });
+    await db.createFormulationComponent({
+      organizationId,
+      versionId: version1_v2,
+      materialId: material4, // Butyl Acetate - reduced from 20% to 18%
+      percentage: "18.0",
+      role: "solvent",
+    });
+    await db.createFormulationComponent({
+      organizationId,
+      versionId: version1_v2,
+      materialId: material5, // BYK-333 Wetting Agent - increased from 5% to 7%
+      percentage: "7.0",
+      role: "additive",
     });
 
     // 5. Add multiple test condition sets

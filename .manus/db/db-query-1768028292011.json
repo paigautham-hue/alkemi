@@ -1,0 +1,38 @@
+{
+  "query": "SELECT fv.id, fv.version_number, fv.status, ff.name as family_name, ff.code \nFROM formulation_versions fv \nJOIN formulation_families ff ON fv.family_id = ff.id \nORDER BY ff.name, fv.version_number;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2w11Z6tqxKEYk6i.b24f818d37b4 --database MSgBPeo7wAzRH3Z9eLPB2M --execute SELECT fv.id, fv.version_number, fv.status, ff.name as family_name, ff.code \nFROM formulation_versions fv \nJOIN formulation_families ff ON fv.family_id = ff.id \nORDER BY ff.name, fv.version_number;",
+  "rows": [
+    {
+      "id": "42d73c2e-f1ff-48e7-92b8-1e89467abe5a",
+      "version_number": "1.0",
+      "status": "approved",
+      "family_name": "Architectural Acrylic Paint",
+      "code": "ARCH-AC-200"
+    },
+    {
+      "id": "6fc4fcbc-cd4a-4819-bedc-b10cb964d463",
+      "version_number": "2.0",
+      "status": "draft",
+      "family_name": "Architectural Acrylic Paint",
+      "code": "ARCH-AC-200"
+    },
+    {
+      "id": "24ddfdeb-ecca-4743-b3b0-ecd7a9a0066d",
+      "version_number": "1.0",
+      "status": "draft",
+      "family_name": "Automotive Clear Coat",
+      "code": "AUTO-PU-300"
+    },
+    {
+      "id": "3c493daf-2bfa-409c-80d3-5694ad8a96ae",
+      "version_number": "1.0",
+      "status": "approved",
+      "family_name": "Industrial Epoxy Coating",
+      "code": "IND-EP-100"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tversion_number\tstatus\tfamily_name\tcode\n42d73c2e-f1ff-48e7-92b8-1e89467abe5a\t1.0\tapproved\tArchitectural Acrylic Paint\tARCH-AC-200\n6fc4fcbc-cd4a-4819-bedc-b10cb964d463\t2.0\tdraft\tArchitectural Acrylic Paint\tARCH-AC-200\n24ddfdeb-ecca-4743-b3b0-ecd7a9a0066d\t1.0\tdraft\tAutomotive Clear Coat\tAUTO-PU-300\n3c493daf-2bfa-409c-80d3-5694ad8a96ae\t1.0\tapproved\tIndustrial Epoxy Coating\tIND-EP-100\n",
+  "stderr": "",
+  "execution_time_ms": 1550
+}

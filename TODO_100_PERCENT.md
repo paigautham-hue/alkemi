@@ -251,3 +251,13 @@
 - [x] Verified FormulationEditor already has back button
 - [x] All pages use DashboardLayout with consistent navigation
 - [x] Created comprehensive UX_AUDIT_REPORT.md
+
+## Mobile & SQL Fixes
+- [x] Fix Reset Workspace button cut off on mobile (responsive design)
+- [x] Added flex-col sm:flex-row responsive layout
+- [x] Full width buttons on mobile, auto width on desktop
+- [x] Fix materials table SQL error with default values
+- [x] Apply same fix pattern as suppliers (explicit values for schema defaults)
+- [x] Rewrote createMaterial to only insert provided fields
+- [ ] Test demo data loads completely without errors
+- [ ] Verify mobile layout works on small screens

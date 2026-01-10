@@ -253,7 +253,37 @@ export async function createMaterial(material: InsertMaterial) {
   if (!db) throw new Error("Database not available");
 
   const id = crypto.randomUUID();
-  await db.insert(materials).values({ ...material, id });
+  
+  // Build insert object with only provided fields to avoid SQL DEFAULT keyword issues
+  const insertData: any = {
+    id,
+    organizationId: material.organizationId,
+    domainId: material.domainId,
+    code: material.code,
+    name: material.name,
+    tradeName: material.tradeName,
+    category: material.category,
+  };
+  
+  // Add optional fields only if provided
+  if (material.casNumber) insertData.casNumber = material.casNumber;
+  if (material.supplierId) insertData.supplierId = material.supplierId;
+  if (material.supplierProductCode) insertData.supplierProductCode = material.supplierProductCode;
+  if (material.density) insertData.density = material.density;
+  if (material.viscosity) insertData.viscosity = material.viscosity;
+  if (material.molecularWeight) insertData.molecularWeight = material.molecularWeight;
+  if (material.refractiveIndex) insertData.refractiveIndex = material.refractiveIndex;
+  if (material.glassTransitionTemp) insertData.glassTransitionTemp = material.glassTransitionTemp;
+  if (material.hansenD) insertData.hansenD = material.hansenD;
+  if (material.hansenP) insertData.hansenP = material.hansenP;
+  if (material.hansenH) insertData.hansenH = material.hansenH;
+  if (material.regulatoryStatus) insertData.regulatoryStatus = material.regulatoryStatus;
+  if (material.costPerKg) insertData.costPerKg = material.costPerKg;
+  if (material.currency) insertData.currency = material.currency;
+  if (material.metadata) insertData.metadata = material.metadata;
+  if (material.isActive !== undefined) insertData.isActive = material.isActive;
+  
+  await db.insert(materials).values(insertData);
   return id;
 }
 

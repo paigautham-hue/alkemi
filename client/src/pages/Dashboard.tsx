@@ -115,20 +115,21 @@ export default function Dashboard() {
   return (
     <DashboardLayout>
       <div className="space-y-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">ALKEMI™ Dashboard</h1>
-            <p className="text-muted-foreground mt-2">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">ALKEMI™ Dashboard</h1>
+            <p className="text-muted-foreground mt-2 text-sm sm:text-base">
               Enterprise formulation intelligence platform for R&D teams
             </p>
           </div>
           {showDemoButton && (
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               <Button 
                 onClick={handleLoadDemoData}
                 disabled={isSeeding || isClearing}
                 size="lg"
                 data-tour="load-demo-data"
+                className="w-full sm:w-auto"
               >
                 <Sparkles className="mr-2 h-5 w-5" />
                 {isSeeding ? "Loading..." : "Load Demo Data"}
@@ -139,6 +140,7 @@ export default function Dashboard() {
                   disabled={isSeeding || isClearing}
                   size="lg"
                   variant="outline"
+                  className="w-full sm:w-auto"
                 >
                   {isClearing ? "Clearing..." : "Reset Workspace"}
                 </Button>

@@ -560,3 +560,39 @@
 - [x] Test formulation composition display with real materials
 - [x] Test predictions page with confidence intervals
 - [x] Test trials page with measurement data
+
+
+## Phase 24: Compliance Checking UI, Approval Workflow, and AI Debate
+### Compliance Checking UI
+- [ ] Create compliance checking backend service
+- [ ] Add compliance.checkFormulation tRPC procedure
+- [ ] Build ComplianceResultDialog component
+- [ ] Add compliance status indicator to formulation editor
+- [ ] Show pass/fail status for each rule
+- [ ] Display detailed violation reports
+- [ ] Add compliance history tracking
+
+### Approval Workflow
+- [ ] Create approval workflow database helpers
+- [ ] Add approval state machine service (draft→submitted→in_review→approved/rejected)
+- [ ] Create approval.submitRequest tRPC procedure
+- [ ] Create approval.reviewRequest tRPC procedure
+- [ ] Create approval.listRequests tRPC procedure
+- [ ] Build ApprovalsPage with request list
+- [ ] Add approval status badge to formulation editor
+- [ ] Create ApprovalSubmitDialog component
+- [ ] Create ApprovalReviewDialog component for managers
+- [ ] Add approval history timeline
+- [ ] Implement role-based access (only managers can approve)
+
+### AI Debate Feature
+- [ ] Create debate engine service with multi-LLM support
+- [ ] Implement persona generation for expert roles
+- [ ] Add debate.startDebate tRPC procedure
+- [ ] Build DebatePage UI
+- [ ] Create DebateDialog component
+- [ ] Add streaming response support
+- [ ] Display multiple expert perspectives
+- [ ] Show cross-critique and synthesis phases
+- [ ] Add debate history tracking
+- [ ] Implement debate export functionality

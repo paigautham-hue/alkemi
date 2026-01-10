@@ -1670,3 +1670,53 @@ export async function compareTrialWithPrediction(trialId: string, organizationId
     comparisons,
   };
 }
+
+
+// ==========================================================
+// COMPLIANCE FUNCTIONS
+// ==========================================================
+
+export async function listComplianceRules(organizationId: string, filters?: { isActive?: boolean }) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const { complianceRules, complianceDatasets, complianceSources } = await import("../drizzle/schema");
+  
+  const conditions = [eq(complianceRules.organizationId, organizationId)];
+  if (filters?.isActive !== undefined) {
+    conditions.push(eq(complianceRules.isActive, filters.isActive));
+  }
+
+  return db
+    .select({
+      rule: complianceRules,
+      dataset: complianceDatasets,
+      source: complianceSources,
+    })
+    .from(complianceRules)
+    .innerJoin(complianceDatasets, eq(complianceRules.datasetId, complianceDatasets.id))
+    .innerJoin(complianceSources, eq(complianceDatasets.sourceId, complianceSources.id))
+    .where(and(...conditions))
+    .orderBy(desc(complianceRules.createdAt));
+}
+
+export async function getComplianceRuleById(ruleId: string, organizationId: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const { complianceRules, complianceDatasets, complianceSources } = await import("../drizzle/schema");
+
+  const results = await db
+    .select({
+      rule: complianceRules,
+      dataset: complianceDatasets,
+      source: complianceSources,
+    })
+    .from(complianceRules)
+    .innerJoin(complianceDatasets, eq(complianceRules.datasetId, complianceDatasets.id))
+    .innerJoin(complianceSources, eq(complianceDatasets.sourceId, complianceSources.id))
+    .where(and(eq(complianceRules.id, ruleId), eq(complianceRules.organizationId, organizationId)))
+    .limit(1);
+
+  return results[0] || null;
+}

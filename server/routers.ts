@@ -741,6 +741,12 @@ export const appRouter = router({
 
   // Compliance
   compliance: router({
+    listRules: protectedProcedure
+      .input(z.object({ isActive: z.boolean().optional() }).optional())
+      .query(async ({ ctx, input }) => {
+        return await db.listComplianceRules(ctx.user.organizationId, input);
+      }),
+    
     listTemplates: protectedProcedure.query(async () => {
       const { getAvailableTemplates } = await import("./complianceTemplates");
       return getAvailableTemplates();

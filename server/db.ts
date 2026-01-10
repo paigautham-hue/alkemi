@@ -327,24 +327,28 @@ export async function createSupplier(supplier: InsertSupplier) {
   if (!db) throw new Error("Database not available");
 
   const id = crypto.randomUUID();
-  // Only include fields that are actually provided
+  
+  // Build insert data with only the fields we want to set
+  // For fields with schema defaults, either provide the value or omit entirely
   const insertData: any = {
     id,
     organizationId: supplier.organizationId,
     code: supplier.code,
     name: supplier.name,
+    // Provide default values for fields that have schema defaults
+    qualificationStatus: supplier.qualificationStatus || "qualified",
   };
   
-  // Add optional fields only if provided
-  if (supplier.country !== undefined) insertData.country = supplier.country;
-  if (supplier.contactEmail !== undefined) insertData.contactEmail = supplier.contactEmail;
-  if (supplier.contactPhone !== undefined) insertData.contactPhone = supplier.contactPhone;
-  if (supplier.address !== undefined) insertData.address = supplier.address;
+  // Add optional fields only if explicitly provided
+  if (supplier.country) insertData.country = supplier.country;
+  if (supplier.contactEmail) insertData.contactEmail = supplier.contactEmail;
+  if (supplier.contactPhone) insertData.contactPhone = supplier.contactPhone;
+  if (supplier.address) insertData.address = supplier.address;
   if (supplier.riskScore !== undefined) insertData.riskScore = supplier.riskScore;
-  if (supplier.qualificationStatus !== undefined) insertData.qualificationStatus = supplier.qualificationStatus;
-  if (supplier.notes !== undefined) insertData.notes = supplier.notes;
-  if (supplier.metadata !== undefined) insertData.metadata = supplier.metadata;
+  if (supplier.notes) insertData.notes = supplier.notes;
+  if (supplier.metadata) insertData.metadata = supplier.metadata;
   
+  // Do NOT include createdAt or updatedAt - let database defaults handle them
   await db.insert(suppliers).values(insertData);
   return id;
 }

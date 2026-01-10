@@ -235,3 +235,10 @@
 - [x] Fix to always show button for admin users (added isAdmin check)
 - [x] Button now shows if isEmpty OR isAdmin
 - [ ] Test on published site
+
+## CreateSupplier SQL Error Fix ✅ COMPLETE
+- [x] Debug why previous fix didn't work (Drizzle inserting SQL DEFAULT keyword)
+- [x] Found schema has .default() for riskScore and qualificationStatus  
+- [x] Rewrote to provide explicit value for qualificationStatus
+- [x] Omit createdAt/updatedAt entirely - let DB defaults handle
+- [ ] Test demo data loads without SQL errors

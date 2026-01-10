@@ -1,0 +1,90 @@
+{
+  "query": "SELECT fc.id, fc.version_id, fc.material_id, fc.percentage, fc.role, m.name as material_name FROM formulation_components fc LEFT JOIN materials m ON fc.material_id = m.id LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2w11Z6tqxKEYk6i.b24f818d37b4 --database MSgBPeo7wAzRH3Z9eLPB2M --execute SELECT fc.id, fc.version_id, fc.material_id, fc.percentage, fc.role, m.name as material_name FROM formulation_components fc LEFT JOIN materials m ON fc.material_id = m.id LIMIT 20;",
+  "rows": [
+    {
+      "id": "aac01719-17ab-4438-9c70-55b98d7fac9b",
+      "version_id": "cb3f3c3d-2325-47f7-89b4-f4388178b284",
+      "material_id": "2538f049-f5fd-467f-af86-27d3ad41053f",
+      "percentage": "5.000000",
+      "role": "additive",
+      "material_name": "BYK-333 Wetting Agent"
+    },
+    {
+      "id": "4081f39b-0b7a-49fb-b413-5e56fbe359c2",
+      "version_id": "a7dd8ab0-f72f-41ec-bc2a-6296a180a6eb",
+      "material_id": "2538f049-f5fd-467f-af86-27d3ad41053f",
+      "percentage": "2.000000",
+      "role": "additive",
+      "material_name": "BYK-333 Wetting Agent"
+    },
+    {
+      "id": "43579a89-8d7d-4195-a709-63b9d5190fce",
+      "version_id": "9ca38f38-2c38-4ba0-8b43-15188a5738f7",
+      "material_id": "3f4576dd-039b-46e3-bd70-b903036ede48",
+      "percentage": "70.000000",
+      "role": "base",
+      "material_name": "Epoxy Resin DER 331"
+    },
+    {
+      "id": "1c64a25f-a79b-46f0-9fdb-8f79aee42dca",
+      "version_id": "cb3f3c3d-2325-47f7-89b4-f4388178b284",
+      "material_id": "3f4576dd-039b-46e3-bd70-b903036ede48",
+      "percentage": "60.000000",
+      "role": "base",
+      "material_name": "Epoxy Resin DER 331"
+    },
+    {
+      "id": "d05451bf-58c1-4693-8bd4-5bf9c1086dbc",
+      "version_id": "a7dd8ab0-f72f-41ec-bc2a-6296a180a6eb",
+      "material_id": "5e84eb6e-14f2-4522-92d4-495aeb223357",
+      "percentage": "23.000000",
+      "role": "solvent",
+      "material_name": "Butyl Acetate"
+    },
+    {
+      "id": "aa134c31-2a01-4711-8250-1401b854df06",
+      "version_id": "cb3f3c3d-2325-47f7-89b4-f4388178b284",
+      "material_id": "5e84eb6e-14f2-4522-92d4-495aeb223357",
+      "percentage": "20.000000",
+      "role": "solvent",
+      "material_name": "Butyl Acetate"
+    },
+    {
+      "id": "4d105459-bcdb-4f29-b6ca-ffa99b4fe0a6",
+      "version_id": "9ca38f38-2c38-4ba0-8b43-15188a5738f7",
+      "material_id": "5e84eb6e-14f2-4522-92d4-495aeb223357",
+      "percentage": "30.000000",
+      "role": "solvent",
+      "material_name": "Butyl Acetate"
+    },
+    {
+      "id": "3b3822a2-89dd-4992-a139-de848fd4e766",
+      "version_id": "a7dd8ab0-f72f-41ec-bc2a-6296a180a6eb",
+      "material_id": "7e983fd1-018d-40c3-8825-a80a2dc2c8c2",
+      "percentage": "50.000000",
+      "role": "base",
+      "material_name": "Acrylic Resin AC-2000"
+    },
+    {
+      "id": "d5a6c84a-f9e0-4be3-aefe-4378a92b3e3d",
+      "version_id": "a7dd8ab0-f72f-41ec-bc2a-6296a180a6eb",
+      "material_id": "e7ebc381-801f-429d-85db-e1fd9f053f9f",
+      "percentage": "25.000000",
+      "role": "pigment",
+      "material_name": "Titanium Dioxide R-706"
+    },
+    {
+      "id": "b0753952-0f78-4309-8d91-d8ddac2f0cc5",
+      "version_id": "cb3f3c3d-2325-47f7-89b4-f4388178b284",
+      "material_id": "e7ebc381-801f-429d-85db-e1fd9f053f9f",
+      "percentage": "15.000000",
+      "role": "pigment",
+      "material_name": "Titanium Dioxide R-706"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tversion_id\tmaterial_id\tpercentage\trole\tmaterial_name\naac01719-17ab-4438-9c70-55b98d7fac9b\tcb3f3c3d-2325-47f7-89b4-f4388178b284\t2538f049-f5fd-467f-af86-27d3ad41053f\t5.000000\tadditive\tBYK-333 Wetting Agent\n4081f39b-0b7a-49fb-b413-5e56fbe359c2\ta7dd8ab0-f72f-41ec-bc2a-6296a180a6eb\t2538f049-f5fd-467f-af86-27d3ad41053f\t2.000000\tadditive\tBYK-333 Wetting Agent\n43579a89-8d7d-4195-a709-63b9d5190fce\t9ca38f38-2c38-4ba0-8b43-15188a5738f7\t3f4576dd-039b-46e3-bd70-b903036ede48\t70.000000\tbase\tEpoxy Resin DER 331\n1c64a25f-a79b-46f0-9fdb-8f79aee42dca\tcb3f3c3d-2325-47f7-89b4-f4388178b284\t3f4576dd-039b-46e3-bd70-b903036ede48\t60.000000\tbase\tEpoxy Resin DER 331\nd05451bf-58c1-4693-8bd4-5bf9c1086dbc\ta7dd8ab0-f72f-41ec-bc2a-6296a180a6eb\t5e84eb6e-14f2-4522-92d4-495aeb223357\t23.000000\tsolvent\tButyl Acetate\naa134c31-2a01-4711-8250-1401b854df06\tcb3f3c3d-2325-47f7-89b4-f4388178b284\t5e84eb6e-14f2-4522-92d4-495aeb223357\t20.000000\tsolvent\tButyl Acetate\n4d105459-bcdb-4f29-b6ca-ffa99b4fe0a6\t9ca38f38-2c38-4ba0-8b43-15188a5738f7\t5e84eb6e-14f2-4522-92d4-495aeb223357\t30.000000\tsolvent\tButyl Acetate\n3b3822a2-89dd-4992-a139-de848fd4e766\ta7dd8ab0-f72f-41ec-bc2a-6296a180a6eb\t7e983fd1-018d-40c3-8825-a80a2dc2c8c2\t50.000000\tbase\tAcrylic Resin AC-2000\nd5a6c84a-f9e0-4be3-aefe-4378a92b3e3d\ta7dd8ab0-f72f-41ec-bc2a-6296a180a6eb\te7ebc381-801f-429d-85db-e1fd9f053f9f\t25.000000\tpigment\tTitanium Dioxide R-706\nb0753952-0f78-4309-8d91-d8ddac2f0cc5\tcb3f3c3d-2325-47f7-89b4-f4388178b284\te7ebc381-801f-429d-85db-e1fd9f053f9f\t15.000000\tpigment\tTitanium Dioxide R-706\n",
+  "stderr": "",
+  "execution_time_ms": 1541
+}

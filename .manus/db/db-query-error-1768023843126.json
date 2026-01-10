@@ -1,0 +1,8 @@
+{
+  "query": "DELETE FROM trial_measurements; DELETE FROM trials; DELETE FROM prediction_features; DELETE FROM predictions; DELETE FROM test_condition_parameters; DELETE FROM test_condition_sets; DELETE FROM formulation_components; DELETE FROM formulation_versions; DELETE FROM formulation_families; DELETE FROM materials; DELETE FROM suppliers; DELETE FROM compliance_rule_versions; DELETE FROM compliance_rules; DELETE FROM compliance_datasets; DELETE FROM compliance_sources;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2w11Z6tqxKEYk6i.b24f818d37b4 --database MSgBPeo7wAzRH3Z9eLPB2M --execute DELETE FROM trial_measurements; DELETE FROM trials; DELETE FROM prediction_features; DELETE FROM predictions; DELETE FROM test_condition_parameters; DELETE FROM test_condition_sets; DELETE FROM formulation_components; DELETE FROM formulation_versions; DELETE FROM formulation_families; DELETE FROM materials; DELETE FROM suppliers; DELETE FROM compliance_rule_versions; DELETE FROM compliance_rules; DELETE FROM compliance_datasets; DELETE FROM compliance_sources;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1146 (42S02) at line 1: Table 'msgbpeo7wazrh3z9elpb2m.compliance_rule_versions' doesn't exist"
+  ]
+}

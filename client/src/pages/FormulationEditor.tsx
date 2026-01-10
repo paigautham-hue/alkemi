@@ -95,7 +95,7 @@ export default function FormulationEditor() {
   );
 
   // Calculate total percentage
-  const totalPercentage = components.reduce((sum: number, comp: any) => sum + parseFloat(comp.percentage), 0);
+  const totalPercentage = components.reduce((sum: number, comp: any) => sum + parseFloat(comp.component.percentage), 0);
   const isValid = Math.abs(totalPercentage - 100) < 0.01;
 
   // Mutations
@@ -379,10 +379,11 @@ export default function FormulationEditor() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {components.map((component: any) => {
-                          const material = materials?.find(m => m.id === component.materialId);
+                        {components.map((row: any) => {
+                          const component = row.component;
+                          const material = row.material;
                           return (
-                            <TableRow key={component.materialId}>
+                            <TableRow key={component.id}>
                               <TableCell className="font-medium">
                                 {material?.name || "Unknown Material"}
                               </TableCell>
@@ -396,13 +397,13 @@ export default function FormulationEditor() {
                                 {parseFloat(component.percentage).toFixed(2)}%
                               </TableCell>
                               <TableCell className="text-muted-foreground">
-                                {component.purpose || "—"}
+                                {component.role || "—"}
                               </TableCell>
                               <TableCell className="text-right">
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => handleRemoveComponent(component.materialId)}
+                                  onClick={() => handleRemoveComponent(component.id)}
                                   disabled={removeComponent.isPending}
                                 >
                                   <Trash2 className="h-4 w-4 text-destructive" />

@@ -1164,7 +1164,7 @@ export async function createApprovalRequest(data: {
 
   await db.execute(
     sql`INSERT INTO approval_requests (id, organization_id, formulation_version_id, requested_by, status, reviewers, submitted_at, created_at) 
-        VALUES (${data.id}, ${data.organizationId}, ${data.formulationVersionId}, ${data.requestedBy}, ${data.status}, ${JSON.stringify(data.reviewers)}, ${data.submittedAt}, NOW())`
+        VALUES (${data.id}, ${data.organizationId}, ${data.formulationVersionId}, ${data.requestedBy}, ${data.status}, ${JSON.stringify(data.reviewers)}, ${data.submittedAt.getTime()}, ${Date.now()})`
   );
 
   return data.id;
@@ -1212,7 +1212,7 @@ export async function createApprovalReview(data: {
 
   await db.execute(
     sql`INSERT INTO approval_reviews (id, approval_request_id, reviewer_id, action, comments, reviewed_at, created_at) 
-        VALUES (${data.id}, ${data.approvalRequestId}, ${data.reviewerId}, ${data.action}, ${data.comments}, ${data.reviewedAt}, NOW())`
+        VALUES (${data.id}, ${data.approvalRequestId}, ${data.reviewerId}, ${data.action}, ${data.comments}, ${data.reviewedAt.getTime()}, ${Date.now()})`
   );
 
   return data.id;
@@ -1720,3 +1720,5 @@ export async function getComplianceRuleById(ruleId: string, organizationId: stri
 
   return results[0] || null;
 }
+
+

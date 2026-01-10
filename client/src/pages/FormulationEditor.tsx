@@ -16,6 +16,8 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ComplianceStatusDialog } from "@/components/ComplianceStatusDialog";
+import { ApprovalSubmitDialog } from "@/components/ApprovalSubmitDialog";
+import { Send } from "lucide-react";
 
 export default function FormulationEditor() {
   const { user, loading: authLoading } = useAuth();
@@ -28,6 +30,7 @@ export default function FormulationEditor() {
   const [purpose, setPurpose] = useState("");
   const [selectedVersionId, setSelectedVersionId] = useState<string>("");
   const [showComplianceDialog, setShowComplianceDialog] = useState(false);
+  const [showApprovalDialog, setShowApprovalDialog] = useState(false);
 
   const generatePDF = trpc.reports.generateFormulationPDF.useMutation({
     onSuccess: (data) => {
@@ -217,13 +220,21 @@ export default function FormulationEditor() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button 
+            <Button
               variant="outline"
               onClick={() => setShowComplianceDialog(true)}
               disabled={!currentVersion}
             >
               <Shield className="h-4 w-4 mr-2" />
               Check Compliance
+            </Button>
+            <Button
+              variant="default"
+              onClick={() => setShowApprovalDialog(true)}
+              disabled={!currentVersion}
+            >
+              <Send className="h-4 w-4 mr-2" />
+              Submit for Approval
             </Button>
             <Button
               variant="outline"
@@ -567,6 +578,19 @@ export default function FormulationEditor() {
             versionId={currentVersion.id}
             open={showComplianceDialog}
             onOpenChange={setShowComplianceDialog}
+          />
+        )}
+
+        {/* Approval Submit Dialog */}
+        {currentVersion && family && (
+          <ApprovalSubmitDialog
+            versionId={currentVersion.id}
+            formulationName={`${family.name} - ${currentVersion.versionNumber}`}
+            open={showApprovalDialog}
+            onOpenChange={setShowApprovalDialog}
+            onSuccess={() => {
+              toast.success("Formulation submitted for approval!");
+            }}
           />
         )}
       </div>

@@ -304,6 +304,203 @@ export const COMPLIANCE_TEMPLATES: ComplianceTemplate[] = [
       },
     ],
   },
+  {
+    id: "reach-svhc-2024",
+    name: "REACH SVHC Restrictions",
+    jurisdiction: "European Union",
+    description: "REACH Regulation (EC) 1907/2006 - Substances of Very High Concern (SVHC) restrictions",
+    sourceUrl: "https://echa.europa.eu/candidate-list-table",
+    rules: [
+      {
+        ruleName: "Bis(2-ethylhexyl) phthalate (DEHP) Ban",
+        ruleType: "banned_substance",
+        ruleLogic: {
+          substanceCAS: "117-81-7",
+          substanceName: "DEHP",
+        },
+        severity: "error",
+        explanation: "DEHP is an SVHC and restricted under REACH Annex XVII for consumer products",
+      },
+      {
+        ruleName: "Bisphenol A (BPA) Restriction",
+        ruleType: "concentration_limit",
+        ruleLogic: {
+          substanceCAS: "80-05-7",
+          substanceName: "Bisphenol A",
+          maxConcentration: 0.02,
+          unit: "percent",
+        },
+        severity: "warning",
+        explanation: "BPA is an SVHC with restrictions in thermal paper and food contact materials",
+      },
+      {
+        ruleName: "Cadmium Compounds Ban",
+        ruleType: "banned_substance",
+        ruleLogic: {
+          substanceName: "Cadmium",
+          casPattern: "7440-43-9",
+        },
+        severity: "error",
+        explanation: "Cadmium and its compounds are restricted in mixtures and articles under REACH Annex XVII",
+      },
+    ],
+  },
+  {
+    id: "voc-limits-coatings",
+    name: "VOC Limits for Coatings",
+    jurisdiction: "United States",
+    description: "EPA VOC content limits for architectural and industrial maintenance coatings (40 CFR Part 59)",
+    sourceUrl: "https://www.epa.gov/stationary-sources-air-pollution/architectural-coatings",
+    rules: [
+      {
+        ruleName: "Flat Coating VOC Limit",
+        ruleType: "total_limit",
+        ruleLogic: {
+          productCategory: "Flat Coating",
+          maxVOC: 50,
+          unit: "g/L",
+        },
+        severity: "error",
+        explanation: "Flat coatings must not exceed 50 g/L VOC content (EPA Rule 2008)",
+      },
+      {
+        ruleName: "Industrial Maintenance Coating VOC Limit",
+        ruleType: "total_limit",
+        ruleLogic: {
+          productCategory: "Industrial Maintenance",
+          maxVOC: 340,
+          unit: "g/L",
+        },
+        severity: "error",
+        explanation: "Industrial maintenance coatings must not exceed 340 g/L VOC content",
+      },
+      {
+        ruleName: "High-Temperature Coating VOC Limit",
+        ruleType: "total_limit",
+        ruleLogic: {
+          productCategory: "High-Temperature Coating",
+          maxVOC: 420,
+          unit: "g/L",
+        },
+        severity: "warning",
+        explanation: "High-temperature coatings should not exceed 420 g/L VOC content",
+      },
+    ],
+  },
+  {
+    id: "heavy-metals-restrictions",
+    name: "Heavy Metals Restrictions",
+    jurisdiction: "Global",
+    description: "Comprehensive heavy metal restrictions for consumer products based on RoHS, CPSIA, and other regulations",
+    sourceUrl: "https://www.cpsc.gov/Business--Manufacturing/Business-Education/Lead",
+    rules: [
+      {
+        ruleName: "Lead Content Limit (CPSIA)",
+        ruleType: "concentration_limit",
+        ruleLogic: {
+          substanceCAS: "7439-92-1",
+          substanceName: "Lead",
+          maxConcentration: 0.009,
+          unit: "percent",
+        },
+        severity: "error",
+        explanation: "Lead content in children's products must not exceed 100 ppm (0.01%) under CPSIA",
+      },
+      {
+        ruleName: "Hexavalent Chromium Ban (RoHS)",
+        ruleType: "banned_substance",
+        ruleLogic: {
+          substanceCAS: "18540-29-9",
+          substanceName: "Chromium VI",
+        },
+        severity: "error",
+        explanation: "Hexavalent chromium is restricted under RoHS Directive (EU) 2015/863",
+      },
+      {
+        ruleName: "Mercury Content Limit",
+        ruleType: "concentration_limit",
+        ruleLogic: {
+          substanceCAS: "7439-97-6",
+          substanceName: "Mercury",
+          maxConcentration: 0.0001,
+          unit: "percent",
+        },
+        severity: "error",
+        explanation: "Mercury content must not exceed 1 ppm in most consumer products",
+      },
+    ],
+  },
+  {
+    id: "automotive-coatings-oem",
+    name: "Automotive OEM Coating Standards",
+    jurisdiction: "Global",
+    description: "Industry standards for automotive original equipment manufacturer coatings",
+    sourceUrl: "https://www.sae.org/standards/",
+    rules: [
+      {
+        ruleName: "Corrosion Resistance Requirement",
+        ruleType: "required_component",
+        ruleLogic: {
+          requiredProperty: "corrosion_resistance",
+          minValue: 1000,
+          unit: "hours_salt_spray",
+        },
+        severity: "warning",
+        explanation: "Automotive coatings should pass 1000+ hours salt spray test per ASTM B117",
+      },
+      {
+        ruleName: "Silicone Contamination Warning",
+        ruleType: "incompatible_combination",
+        ruleLogic: {
+          substanceClass: "Silicone",
+          incompatibleWith: "Automotive Clearcoat",
+        },
+        severity: "warning",
+        explanation: "Silicone additives may cause cratering defects in automotive clearcoats",
+      },
+    ],
+  },
+  {
+    id: "food-contact-fda-fcn",
+    name: "FDA Food Contact Notifications",
+    jurisdiction: "United States",
+    description: "FDA regulations for food contact substances (21 CFR 170-189)",
+    sourceUrl: "https://www.fda.gov/food/food-ingredients-packaging/food-contact-substances-fcs",
+    rules: [
+      {
+        ruleName: "BPA in Food Contact Ban",
+        ruleType: "banned_substance",
+        ruleLogic: {
+          substanceCAS: "80-05-7",
+          substanceName: "Bisphenol A",
+          applicationArea: "Food Contact",
+        },
+        severity: "error",
+        explanation: "BPA is banned in baby bottles and sippy cups (21 CFR 177.1580)",
+      },
+      {
+        ruleName: "PFAS Restriction in Food Packaging",
+        ruleType: "banned_substance",
+        ruleLogic: {
+          substanceClass: "PFAS",
+          applicationArea: "Food Contact",
+        },
+        severity: "error",
+        explanation: "Per- and polyfluoroalkyl substances (PFAS) are being phased out of food contact materials",
+      },
+      {
+        ruleName: "Migration Limit for Coatings",
+        ruleType: "total_limit",
+        ruleLogic: {
+          testType: "Overall Migration",
+          maxMigration: 60,
+          unit: "mg/kg",
+        },
+        severity: "warning",
+        explanation: "Overall migration from food contact coatings should not exceed 60 mg/kg (EU 10/2011)",
+      },
+    ],
+  },
 ];
 
 /**

@@ -596,3 +596,56 @@
 - [ ] Show cross-critique and synthesis phases
 - [ ] Add debate history tracking
 - [ ] Implement debate export functionality
+
+
+## Phase 25: Approval Workflow, AI Debate, and Comprehensive Compliance Rules
+
+### Approval Workflow
+- [ ] Create approval workflow database helpers (createApprovalRequest, listApprovalRequests, etc.)
+- [ ] Implement approval state machine service (validateTransition, submitForApproval, approveRequest, rejectRequest)
+- [ ] Add approval tRPC router with procedures (submit, list, review, getHistory)
+- [ ] Create ApprovalSubmitDialog component for submitting formulations
+- [ ] Build ApprovalsPage with pending/completed request lists
+- [ ] Create ApprovalReviewDialog for managers to approve/reject
+- [ ] Add approval status badges to formulation editor
+- [ ] Implement approval history tracking and audit trail
+- [ ] Add approval notifications (toast messages)
+
+### AI Debate Feature
+- [ ] Create debate engine service with persona generation
+- [ ] Implement parallel LLM consultation (3-5 expert personas)
+- [ ] Add cross-critique phase for debate
+- [ ] Implement synthesis and consensus building
+- [ ] Create debate tRPC router (startDebate, getDebateHistory)
+- [ ] Build AIDebatePage with question input interface
+- [ ] Create DebateVisualization component with streaming responses
+- [ ] Add debate history tracking and export
+- [ ] Implement debate cost tracking
+
+### Comprehensive Demo Compliance Rules
+- [ ] Add FDA cosmetics regulations (ingredient restrictions, labeling requirements)
+- [ ] Add REACH regulations (SVHC restrictions, registration requirements)
+- [ ] Add VOC content limits for coatings
+- [ ] Add heavy metal restrictions (lead, mercury, cadmium)
+- [ ] Add allergen disclosure requirements
+- [ ] Add industry-specific rules (automotive, aerospace, food contact)
+- [ ] Update seedDemoDataSimple to include comprehensive compliance rules
+- [ ] Test compliance checking with new rules
+
+
+## Phase 25: Comprehensive Demo Data & Advanced Features (Current)
+- [x] Add comprehensive compliance templates (FDA, REACH, VOC, heavy metals, industry rules)
+- [x] Update complianceTemplates.ts with 10+ regulatory templates
+- [x] Enhance demo data with realistic formulation compositions totaling 100%
+- [x] Add multiple test condition sets (standard, UV, high-temperature)
+- [x] Add predictions with confidence intervals and feature importance
+- [x] Add trials with actual measurement data
+- [x] Fix formulation composition display bug (NaN% and Unknown Material)
+- [x] Implement Compliance checking UI with ComplianceStatusDialog
+- [x] Add compliance status indicator to formulation editor
+- [x] Create compliance checking backend service
+- [ ] Fix Approval Workflow submission (500 error on submit - needs debugging)
+- [ ] Complete ApprovalSubmitDialog integration
+- [ ] Test approval workflow end-to-end
+- [ ] Verify AI Debate feature is working correctly
+- [ ] Write tests for all new features

@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Plus, Beaker, FileText, Target, TrendingUp, Trash2, Eye, BarChart3, Database } from "lucide-react";
+import { Loader2, Plus, Beaker, FileText, Target, TrendingUp, Trash2, Eye, BarChart3, Database, FileDown, FileSpreadsheet, FileJson, Download } from "lucide-react";
 import { toast } from "sonner";
 import { AnalysisProgressIndicator, AnalysisResultsSkeleton } from "@/components/AnalysisProgressIndicator";
 import { AnalysisCharts } from "@/components/AnalysisCharts";
@@ -75,6 +75,75 @@ export default function ReverseEngineering() {
       toast.error(`Failed to seed test products: ${error.message}`);
     },
   });
+
+  // Export mutations
+  const exportPDF = trpc.reverseEngineering.exportPDF.useMutation({
+    onSuccess: (data) => {
+      const blob = new Blob([data.html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = data.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success(`PDF report downloaded: ${selectedProductData?.productName}`);
+    },
+    onError: (error) => {
+      toast.error(`Export failed: ${error.message}`);
+    },
+  });
+
+  const exportExcel = trpc.reverseEngineering.exportExcel.useMutation({
+    onSuccess: (data) => {
+      const blob = new Blob([data.csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = data.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success(`Excel report downloaded: ${selectedProductData?.productName}`);
+    },
+    onError: (error) => {
+      toast.error(`Export failed: ${error.message}`);
+    },
+  });
+
+  const handleExportPDF = () => {
+    if (selectedProduct) {
+      exportPDF.mutate({ productId: selectedProduct });
+    }
+  };
+
+  const handleExportExcel = () => {
+    if (selectedProduct) {
+      exportExcel.mutate({ productId: selectedProduct });
+    }
+  };
+
+  const handleExportJSON = () => {
+    if (selectedProductData && analyses) {
+      const exportData = {
+        product: selectedProductData,
+        analyses: analyses,
+        exportedAt: new Date().toISOString(),
+      };
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ALKEMI_Analysis_${selectedProductData.productName.replace(/\s+/g, '_')}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success(`JSON data exported: ${selectedProductData.productName}`);
+    }
+  };
 
   const handleAddProduct = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -369,6 +438,49 @@ export default function ReverseEngineering() {
                           <span className="text-sm font-medium">
                             {(parseFloat(selectedProductData.confidenceScore) * 100).toFixed(0)}%
                           </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Export Buttons */}
+                    {selectedProductData.analysisStatus === "completed" && (
+                      <div className="pt-4 border-t">
+                        <Label className="mb-3 block">Export Analysis</Label>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleExportPDF}
+                            disabled={exportPDF.isPending}
+                          >
+                            {exportPDF.isPending ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <FileDown className="h-4 w-4 mr-2" />
+                            )}
+                            Export PDF
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleExportExcel}
+                            disabled={exportExcel.isPending}
+                          >
+                            {exportExcel.isPending ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <FileSpreadsheet className="h-4 w-4 mr-2" />
+                            )}
+                            Export Excel
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleExportJSON}
+                          >
+                            <FileJson className="h-4 w-4 mr-2" />
+                            Export JSON
+                          </Button>
                         </div>
                       </div>
                     )}

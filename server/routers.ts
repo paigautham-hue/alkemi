@@ -1329,6 +1329,30 @@ export const appRouter = router({
           message: `Successfully seeded ${TEST_COMPETITOR_PRODUCTS.length} test competitor products` 
         };
       }),
+
+    exportPDF: protectedProcedure
+      .input(z.object({ productId: z.string().uuid() }))
+      .mutation(async ({ ctx, input }) => {
+        const { generatePDFContent, getExportData } = await import("./exportService");
+        const data = await getExportData(input.productId, ctx.user.organizationId);
+        const html = generatePDFContent(data);
+        return {
+          html,
+          filename: `ALKEMI_Analysis_${data.product.productName.replace(/\s+/g, '_')}.html`,
+        };
+      }),
+
+    exportExcel: protectedProcedure
+      .input(z.object({ productId: z.string().uuid() }))
+      .mutation(async ({ ctx, input }) => {
+        const { generateExcelContent, getExportData } = await import("./exportService");
+        const data = await getExportData(input.productId, ctx.user.organizationId);
+        const csv = generateExcelContent(data);
+        return {
+          csv,
+          filename: `ALKEMI_Analysis_${data.product.productName.replace(/\s+/g, '_')}.csv`,
+        };
+      }),
   }),
 
   // Patent & Literature Analysis

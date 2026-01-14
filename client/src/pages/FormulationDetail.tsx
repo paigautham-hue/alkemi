@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,6 +41,7 @@ export default function FormulationDetail() {
   const [showComparison, setShowComparison] = useState(false);
   const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
   const [versionToRestore, setVersionToRestore] = useState<string | null>(null);
+  const [branchFilter, setBranchFilter] = useState<string>("all");
   const [, setLocation] = useLocation();
 
   const { data: family, isLoading: familyLoading } = trpc.formulations.getFamilyById.useQuery(
@@ -243,13 +245,40 @@ export default function FormulationDetail() {
 
                 {/* Tree View */}
                 <TabsContent value="tree" className="mt-0">
+                  {/* Branch Filter */}
+                  <div className="mb-4 flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Filter by branch:</span>
+                    <Select value={branchFilter} onValueChange={setBranchFilter}>
+                      <SelectTrigger className="w-[200px]">
+                        <SelectValue placeholder="All Branches" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Branches</SelectItem>
+                        <SelectItem value="revision">Revision</SelectItem>
+                        <SelectItem value="variant">Variant</SelectItem>
+                        <SelectItem value="cost_reduction">Cost Reduction</SelectItem>
+                        <SelectItem value="customer_specific">Customer Specific</SelectItem>
+                        <SelectItem value="experimental">Experimental</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {branchFilter !== "all" && (
+                      <Badge variant="secondary">
+                        {versions?.filter((v) => v.branchType === branchFilter).length || 0} version(s)
+                      </Badge>
+                    )}
+                  </div>
+
                   {isLoading ? (
                     <div className="flex items-center justify-center py-12">
                       <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
                     </div>
                   ) : versions && versions.length > 0 ? (
                     <VersionTree
-                      versions={versions}
+                      versions={
+                        branchFilter === "all"
+                          ? versions
+                          : versions.filter((v) => v.branchType === branchFilter)
+                      }
                       onVersionClick={handleVersionClick}
                       highlightVersionId={versions[0]?.id}
                     />

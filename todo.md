@@ -1801,3 +1801,39 @@
 - [x] Run all unit tests (18 tests passing)
 - [x] TypeScript compilation successful (0 errors)
 - [x] Create checkpoint
+
+
+## Phase 33: Version Tree Enhancements ✅ COMPLETE
+
+### Hover Diff Tooltips
+- [x] Fetch parent version data on node hover (passed via data.parentVersion)
+- [x] Calculate component count difference (componentDiff)
+- [x] Show status change in tooltip (statusChanged with arrow)
+- [x] Display created date and author (Calendar and User icons)
+- [x] Add glassmorphic tooltip styling (glass class)
+- [x] Add fade-in animation for tooltips (delayDuration 300ms)
+- [x] Show TrendingUp/TrendingDown icons for component changes
+- [x] Only show tooltip for nodes with parents
+
+### Branch Filtering
+- [x] Add Select dropdown for branch type filter
+- [x] Add "All Branches" option
+- [x] Add options for all branch types (revision, variant, cost_reduction, customer_specific, experimental)
+- [x] Filter versions array based on selected branch type
+- [x] Tree layout updates automatically via useMemo
+- [x] Show filtered count in Badge when filter is active
+- [x] Persist filter selection in branchFilter state
+
+### PNG Export
+- [x] Install html-to-image library (html-to-image 1.11.13)
+- [x] Add "Export as PNG" button to tree controls (top-right corner)
+- [x] Capture React Flow canvas as image (toPng with quality 1.0, pixelRatio 2)
+- [x] Download PNG with timestamp in filename
+- [x] Add loading state during export (isExporting state, disabled button)
+- [x] Show success toast after export
+- [x] Show error toast if export fails
+
+### Testing
+- [x] Run all unit tests (18 tests passing)
+- [x] TypeScript compilation successful (0 errors)
+- [x] Create checkpoint

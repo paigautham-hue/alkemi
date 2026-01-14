@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import ReactFlow, {
   Node,
   Edge,
@@ -12,7 +12,15 @@ import ReactFlow, {
 } from "reactflow";
 import dagre from "dagre";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, User, GitBranch } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Calendar, User, GitBranch, TrendingUp, TrendingDown, Download } from "lucide-react";
+import { toPng } from "html-to-image";
+import { toast } from "sonner";
 import "reactflow/dist/style.css";
 
 interface Version {
@@ -25,6 +33,7 @@ interface Version {
   createdBy: string;
   notes?: string | null;
   changeReason?: string | null;
+  componentCount?: number;
 }
 
 interface VersionTreeProps {
@@ -70,7 +79,17 @@ function VersionNode({ data }: { data: any }) {
     }
   };
 
-  return (
+  // Calculate diff with parent
+  const parentVersion = data.parentVersion;
+  const componentDiff =
+    parentVersion &&
+    data.componentCount !== undefined &&
+    parentVersion.componentCount !== undefined
+      ? data.componentCount - parentVersion.componentCount
+      : null;
+  const statusChanged = parentVersion && data.status !== parentVersion.status;
+
+  const nodeContent = (
     <div
       className={`glass border-2 rounded-lg p-3 ${getStatusColor(data.status)} ${
         data.isHighlighted ? "ring-4 ring-primary ring-offset-2" : ""
@@ -118,6 +137,68 @@ function VersionNode({ data }: { data: any }) {
       </div>
     </div>
   );
+
+  // If there's a parent, show tooltip with diff
+  if (parentVersion) {
+    return (
+      <TooltipProvider>
+        <Tooltip delayDuration={300}>
+          <TooltipTrigger asChild>{nodeContent}</TooltipTrigger>
+          <TooltipContent side="right" className="glass max-w-sm">
+            <div className="space-y-2 p-2">
+              <div className="font-semibold text-sm">{data.versionNumber}</div>
+
+              {/* Component Count Diff */}
+              {componentDiff !== null && (
+                <div className="flex items-center gap-2 text-xs">
+                  {componentDiff > 0 ? (
+                    <>
+                      <TrendingUp className="h-3 w-3 text-green-500" />
+                      <span className="text-green-600 dark:text-green-400">
+                        +{componentDiff} component{componentDiff !== 1 ? "s" : ""}
+                      </span>
+                    </>
+                  ) : componentDiff < 0 ? (
+                    <>
+                      <TrendingDown className="h-3 w-3 text-red-500" />
+                      <span className="text-red-600 dark:text-red-400">
+                        {componentDiff} component{componentDiff !== -1 ? "s" : ""}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-muted-foreground">No component changes</span>
+                  )}
+                </div>
+              )}
+
+              {/* Status Change */}
+              {statusChanged && (
+                <div className="text-xs">
+                  <span className="text-muted-foreground">Status: </span>
+                  <span className="font-medium">{parentVersion.status}</span>
+                  <span className="mx-1">→</span>
+                  <span className="font-medium">{data.status}</span>
+                </div>
+              )}
+
+              {/* Created Info */}
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Calendar className="h-3 w-3" />
+                <span>{new Date(data.createdAt).toLocaleDateString()}</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <User className="h-3 w-3" />
+                <span>{data.createdBy}</span>
+              </div>
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
+  // No parent, just show the node without tooltip
+  return nodeContent;
 }
 
 const nodeTypes = {
@@ -157,14 +238,45 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
 };
 
 export function VersionTree({ versions, onVersionClick, highlightVersionId }: VersionTreeProps) {
+  const treeRef = useRef<HTMLDivElement>(null);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportPNG = useCallback(async () => {
+    if (!treeRef.current) return;
+
+    setIsExporting(true);
+    try {
+      const dataUrl = await toPng(treeRef.current, {
+        quality: 1.0,
+        pixelRatio: 2,
+        backgroundColor: "#ffffff",
+      });
+
+      const link = document.createElement("a");
+      link.download = `formulation-version-tree-${new Date().getTime()}.png`;
+      link.href = dataUrl;
+      link.click();
+
+      toast.success("Version tree exported successfully");
+    } catch (error) {
+      console.error("Failed to export tree:", error);
+      toast.error("Failed to export version tree");
+    } finally {
+      setIsExporting(false);
+    }
+  }, []);
   // Build nodes and edges from version data
   const { initialNodes, initialEdges } = useMemo(() => {
+    // Create a map for quick parent lookup
+    const versionMap = new Map(versions.map((v) => [v.id, v]));
+
     const nodes: Node[] = versions.map((version) => ({
       id: version.id,
       type: "versionNode",
       data: {
         ...version,
         isHighlighted: version.id === highlightVersionId,
+        parentVersion: version.parentVersionId ? versionMap.get(version.parentVersionId) : null,
       },
       position: { x: 0, y: 0 }, // Will be set by dagre
     }));
@@ -206,7 +318,17 @@ export function VersionTree({ versions, onVersionClick, highlightVersionId }: Ve
   );
 
   return (
-    <div className="w-full h-[600px] glass rounded-lg border">
+    <div ref={treeRef} className="w-full h-[600px] glass rounded-lg border relative">
+      {/* Export Button */}
+      <button
+        onClick={handleExportPNG}
+        disabled={isExporting}
+        className="absolute top-4 right-4 z-10 glass border rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent transition-colors flex items-center gap-2"
+      >
+        <Download className="h-4 w-4" />
+        {isExporting ? "Exporting..." : "Export PNG"}
+      </button>
+      
       <ReactFlow
         nodes={nodes}
         edges={edges}

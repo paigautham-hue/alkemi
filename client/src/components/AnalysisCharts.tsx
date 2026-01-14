@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { AnimatedNumber, ConfidenceMeter } from "@/components/AnimatedProgressBar";
 import {
   BarChart,
   Bar,
@@ -315,28 +316,32 @@ export function ConfidenceSummaryStats({ technicalParameters }: { technicalParam
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 gap-4">
-          <div className="text-center p-4 bg-muted/50 rounded-lg">
-            <p className="text-3xl font-bold text-primary">{stats.total}</p>
+          <div className="text-center p-4 glass rounded-lg hover-lift">
+            <p className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              <AnimatedNumber value={stats.total} />
+            </p>
             <p className="text-sm text-muted-foreground">Parameters</p>
           </div>
-          <div className="text-center p-4 bg-muted/50 rounded-lg">
-            <p className="text-3xl font-bold text-primary">{stats.average}%</p>
+          <div className="text-center p-4 glass rounded-lg hover-lift">
+            <p className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              <AnimatedNumber value={stats.average} suffix="%" />
+            </p>
             <p className="text-sm text-muted-foreground">Avg Confidence</p>
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-2 mt-4">
-          <div className="text-center p-2 rounded-lg" style={{ backgroundColor: `${CONFIDENCE_COLORS.high}20` }}>
-            <p className="text-lg font-semibold" style={{ color: CONFIDENCE_COLORS.high }}>{stats.high}</p>
-            <p className="text-xs text-muted-foreground">High</p>
-          </div>
-          <div className="text-center p-2 rounded-lg" style={{ backgroundColor: `${CONFIDENCE_COLORS.medium}20` }}>
-            <p className="text-lg font-semibold" style={{ color: CONFIDENCE_COLORS.medium }}>{stats.medium}</p>
-            <p className="text-xs text-muted-foreground">Medium</p>
-          </div>
-          <div className="text-center p-2 rounded-lg" style={{ backgroundColor: `${CONFIDENCE_COLORS.low}20` }}>
-            <p className="text-lg font-semibold" style={{ color: CONFIDENCE_COLORS.low }}>{stats.low}</p>
-            <p className="text-xs text-muted-foreground">Low</p>
-          </div>
+        <div className="space-y-3 mt-4">
+          <ConfidenceMeter 
+            confidence={stats.high / stats.total} 
+            label={`High Confidence (${stats.high} parameters)`}
+          />
+          <ConfidenceMeter 
+            confidence={stats.medium / stats.total} 
+            label={`Medium Confidence (${stats.medium} parameters)`}
+          />
+          <ConfidenceMeter 
+            confidence={stats.low / stats.total} 
+            label={`Low Confidence (${stats.low} parameters)`}
+          />
         </div>
       </CardContent>
     </Card>

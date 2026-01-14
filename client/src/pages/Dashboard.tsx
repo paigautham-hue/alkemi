@@ -6,6 +6,7 @@ import { Beaker, Building2, FlaskConical, Package, Sparkles } from "lucide-react
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
+import { AnimatedPage } from "@/components/AnimatedPage";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { createTour, hasTourBeenCompleted, markTourAsCompleted } from "@/lib/tour";
 import { MapIcon } from "lucide-react";
@@ -114,6 +115,7 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout>
+      <AnimatedPage>
       <div className="space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex-1 min-w-0">
@@ -266,6 +268,7 @@ export default function Dashboard() {
           </Card>
         </div>
       </div>
+      </AnimatedPage>
     </DashboardLayout>
   );
 }

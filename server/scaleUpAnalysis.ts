@@ -128,7 +128,7 @@ ${targetScale ? `- Target Scale: ${targetScale.volume} ${targetScale.unit}` : ""
 Provide a detailed JSON response with all numerical values and risk assessments.`;
 
   const response = await invokeLLM({
-    model: "claude-opus-4.5",
+    model: "claude-opus-4-5",
     temperature: 0.2,
     max_tokens: 5000,
     messages: [
@@ -306,7 +306,7 @@ For each scenario, provide:
 - Confidence level (0-100%)`;
 
   const response = await invokeLLM({
-    model: "claude-opus-4.5",
+    model: "claude-opus-4-5",
     temperature: 0.3,
     max_tokens: 4000,
     messages: [

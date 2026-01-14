@@ -66,7 +66,7 @@ ${equipmentInfo || "Standard mixing equipment"}
 Generate a comprehensive SOP document including safety precautions, quality checkpoints, and detailed manufacturing steps.`;
 
   const response = await invokeLLM({
-    model: "claude-opus-4.5",
+    model: "claude-opus-4-5",
     temperature: 0.2,
     max_tokens: 5000,
     messages: [
@@ -141,7 +141,7 @@ ${components.map(c => `- ${c.material.name}: ${c.component.percentage}% (${c.com
 Provide a clear title, comprehensive process description, and step-by-step manufacturing instructions.`;
 
   const response = await invokeLLM({
-    model: "claude-opus-4.5",
+    model: "claude-opus-4-5",
     temperature: 0.2,
     max_tokens: 5000,
     messages: [
@@ -203,7 +203,7 @@ ${components.map(c => `- ${c.material.name}: ${c.component.percentage}%`).join("
 Create a detailed process flow diagram showing raw material preparation, mixing/blending, processing, quality control, and packaging.`;
 
   const response = await invokeLLM({
-    model: "claude-opus-4.5",
+    model: "claude-opus-4-5",
     temperature: 0.2,
     max_tokens: 4000,
     messages: [

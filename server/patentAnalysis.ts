@@ -64,7 +64,7 @@ export async function extractChemicalCompounds(
   patentTitle: string
 ): Promise<ChemicalCompound[]> {
   const response = await invokeLLM({
-    model: "claude-opus-4.5",
+    model: "claude-opus-4-5",
     temperature: 0.2,
     max_tokens: 4000,
     messages: [
@@ -122,7 +122,7 @@ export async function extractReactionMechanisms(
   patentTitle: string
 ): Promise<ReactionMechanism[]> {
   const response = await invokeLLM({
-    model: "claude-opus-4.5",
+    model: "claude-opus-4-5",
     temperature: 0.2,
     max_tokens: 4000,
     messages: [
@@ -191,7 +191,7 @@ export async function extractProcessingConditions(
   patentTitle: string
 ): Promise<ProcessingConditions> {
   const response = await invokeLLM({
-    model: "claude-opus-4.5",
+    model: "claude-opus-4-5",
     temperature: 0.2,
     max_tokens: 4000,
     messages: [
@@ -249,7 +249,7 @@ export async function analyzeTechnologyLandscape(
   patentAbstract: string
 ): Promise<TechnologyLandscape> {
   const response = await invokeLLM({
-    model: "claude-opus-4.5",
+    model: "claude-opus-4-5",
     temperature: 0.3,
     max_tokens: 4000,
     messages: [
@@ -310,7 +310,7 @@ export async function generateFormulationStrategies(
   technologyLandscape: TechnologyLandscape
 ): Promise<FormulationStrategy[]> {
   const response = await invokeLLM({
-    model: "claude-opus-4.5",
+    model: "claude-opus-4-5",
     temperature: 0.3,
     max_tokens: 4000,
     messages: [

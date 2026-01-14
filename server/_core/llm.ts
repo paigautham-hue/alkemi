@@ -267,9 +267,73 @@ const normalizeResponseFormat = ({
   };
 };
 
+// Model fallback strategy: Try best model first, fallback to alternatives if unavailable
+// Based on December 2025 LLM capabilities matrix for R&D/scientific applications
+const MODEL_FALLBACK_CHAIN = [
+  "claude-opus-4-5",      // Primary: Most intelligent, excellent for technical analysis
+  "gpt-5.2",              // Fallback 1: Superior reasoning for complex problems
+  "claude-sonnet-4-5",    // Fallback 2: Balanced performance/cost
+  "gemini-2.5-flash"      // Fallback 3: Fast, cost-effective
+];
+
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   assertApiKey();
 
+  const {
+    messages,
+    model,
+    temperature,
+    tools,
+    toolChoice,
+    tool_choice,
+    maxTokens,
+    max_tokens,
+    outputSchema,
+    output_schema,
+    responseFormat,
+    response_format,
+  } = params;
+
+  // Determine model to use: specified model or fallback chain
+  const modelsToTry = model ? [model, ...MODEL_FALLBACK_CHAIN] : MODEL_FALLBACK_CHAIN;
+  let lastError: Error | null = null;
+
+  // Try each model in the fallback chain
+  for (let i = 0; i < modelsToTry.length; i++) {
+    const currentModel = modelsToTry[i];
+    
+    try {
+      console.log(`[LLM] Attempting model: ${currentModel}${i > 0 ? ' (fallback)' : ''}`);
+      
+      const result = await invokeLLMWithModel({
+        ...params,
+        model: currentModel
+      });
+      
+      if (i > 0) {
+        console.log(`[LLM] Successfully used fallback model: ${currentModel}`);
+      }
+      
+      return result;
+    } catch (error) {
+      lastError = error as Error;
+      console.error(`[LLM] Model ${currentModel} failed:`, error);
+      
+      // If this is the last model in the chain, throw the error
+      if (i === modelsToTry.length - 1) {
+        throw new Error(`All LLM models failed. Last error: ${lastError.message}`);
+      }
+      
+      // Otherwise, continue to next model in fallback chain
+      console.log(`[LLM] Trying next fallback model...`);
+    }
+  }
+
+  throw new Error(`LLM invocation failed: ${lastError?.message || 'Unknown error'}`);
+}
+
+// Internal function that makes the actual API call with a specific model
+async function invokeLLMWithModel(params: InvokeParams): Promise<InvokeResult> {
   const {
     messages,
     model,

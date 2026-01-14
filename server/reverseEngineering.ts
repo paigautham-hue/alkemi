@@ -88,7 +88,7 @@ Format your response as JSON with the following structure:
 }`;
 
   const response = await invokeLLM({
-    model: "claude-opus-4.5",
+    model: "claude-opus-4-5",
     temperature: 0.3,
     max_tokens: 4000,
     messages: [
@@ -188,7 +188,7 @@ Provide a detailed formulation strategy including:
 Format your response as JSON.`;
 
   const response = await invokeLLM({
-    model: "claude-opus-4.5",
+    model: "claude-opus-4-5",
     temperature: 0.3,
     max_tokens: 4000,
     messages: [
@@ -297,7 +297,7 @@ Create a detailed TPP that defines:
 Format your response as JSON.`;
 
   const response = await invokeLLM({
-    model: "claude-opus-4.5",
+    model: "claude-opus-4-5",
     temperature: 0.3,
     max_tokens: 4000,
     messages: [
@@ -393,7 +393,7 @@ Return only materials with similarity >= 0.5.
 Format your response as JSON array.`;
 
   const response = await invokeLLM({
-    model: "claude-opus-4.5",
+    model: "claude-opus-4-5",
     temperature: 0.3,
     max_tokens: 4000,
     messages: [

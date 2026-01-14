@@ -62,7 +62,7 @@ export async function analyzeEquipmentCompatibility(
   equipment: Equipment
 ): Promise<CompatibilityAnalysis> {
   const response = await invokeLLM({
-    model: "claude-opus-4.5",
+    model: "claude-opus-4-5",
     temperature: 0.2,
     max_tokens: 4000,
     messages: [

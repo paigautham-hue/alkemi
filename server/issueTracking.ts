@@ -37,7 +37,7 @@ Provide your analysis in JSON format:
 }`;
 
   const response = await invokeLLM({
-    model: "claude-opus-4.5",
+    model: "claude-opus-4-5",
     temperature: 0.2,
     max_tokens: 4000,
     messages: [
@@ -133,7 +133,7 @@ Provide your analysis in JSON format:
 }`;
 
   const response = await invokeLLM({
-    model: "claude-opus-4.5",
+    model: "claude-opus-4-5",
     temperature: 0.2,
     max_tokens: 4000,
     messages: [
@@ -246,7 +246,7 @@ Provide your analysis in JSON format:
 }`;
 
   const response = await invokeLLM({
-    model: "claude-opus-4.5",
+    model: "claude-opus-4-5",
     temperature: 0.2,
     max_tokens: 4000,
     messages: [
@@ -360,7 +360,7 @@ Action types: process_change, training, equipment_upgrade, supplier_change, form
 Priorities: critical, high, medium, low`;
 
   const response = await invokeLLM({
-    model: "claude-opus-4.5",
+    model: "claude-opus-4-5",
     temperature: 0.3,
     max_tokens: 4000,
     messages: [

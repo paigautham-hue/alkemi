@@ -1,3 +1,4 @@
+import DashboardLayout from "@/components/DashboardLayout";
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ export default function Debate() {
   };
 
   return (
+    <DashboardLayout>
     <div className="container mx-auto py-8 space-y-8">
       <div>
         <h1 className="text-3xl font-bold">Multi-LLM Debate Engine</h1>
@@ -243,5 +245,6 @@ export default function Debate() {
         </CardContent>
       </Card>
     </div>
+    </DashboardLayout>
   );
 }

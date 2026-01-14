@@ -1,3 +1,4 @@
+import DashboardLayout from "@/components/DashboardLayout";
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ export default function Predictions() {
   const { data: predictions, isLoading } = trpc.predictions.list.useQuery();
 
   return (
+    <DashboardLayout>
     <div className="container py-8">
       <div className="flex justify-between items-center mb-8">
         <div>
@@ -74,6 +76,7 @@ export default function Predictions() {
         </Card>
       )}
     </div>
+    </DashboardLayout>
   );
 }
 

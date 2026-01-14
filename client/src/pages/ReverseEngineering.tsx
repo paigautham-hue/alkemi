@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
+import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -109,6 +110,7 @@ export default function ReverseEngineering() {
   const criticalProperties = (performanceTranslation?.results as any)?.criticalProperties || [];
 
   return (
+    <DashboardLayout>
     <div className="container mx-auto py-8">
       <div className="flex items-center justify-between mb-8">
         <div>
@@ -672,5 +674,6 @@ export default function ReverseEngineering() {
         </div>
       </div>
     </div>
+    </DashboardLayout>
   );
 }

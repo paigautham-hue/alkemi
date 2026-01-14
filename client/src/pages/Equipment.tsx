@@ -1,3 +1,4 @@
+import DashboardLayout from "@/components/DashboardLayout";
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -97,6 +98,7 @@ export default function Equipment() {
   };
 
   return (
+    <DashboardLayout>
     <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
         <div>
@@ -333,5 +335,6 @@ export default function Equipment() {
         </div>
       </div>
     </div>
+    </DashboardLayout>
   );
 }

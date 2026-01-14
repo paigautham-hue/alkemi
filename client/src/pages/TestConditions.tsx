@@ -1,3 +1,4 @@
+import DashboardLayout from "@/components/DashboardLayout";
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ export default function TestConditions() {
   const { data: domains } = trpc.domains.list.useQuery();
 
   return (
+    <DashboardLayout>
     <div className="container py-8">
       <div className="flex justify-between items-center mb-8">
         <div>
@@ -96,6 +98,7 @@ export default function TestConditions() {
         </Card>
       )}
     </div>
+    </DashboardLayout>
   );
 }
 

@@ -1,3 +1,4 @@
+import DashboardLayout from "@/components/DashboardLayout";
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -110,6 +111,7 @@ export default function SupplierRiskDashboard() {
       (riskAssessments?.length || 1);
 
   return (
+    <DashboardLayout>
     <div className="container py-8 space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Supplier Risk Assessment</h1>
@@ -505,5 +507,6 @@ export default function SupplierRiskDashboard() {
         </DialogContent>
       </Dialog>
     </div>
+    </DashboardLayout>
   );
 }

@@ -1,3 +1,4 @@
+import DashboardLayout from "@/components/DashboardLayout";
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -66,6 +67,7 @@ export default function ManufacturingDocs() {
   const isGenerating = generateSOPMutation.isPending || generateBatchProcessMutation.isPending || generateProcessFlowMutation.isPending;
 
   return (
+    <DashboardLayout>
     <div className="container mx-auto py-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Manufacturing Documentation Generator</h1>
@@ -272,5 +274,6 @@ export default function ManufacturingDocs() {
         </div>
       </div>
     </div>
+    </DashboardLayout>
   );
 }

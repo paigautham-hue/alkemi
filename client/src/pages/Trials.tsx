@@ -1,3 +1,4 @@
+import DashboardLayout from "@/components/DashboardLayout";
 import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
@@ -147,6 +148,7 @@ export default function Trials() {
   }
 
   return (
+    <DashboardLayout>
     <div className="container mx-auto py-8">
       <div className="flex justify-between items-center mb-6">
         <div>
@@ -463,5 +465,6 @@ export default function Trials() {
         </DialogContent>
       </Dialog>
     </div>
+    </DashboardLayout>
   );
 }

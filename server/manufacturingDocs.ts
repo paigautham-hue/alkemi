@@ -66,8 +66,11 @@ ${equipmentInfo || "Standard mixing equipment"}
 Generate a comprehensive SOP document including safety precautions, quality checkpoints, and detailed manufacturing steps.`;
 
   const response = await invokeLLM({
+    model: "claude-opus-4.5",
+    temperature: 0.2,
+    max_tokens: 5000,
     messages: [
-      { role: "system", content: "You are a manufacturing process expert. Always return valid JSON." },
+      { role: "system", content: "You are a PhD-level chemical engineer with 20+ years of experience in manufacturing operations, process documentation, and regulatory compliance. You have deep expertise in: cGMP (current Good Manufacturing Practices), ISO 9001, FDA regulations, process validation, and technical writing. Generate comprehensive Standard Operating Procedures (SOPs) that meet regulatory requirements and industry best practices. Include: detailed step-by-step instructions with process parameters, safety precautions (PPE, hazards, emergency procedures), quality control checkpoints with acceptance criteria, equipment specifications, and troubleshooting guidance. Write in clear, unambiguous language suitable for shop floor operators. Follow ANSI Z535 standards for safety communication." },
       { role: "user", content: prompt }
     ],
     response_format: {
@@ -138,8 +141,11 @@ ${components.map(c => `- ${c.material.name}: ${c.component.percentage}% (${c.com
 Provide a clear title, comprehensive process description, and step-by-step manufacturing instructions.`;
 
   const response = await invokeLLM({
+    model: "claude-opus-4.5",
+    temperature: 0.2,
+    max_tokens: 5000,
     messages: [
-      { role: "system", content: "You are a manufacturing process expert. Always return valid JSON." },
+      { role: "system", content: "You are a senior process engineer with expertise in batch manufacturing, process design, and production planning. You have deep knowledge of: batch processing equipment (reactors, mixers, filters, dryers), material handling, process control, and production scheduling. Generate detailed batch process descriptions with: material requirements (quantities, specifications, suppliers), equipment requirements (type, capacity, operating conditions), process steps with timing and sequencing, critical process parameters (temperature, pressure, agitation speed), in-process controls and testing, and yield calculations. Consider process efficiency, quality assurance, and safety. Follow ISA-88 batch control standards." },
       { role: "user", content: prompt }
     ],
     response_format: {
@@ -197,8 +203,11 @@ ${components.map(c => `- ${c.material.name}: ${c.component.percentage}%`).join("
 Create a detailed process flow diagram showing raw material preparation, mixing/blending, processing, quality control, and packaging.`;
 
   const response = await invokeLLM({
+    model: "claude-opus-4.5",
+    temperature: 0.2,
+    max_tokens: 4000,
     messages: [
-      { role: "system", content: "You are a process engineering expert. Generate Mermaid flowchart code. Always return valid JSON." },
+      { role: "system", content: "You are a process engineer with expertise in process flow diagram (PFD) creation, process design, and technical documentation. You have deep knowledge of: process flow diagram standards (ISO 10628, ANSI/ISA-5.1), unit operations, process equipment symbols, and flow diagram conventions. Generate clear, professional process flow diagrams using Mermaid flowchart syntax. Include: major process steps, equipment (with identifiers), material flows (with flow rates), decision points, quality control checks, and process conditions. Use standard symbols and clear labeling. Organize flow logically from raw materials to finished product. Always return valid JSON with Mermaid code." },
       { role: "user", content: prompt }
     ],
     response_format: {

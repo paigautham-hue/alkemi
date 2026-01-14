@@ -64,10 +64,13 @@ export async function extractChemicalCompounds(
   patentTitle: string
 ): Promise<ChemicalCompound[]> {
   const response = await invokeLLM({
+    model: "claude-opus-4.5",
+    temperature: 0.2,
+    max_tokens: 4000,
     messages: [
       {
         role: "system",
-        content: `You are an expert chemist analyzing patents. Extract all chemical compounds mentioned in the patent text, including their roles, concentrations, and properties. Return a JSON array of compounds.`
+        content: `You are a PhD-level organic chemist with expertise in patent analysis, chemical nomenclature (IUPAC), and formulation chemistry. You have deep knowledge of: polymer chemistry, catalysis, organic synthesis, and analytical chemistry. Extract all chemical compounds with precise nomenclature, CAS registry numbers, functional roles, and quantitative concentrations. Identify both explicitly stated and implied chemical structures from descriptions. Return comprehensive, accurate data suitable for formulation replication.`
       },
       {
         role: "user",
@@ -119,10 +122,13 @@ export async function extractReactionMechanisms(
   patentTitle: string
 ): Promise<ReactionMechanism[]> {
   const response = await invokeLLM({
+    model: "claude-opus-4.5",
+    temperature: 0.2,
+    max_tokens: 4000,
     messages: [
       {
         role: "system",
-        content: `You are an expert chemist analyzing patents. Extract all reaction mechanisms described in the patent, including reaction types, conditions, and steps.`
+        content: `You are a PhD-level chemical engineer with expertise in reaction engineering, kinetics, and process chemistry. You have deep knowledge of: reaction mechanisms (radical, ionic, catalytic), thermodynamics, kinetics, and process conditions. Extract complete reaction pathways with mechanistic details, rate-limiting steps, side reactions, and process parameters. Provide quantitative conditions (temperature ranges, pressures, residence times) and identify critical control parameters.`
       },
       {
         role: "user",
@@ -185,10 +191,13 @@ export async function extractProcessingConditions(
   patentTitle: string
 ): Promise<ProcessingConditions> {
   const response = await invokeLLM({
+    model: "claude-opus-4.5",
+    temperature: 0.2,
+    max_tokens: 4000,
     messages: [
       {
         role: "system",
-        content: `You are an expert process engineer analyzing patents. Extract all processing conditions and equipment mentioned.`
+        content: `You are a PhD-level process engineer with expertise in chemical process design, unit operations, and equipment selection. You have deep knowledge of: mixing technology, heat transfer, mass transfer, reactor design, and scale-up principles. Extract comprehensive processing conditions with quantitative parameters, equipment specifications, and process control strategies. Identify critical process parameters (CPPs) and their acceptable ranges for robust manufacturing.`
       },
       {
         role: "user",
@@ -240,10 +249,13 @@ export async function analyzeTechnologyLandscape(
   patentAbstract: string
 ): Promise<TechnologyLandscape> {
   const response = await invokeLLM({
+    model: "claude-opus-4.5",
+    temperature: 0.3,
+    max_tokens: 4000,
     messages: [
       {
         role: "system",
-        content: `You are a technology analyst specializing in chemical formulations. Analyze the patent to identify the technology category, key innovations, competitive landscape, and market applications.`
+        content: `You are a senior technology strategist with PhD in chemistry and MBA, specializing in intellectual property analysis, competitive intelligence, and market assessment. You have expertise in: patent landscape analysis, freedom-to-operate (FTO) assessment, technology maturity evaluation, and commercialization strategy. Analyze patents to identify breakthrough innovations, competitive positioning, white space opportunities, and market potential. Consider technical merit, commercial viability, and strategic value.`
       },
       {
         role: "user",
@@ -298,10 +310,13 @@ export async function generateFormulationStrategies(
   technologyLandscape: TechnologyLandscape
 ): Promise<FormulationStrategy[]> {
   const response = await invokeLLM({
+    model: "claude-opus-4.5",
+    temperature: 0.3,
+    max_tokens: 4000,
     messages: [
       {
         role: "system",
-        content: `You are an expert formulation chemist. Based on the patent analysis, generate practical formulation strategies that could replicate or improve upon the patented technology.`
+        content: `You are a PhD-level formulation scientist with 20+ years of R&D experience in product development and competitive analysis. You have expertise in: formulation design, material selection, process optimization, and intellectual property navigation. Generate actionable formulation strategies that achieve similar performance while avoiding patent infringement. Consider design-around approaches, alternative chemistries, and process modifications. Provide specific recommendations with technical justifications and risk assessments.`
       },
       {
         role: "user",

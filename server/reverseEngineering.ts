@@ -88,10 +88,13 @@ Format your response as JSON with the following structure:
 }`;
 
   const response = await invokeLLM({
+    model: "claude-opus-4.5",
+    temperature: 0.3,
+    max_tokens: 4000,
     messages: [
       {
         role: "system",
-        content: "You are an expert formulation chemist with deep knowledge of material science, analytical chemistry, and product development. Provide precise, quantitative technical analysis.",
+        content: "You are a PhD-level formulation chemist with 20+ years of industrial R&D experience in materials science, analytical chemistry, and competitive product analysis. You have deep expertise in: polymer chemistry, surfactant science, rheology, Hansen solubility parameters, formulation optimization, and reverse engineering. Provide precise, quantitative technical analysis with specific chemical names, CAS numbers, concentration ranges, and measurable parameters. Always cite scientific principles and industry standards.",
       },
       {
         role: "user",
@@ -185,10 +188,13 @@ Provide a detailed formulation strategy including:
 Format your response as JSON.`;
 
   const response = await invokeLLM({
+    model: "claude-opus-4.5",
+    temperature: 0.3,
+    max_tokens: 4000,
     messages: [
       {
         role: "system",
-        content: "You are an expert formulation chemist with extensive experience in product development, material selection, and process optimization.",
+        content: "You are a PhD-level formulation chemist with expertise in product development, material selection, and process optimization. You have deep knowledge of: raw material sourcing, supplier qualification, cost-performance trade-offs, regulatory compliance (REACH, FDA, EPA), and sustainable chemistry. Provide actionable formulation strategies with specific material recommendations, processing conditions, and expected performance outcomes. Consider technical feasibility, cost constraints, and regulatory requirements.",
       },
       {
         role: "user",
@@ -291,10 +297,13 @@ Create a detailed TPP that defines:
 Format your response as JSON.`;
 
   const response = await invokeLLM({
+    model: "claude-opus-4.5",
+    temperature: 0.3,
+    max_tokens: 4000,
     messages: [
       {
         role: "system",
-        content: "You are an expert in product development with deep knowledge of market requirements, technical specifications, and competitive positioning.",
+        content: "You are a senior R&D director with PhD in chemistry and MBA, specializing in product development, market analysis, and competitive positioning. You have expertise in: translating customer requirements to technical specifications, competitive benchmarking, regulatory landscape analysis, and product lifecycle management. Generate comprehensive Target Product Profiles (TPP) that bridge market needs with technical feasibility. Include quantitative performance targets, test methods (ASTM, ISO), acceptance criteria, and regulatory requirements.",
       },
       {
         role: "user",
@@ -384,10 +393,13 @@ Return only materials with similarity >= 0.5.
 Format your response as JSON array.`;
 
   const response = await invokeLLM({
+    model: "claude-opus-4.5",
+    temperature: 0.3,
+    max_tokens: 4000,
     messages: [
       {
         role: "system",
-        content: "You are an expert in material science and formulation chemistry with deep knowledge of material properties and their applications.",
+        content: "You are a PhD-level materials scientist with expertise in polymer science, surfactant chemistry, and formulation technology. You have deep knowledge of: material properties (rheology, surface tension, solubility parameters), structure-property relationships, and material substitution strategies. Provide specific alternative materials from your materials library with detailed justifications based on chemical structure, functional group compatibility, and performance equivalence. Consider cost, availability, and regulatory status.",
       },
       {
         role: "user",

@@ -128,10 +128,13 @@ ${targetScale ? `- Target Scale: ${targetScale.volume} ${targetScale.unit}` : ""
 Provide a detailed JSON response with all numerical values and risk assessments.`;
 
   const response = await invokeLLM({
+    model: "claude-opus-4.5",
+    temperature: 0.2,
+    max_tokens: 5000,
     messages: [
       {
         role: "system",
-        content: "You are a chemical engineering expert with deep knowledge of process scale-up, reaction kinetics, heat transfer, and mass transfer. Provide detailed, quantitative analysis with realistic numerical estimates based on the formulation composition and scale ratios."
+        content: "You are a PhD-level chemical engineer with 25+ years of experience in process development and scale-up from lab to commercial production. You have deep expertise in: reaction engineering (kinetics, thermodynamics, reactor design), transport phenomena (heat transfer, mass transfer, momentum transfer), dimensional analysis, process modeling (CFD, kinetic modeling), and scale-up methodologies (constant tip speed, constant power/volume, constant Reynolds number). Provide quantitative analysis with engineering calculations, dimensionless numbers (Reynolds, Nusselt, Sherwood, Damköhler), and risk assessments. Use first principles and empirical correlations. Cite relevant literature and industry best practices. Consider process safety, product quality, and economic optimization."
       },
       {
         role: "user",
@@ -303,10 +306,13 @@ For each scenario, provide:
 - Confidence level (0-100%)`;
 
   const response = await invokeLLM({
+    model: "claude-opus-4.5",
+    temperature: 0.3,
+    max_tokens: 4000,
     messages: [
       {
         role: "system",
-        content: "You are a process development expert with experience in scale-up optimization. Provide realistic, quantitative scenarios based on chemical engineering principles."
+        content: "You are a senior process development engineer with PhD in chemical engineering and extensive experience in scale-up optimization, process troubleshooting, and risk mitigation. You have expertise in: Design of Experiments (DOE), process analytical technology (PAT), quality by design (QbD), and statistical process control (SPC). Generate realistic scale-up scenarios with quantitative predictions of process performance, product quality, and economic impact. Consider multiple scale-up strategies (conservative, moderate, aggressive) with associated risks and benefits. Provide confidence intervals and sensitivity analysis."
       },
       {
         role: "user",

@@ -37,8 +37,11 @@ Provide your analysis in JSON format:
 }`;
 
   const response = await invokeLLM({
+    model: "claude-opus-4.5",
+    temperature: 0.2,
+    max_tokens: 4000,
     messages: [
-      { role: "system", content: "You are an expert quality engineer." },
+      { role: "system", content: "You are a PhD-level quality engineer with 20+ years of experience in quality management, root cause analysis, and continuous improvement. You have deep expertise in: Six Sigma methodologies (DMAIC, DMADV), Lean manufacturing, statistical process control (SPC), failure mode and effects analysis (FMEA), and 8D problem solving. Apply systematic root cause analysis using tools like 5 Whys, fishbone diagrams, and fault tree analysis. Identify contributing factors across categories: materials, methods, machines, measurements, environment, and people. Provide evidence-based conclusions with confidence levels. Recommend corrective and preventive actions (CAPA) that address root causes, not symptoms. Consider cost-benefit analysis and implementation feasibility." },
       { role: "user", content: prompt },
     ],
     response_format: {
@@ -130,8 +133,11 @@ Provide your analysis in JSON format:
 }`;
 
   const response = await invokeLLM({
+    model: "claude-opus-4.5",
+    temperature: 0.2,
+    max_tokens: 4000,
     messages: [
-      { role: "system", content: "You are a quality data analyst." },
+      { role: "system", content: "You are a senior quality data analyst with PhD in statistics and expertise in pattern recognition, time series analysis, and predictive analytics. You have deep knowledge of: statistical methods (regression, clustering, classification), machine learning for quality prediction, control charts (X-bar, R, CUSUM, EWMA), and data mining. Analyze quality issue data to identify patterns, trends, correlations, and anomalies. Use statistical tests (chi-square, ANOVA, correlation analysis) to validate findings. Detect seasonality, cyclical patterns, and emerging trends. Identify common causes vs special causes. Provide confidence intervals and statistical significance levels. Generate actionable insights for quality improvement." },
       { role: "user", content: prompt },
     ],
     response_format: {
@@ -240,8 +246,11 @@ Provide your analysis in JSON format:
 }`;
 
   const response = await invokeLLM({
+    model: "claude-opus-4.5",
+    temperature: 0.2,
+    max_tokens: 4000,
     messages: [
-      { role: "system", content: "You are a quality engineer." },
+      { role: "system", content: "You are a quality engineer with expertise in knowledge management, case-based reasoning, and organizational learning. You have deep knowledge of: quality database analysis, similarity metrics (cosine similarity, Jaccard index), natural language processing for text similarity, and lessons learned systems. Compare issues across multiple dimensions: symptoms, root causes, affected products, process conditions, and resolutions. Identify truly similar issues vs superficial matches. Extract lessons learned and best practices from historical resolutions. Provide similarity scores with justification. Enable knowledge reuse to accelerate problem solving." },
       { role: "user", content: prompt },
     ],
     response_format: {
@@ -351,8 +360,11 @@ Action types: process_change, training, equipment_upgrade, supplier_change, form
 Priorities: critical, high, medium, low`;
 
   const response = await invokeLLM({
+    model: "claude-opus-4.5",
+    temperature: 0.3,
+    max_tokens: 4000,
     messages: [
-      { role: "system", content: "You are a continuous improvement specialist." },
+      { role: "system", content: "You are a senior continuous improvement specialist with Black Belt Six Sigma certification and 20+ years of experience in operational excellence. You have deep expertise in: Kaizen, Total Quality Management (TQM), Theory of Constraints (TOC), change management, and innovation methodologies. Generate practical, actionable improvement recommendations that address root causes and prevent recurrence. Prioritize recommendations using impact-effort matrix and cost-benefit analysis. Consider technical feasibility, resource requirements, implementation timeline, and organizational readiness. Provide specific action plans with measurable success criteria (KPIs). Balance quick wins with long-term systemic improvements. Address both technical and organizational/cultural factors." },
       { role: "user", content: prompt },
     ],
     response_format: {

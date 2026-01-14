@@ -62,19 +62,13 @@ export async function analyzeEquipmentCompatibility(
   equipment: Equipment
 ): Promise<CompatibilityAnalysis> {
   const response = await invokeLLM({
+    model: "claude-opus-4.5",
+    temperature: 0.2,
+    max_tokens: 4000,
     messages: [
       {
         role: "system",
-        content: `You are an expert chemical engineer specializing in manufacturing process design and equipment selection. Analyze the compatibility between a formulation and manufacturing equipment, considering:
-
-1. Material compatibility with equipment surfaces
-2. Processing parameter compatibility (temperature, pressure, mixing)
-3. Batch size and capacity constraints
-4. Chemical compatibility and safety
-5. Cleaning and changeover requirements
-6. Process capability and limitations
-
-Provide a detailed compatibility analysis with specific technical reasoning.`
+        content: `You are a PhD-level chemical engineer with 20+ years of experience in process design, equipment selection, and manufacturing operations. You have deep expertise in: materials of construction (stainless steel, glass-lined, hastelloy, PTFE), process equipment (reactors, mixers, mills, extruders), heat transfer, mass transfer, fluid dynamics, and process safety (HAZOP, FMEA). Analyze formulation-equipment compatibility with quantitative assessments of: material corrosion rates, process parameter margins, capacity utilization, safety factors, and cleaning validation requirements. Provide specific technical recommendations with engineering calculations and risk assessments. Consider cGMP requirements and industry standards (ASME, API, EHEDG).`
       },
       {
         role: "user",

@@ -9,7 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Plus, Beaker, FileText, Target, TrendingUp, Trash2, Eye, BarChart3, Database, FileDown, FileSpreadsheet, FileJson, Download } from "lucide-react";
+import { Loader2, Plus, Beaker, FileText, Target, TrendingUp, Trash2, Eye, BarChart3, Database, FileDown, FileSpreadsheet, FileJson, Download, CheckSquare, Square } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { AnalysisProgressIndicator, AnalysisResultsSkeleton } from "@/components/AnalysisProgressIndicator";
 import { AnalysisCharts } from "@/components/AnalysisCharts";
@@ -19,6 +21,8 @@ export default function ReverseEngineering() {
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showCharts, setShowCharts] = useState(false);
+  const [selectedForExport, setSelectedForExport] = useState<Set<string>>(new Set());
+  const [isBatchExporting, setIsBatchExporting] = useState(false);
 
   const utils = trpc.useUtils();
   const { data: products, isLoading } = trpc.reverseEngineering.listCompetitorProducts.useQuery({});
@@ -145,6 +149,68 @@ export default function ReverseEngineering() {
     }
   };
 
+  // Batch export mutation
+  const batchExport = trpc.reverseEngineering.batchExport.useMutation({
+    onSuccess: (data) => {
+      // Create and download a ZIP-like combined file or individual files
+      data.files.forEach((file: { filename: string; content: string; type: string }) => {
+        const mimeType = file.type === 'html' ? 'text/html' : file.type === 'csv' ? 'text/csv' : 'application/json';
+        const blob = new Blob([file.content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = file.filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      });
+      toast.success(`Exported ${data.count} product reports`);
+      setSelectedForExport(new Set());
+      setIsBatchExporting(false);
+    },
+    onError: (error) => {
+      toast.error(`Batch export failed: ${error.message}`);
+      setIsBatchExporting(false);
+    },
+  });
+
+  const toggleProductSelection = (productId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedForExport(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(productId)) {
+        newSet.delete(productId);
+      } else {
+        newSet.add(productId);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAllProducts = () => {
+    if (products) {
+      const analyzedProducts = products.filter(p => p.analysisStatus === 'completed');
+      setSelectedForExport(new Set(analyzedProducts.map(p => p.id)));
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedForExport(new Set());
+  };
+
+  const handleBatchExport = (format: 'pdf' | 'excel' | 'json') => {
+    if (selectedForExport.size === 0) {
+      toast.error('Please select at least one product to export');
+      return;
+    }
+    setIsBatchExporting(true);
+    batchExport.mutate({
+      productIds: Array.from(selectedForExport),
+      format,
+    });
+  };
+
   const handleAddProduct = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -269,8 +335,63 @@ export default function ReverseEngineering() {
         <div className="col-span-4">
           <Card>
             <CardHeader>
-              <CardTitle>Competitor Products</CardTitle>
-              <CardDescription>Select a product to view analysis</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Competitor Products</CardTitle>
+                  <CardDescription>Select a product to view analysis</CardDescription>
+                </div>
+                {selectedForExport.size > 0 && (
+                  <Badge variant="secondary">
+                    {selectedForExport.size} selected
+                  </Badge>
+                )}
+              </div>
+              {/* Batch Export Controls */}
+              {products && products.length > 0 && (
+                <div className="flex items-center gap-2 mt-3 pt-3 border-t">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={selectedForExport.size === products.filter(p => p.analysisStatus === 'completed').length ? clearSelection : selectAllProducts}
+                  >
+                    {selectedForExport.size === products.filter(p => p.analysisStatus === 'completed').length ? (
+                      <><Square className="h-4 w-4 mr-1" /> Deselect All</>
+                    ) : (
+                      <><CheckSquare className="h-4 w-4 mr-1" /> Select All</>
+                    )}
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        disabled={selectedForExport.size === 0 || isBatchExporting}
+                      >
+                        {isBatchExporting ? (
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        ) : (
+                          <Download className="h-4 w-4 mr-1" />
+                        )}
+                        Export ({selectedForExport.size})
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem onClick={() => handleBatchExport('pdf')}>
+                        <FileDown className="h-4 w-4 mr-2" />
+                        Export as PDF (HTML)
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleBatchExport('excel')}>
+                        <FileSpreadsheet className="h-4 w-4 mr-2" />
+                        Export as Excel (CSV)
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleBatchExport('json')}>
+                        <FileJson className="h-4 w-4 mr-2" />
+                        Export as JSON
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              )}
             </CardHeader>
             <CardContent>
               {isLoading ? (
@@ -284,19 +405,28 @@ export default function ReverseEngineering() {
                       key={product.id}
                       className={`cursor-pointer transition-colors hover:bg-accent ${
                         selectedProduct === product.id ? "border-primary bg-accent" : ""
-                      }`}
+                      } ${selectedForExport.has(product.id) ? "ring-2 ring-primary" : ""}`}
                       onClick={() => setSelectedProduct(product.id)}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <h3 className="font-semibold">{product.productName}</h3>
-                            <p className="text-sm text-muted-foreground">{product.manufacturer}</p>
-                            {product.category && (
-                              <Badge variant="secondary" className="mt-2">
-                                {product.category}
-                              </Badge>
+                          <div className="flex items-start gap-3 flex-1">
+                            {product.analysisStatus === 'completed' && (
+                              <Checkbox
+                                checked={selectedForExport.has(product.id)}
+                                onClick={(e) => toggleProductSelection(product.id, e)}
+                                className="mt-1"
+                              />
                             )}
+                            <div className="flex-1">
+                              <h3 className="font-semibold">{product.productName}</h3>
+                              <p className="text-sm text-muted-foreground">{product.manufacturer}</p>
+                              {product.category && (
+                                <Badge variant="secondary" className="mt-2">
+                                  {product.category}
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                           {product.analysisStatus === "completed" && (
                             <Badge variant="default" className="ml-2">

@@ -296,3 +296,49 @@ function escapeCSV(value: string): string {
   }
   return value;
 }
+
+
+export interface BatchExportFile {
+  filename: string;
+  content: string;
+  type: 'html' | 'csv' | 'json';
+}
+
+export async function getBatchExportData(
+  productIds: string[],
+  organizationId: string,
+  format: 'pdf' | 'excel' | 'json'
+): Promise<BatchExportFile[]> {
+  const files: BatchExportFile[] = [];
+  
+  for (const productId of productIds) {
+    try {
+      const data = await getExportData(productId, organizationId);
+      const safeName = data.product.productName.replace(/[^a-zA-Z0-9]/g, '_');
+      
+      if (format === 'pdf') {
+        files.push({
+          filename: `ALKEMI_Analysis_${safeName}.html`,
+          content: generatePDFContent(data),
+          type: 'html',
+        });
+      } else if (format === 'excel') {
+        files.push({
+          filename: `ALKEMI_Analysis_${safeName}.csv`,
+          content: generateExcelContent(data),
+          type: 'csv',
+        });
+      } else {
+        files.push({
+          filename: `ALKEMI_Analysis_${safeName}.json`,
+          content: JSON.stringify(data, null, 2),
+          type: 'json',
+        });
+      }
+    } catch (error) {
+      console.error(`Failed to export product ${productId}:`, error);
+    }
+  }
+  
+  return files;
+}

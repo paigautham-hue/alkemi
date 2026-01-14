@@ -1353,6 +1353,21 @@ export const appRouter = router({
           filename: `ALKEMI_Analysis_${data.product.productName.replace(/\s+/g, '_')}.csv`,
         };
       }),
+
+    batchExport: protectedProcedure
+      .input(z.object({
+        productIds: z.array(z.string().uuid()).min(1).max(50),
+        format: z.enum(['pdf', 'excel', 'json']),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { getBatchExportData } = await import("./exportService");
+        const files = await getBatchExportData(
+          input.productIds,
+          ctx.user.organizationId,
+          input.format
+        );
+        return { files, count: files.length };
+      }),
   }),
 
   // Patent & Literature Analysis

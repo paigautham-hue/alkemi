@@ -1318,6 +1318,17 @@ export const appRouter = router({
         }
         return analysis;
       }),
+
+    seedTestProducts: protectedProcedure
+      .mutation(async ({ ctx }) => {
+        const { seedCompetitorProducts, TEST_COMPETITOR_PRODUCTS } = await import("./seedCompetitorProducts");
+        await seedCompetitorProducts(ctx.user.organizationId, ctx.user.id);
+        return { 
+          success: true, 
+          count: TEST_COMPETITOR_PRODUCTS.length,
+          message: `Successfully seeded ${TEST_COMPETITOR_PRODUCTS.length} test competitor products` 
+        };
+      }),
   }),
 
   // Patent & Literature Analysis

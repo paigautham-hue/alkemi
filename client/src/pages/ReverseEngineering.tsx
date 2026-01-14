@@ -8,14 +8,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Plus, Beaker, FileText, Target, TrendingUp, Trash2, Eye } from "lucide-react";
+import { Loader2, Plus, Beaker, FileText, Target, TrendingUp, Trash2, Eye, BarChart3, Database } from "lucide-react";
 import { toast } from "sonner";
-import { Streamdown } from "streamdown";
+import { AnalysisProgressIndicator, AnalysisResultsSkeleton } from "@/components/AnalysisProgressIndicator";
+import { AnalysisCharts } from "@/components/AnalysisCharts";
 
 export default function ReverseEngineering() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showCharts, setShowCharts] = useState(false);
 
   const utils = trpc.useUtils();
   const { data: products, isLoading } = trpc.reverseEngineering.listCompetitorProducts.useQuery({});
@@ -63,6 +65,16 @@ export default function ReverseEngineering() {
     },
   });
 
+  const seedTestProducts = trpc.reverseEngineering.seedTestProducts.useMutation({
+    onSuccess: (data) => {
+      toast.success(data.message);
+      utils.reverseEngineering.listCompetitorProducts.invalidate();
+    },
+    onError: (error) => {
+      toast.error(`Failed to seed test products: ${error.message}`);
+    },
+  });
+
   const handleAddProduct = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -91,6 +103,11 @@ export default function ReverseEngineering() {
   const formulationStrategy = analyses?.find(a => a.analysisType === "formulation_strategy");
   const tppAnalysis = analyses?.find(a => a.analysisType === "tpp_generation");
 
+  // Extract data for charts
+  const technicalParameters = (performanceTranslation?.results as any)?.technicalParameters || {};
+  const testMethods = (performanceTranslation?.results as any)?.testMethods || [];
+  const criticalProperties = (performanceTranslation?.results as any)?.criticalProperties || [];
+
   return (
     <div className="container mx-auto py-8">
       <div className="flex items-center justify-between mb-8">
@@ -100,13 +117,26 @@ export default function ReverseEngineering() {
             Analyze competitor products and generate formulation strategies
           </p>
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Competitor Product
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => seedTestProducts.mutate()}
+            disabled={seedTestProducts.isPending}
+          >
+            {seedTestProducts.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Database className="h-4 w-4 mr-2" />
+            )}
+            Load Test Products
+          </Button>
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Competitor Product
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Add Competitor Product</DialogTitle>
@@ -160,6 +190,7 @@ export default function ReverseEngineering() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <div className="grid grid-cols-12 gap-6">
@@ -225,6 +256,16 @@ export default function ReverseEngineering() {
 
         {/* Product Details & Analysis */}
         <div className="col-span-8">
+          {/* Analysis Progress Indicator */}
+          {isAnalyzing && selectedProductData && (
+            <div className="mb-6">
+              <AnalysisProgressIndicator 
+                isAnalyzing={isAnalyzing} 
+                productName={selectedProductData.productName} 
+              />
+            </div>
+          )}
+
           {selectedProduct && selectedProductData ? (
             <Tabs defaultValue="overview" className="space-y-4">
               <TabsList>
@@ -235,6 +276,10 @@ export default function ReverseEngineering() {
                 <TabsTrigger value="technical">
                   <Beaker className="h-4 w-4 mr-2" />
                   Technical Analysis
+                </TabsTrigger>
+                <TabsTrigger value="charts" disabled={!performanceTranslation}>
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  Visualizations
                 </TabsTrigger>
                 <TabsTrigger value="strategy">
                   <TrendingUp className="h-4 w-4 mr-2" />
@@ -338,14 +383,14 @@ export default function ReverseEngineering() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {performanceTranslation ? (
+                    {isAnalyzing ? (
+                      <AnalysisResultsSkeleton />
+                    ) : performanceTranslation ? (
                       <div className="space-y-6">
                         <div>
                           <h3 className="font-semibold mb-3">Technical Parameters</h3>
                           <div className="grid gap-4">
-                            {Object.entries(
-                              (performanceTranslation.results as any).technicalParameters || {}
-                            ).map(([param, data]: [string, any]) => (
+                            {Object.entries(technicalParameters).map(([param, data]: [string, any]) => (
                               <Card key={param}>
                                 <CardContent className="p-4">
                                   <div className="flex items-start justify-between">
@@ -368,26 +413,22 @@ export default function ReverseEngineering() {
                         <div>
                           <h3 className="font-semibold mb-3">Test Methods</h3>
                           <ul className="list-disc list-inside space-y-1">
-                            {((performanceTranslation.results as any).testMethods || []).map(
-                              (method: string, i: number) => (
-                                <li key={i} className="text-sm">
-                                  {method}
-                                </li>
-                              )
-                            )}
+                            {testMethods.map((method: string, i: number) => (
+                              <li key={i} className="text-sm">
+                                {method}
+                              </li>
+                            ))}
                           </ul>
                         </div>
 
                         <div>
                           <h3 className="font-semibold mb-3">Critical Properties</h3>
                           <div className="flex flex-wrap gap-2">
-                            {((performanceTranslation.results as any).criticalProperties || []).map(
-                              (prop: string, i: number) => (
-                                <Badge key={i} variant="outline">
-                                  {prop}
-                                </Badge>
-                              )
-                            )}
+                            {criticalProperties.map((prop: string, i: number) => (
+                              <Badge key={i} variant="outline">
+                                {prop}
+                              </Badge>
+                            ))}
                           </div>
                         </div>
                       </div>
@@ -402,6 +443,37 @@ export default function ReverseEngineering() {
                 </Card>
               </TabsContent>
 
+              <TabsContent value="charts">
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-semibold">Analysis Visualizations</h2>
+                      <p className="text-sm text-muted-foreground">
+                        Interactive charts for analysis results
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {performanceTranslation ? (
+                    <AnalysisCharts
+                      technicalParameters={technicalParameters}
+                      testMethods={testMethods}
+                      criticalProperties={criticalProperties}
+                    />
+                  ) : (
+                    <Card>
+                      <CardContent className="flex flex-col items-center justify-center py-16">
+                        <BarChart3 className="h-16 w-16 text-muted-foreground opacity-50 mb-4" />
+                        <h3 className="text-lg font-semibold mb-2">No Data Available</h3>
+                        <p className="text-sm text-muted-foreground text-center max-w-md">
+                          Run an analysis first to see interactive visualizations of the results.
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              </TabsContent>
+
               <TabsContent value="strategy">
                 <Card>
                   <CardHeader>
@@ -411,7 +483,9 @@ export default function ReverseEngineering() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {formulationStrategy ? (
+                    {isAnalyzing ? (
+                      <AnalysisResultsSkeleton />
+                    ) : formulationStrategy ? (
                       <div className="space-y-6">
                         <div>
                           <h3 className="font-semibold mb-2">Recommended Approach</h3>
@@ -492,7 +566,9 @@ export default function ReverseEngineering() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {tppAnalysis ? (
+                    {isAnalyzing ? (
+                      <AnalysisResultsSkeleton />
+                    ) : tppAnalysis ? (
                       <div className="space-y-6">
                         <div className="grid grid-cols-2 gap-4">
                           <div>

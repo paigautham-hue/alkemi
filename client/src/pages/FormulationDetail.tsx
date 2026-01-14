@@ -1,12 +1,23 @@
 import { useState } from "react";
-import { useRoute } from "wouter";
+import { useRoute, useLocation } from "wouter";
 import DashboardLayout from "@/components/DashboardLayout";
 import { AnimatedPage } from "@/components/AnimatedPage";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { trpc } from "@/lib/trpc";
 import { FormulationComparison } from "@/components/FormulationComparison";
+import { toast } from "sonner";
 import {
   ArrowLeft,
   GitCompare,
@@ -15,6 +26,7 @@ import {
   User,
   FileText,
   Beaker,
+  RotateCcw,
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -22,6 +34,9 @@ export default function FormulationDetail() {
   const [, params] = useRoute("/formulations/:id");
   const familyId = params?.id || "";
   const [showComparison, setShowComparison] = useState(false);
+  const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
+  const [versionToRestore, setVersionToRestore] = useState<string | null>(null);
+  const [, setLocation] = useLocation();
 
   const { data: family, isLoading: familyLoading } = trpc.formulations.getFamilyById.useQuery(
     { id: familyId },
@@ -32,6 +47,38 @@ export default function FormulationDetail() {
     { familyId },
     { enabled: !!familyId }
   );
+
+  const utils = trpc.useUtils();
+  const restoreMutation = trpc.formulations.restoreVersion.useMutation({
+    onSuccess: (data) => {
+      toast.success(data.message, {
+        description: `New draft version ${data.versionNumber} created`,
+        action: {
+          label: "View",
+          onClick: () => setLocation(`/formulations/${familyId}/versions/${data.id}`),
+        },
+      });
+      utils.formulations.listVersions.invalidate({ familyId });
+      setRestoreDialogOpen(false);
+      setVersionToRestore(null);
+    },
+    onError: (error) => {
+      toast.error("Failed to restore version", {
+        description: error.message,
+      });
+    },
+  });
+
+  const handleRestoreClick = (versionId: string) => {
+    setVersionToRestore(versionId);
+    setRestoreDialogOpen(true);
+  };
+
+  const handleRestoreConfirm = () => {
+    if (versionToRestore) {
+      restoreMutation.mutate({ versionId: versionToRestore });
+    }
+  };
 
   const isLoading = familyLoading || versionsLoading;
 
@@ -174,6 +221,15 @@ export default function FormulationDetail() {
                           )}
                         </div>
                         <div className="flex items-center gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleRestoreClick(version.id)}
+                            disabled={restoreMutation.isPending}
+                          >
+                            <RotateCcw className="mr-2 h-4 w-4" />
+                            Restore
+                          </Button>
                           <Button size="sm" variant="outline">
                             <Beaker className="mr-2 h-4 w-4" />
                             View
@@ -195,6 +251,25 @@ export default function FormulationDetail() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Restore Confirmation Dialog */}
+        <AlertDialog open={restoreDialogOpen} onOpenChange={setRestoreDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Restore This Version?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will create a new draft version based on the selected version. The original version will remain unchanged.
+                You can edit the new draft and submit it for approval when ready.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleRestoreConfirm} disabled={restoreMutation.isPending}>
+                {restoreMutation.isPending ? "Restoring..." : "Restore Version"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </AnimatedPage>
     </DashboardLayout>
   );

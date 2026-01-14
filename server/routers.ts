@@ -356,6 +356,63 @@ export const appRouter = router({
         );
       }),
 
+    restoreVersion: protectedProcedure
+      .input(z.object({ 
+        versionId: z.string().uuid(),
+        changeReason: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Get the source version
+        const sourceVersion = await db.getFormulationVersionById(input.versionId, ctx.user.organizationId);
+        if (!sourceVersion) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Source version not found" });
+        }
+
+        // Get all components from source version
+        const sourceComponents = await db.getFormulationComponents(input.versionId, ctx.user.organizationId);
+
+        // Get the latest version number for this family to generate new version number
+        const existingVersions = await db.getFormulationVersions(sourceVersion.familyId, ctx.user.organizationId);
+        const versionNumbers = existingVersions.map(v => {
+          const match = v.versionNumber.match(/\d+/);
+          return match ? parseInt(match[0]) : 0;
+        });
+        const maxVersion = Math.max(...versionNumbers, 0);
+        const newVersionNumber = `v${maxVersion + 1}.0`;
+
+        // Create new draft version
+        const newVersionId = await db.createFormulationVersion({
+          organizationId: ctx.user.organizationId,
+          familyId: sourceVersion.familyId,
+          versionNumber: newVersionNumber,
+          parentVersionId: input.versionId,
+          branchType: "revision",
+          status: "draft",
+          createdBy: ctx.user.id,
+          targetProperties: sourceVersion.targetProperties,
+          notes: `Restored from ${sourceVersion.versionNumber}`,
+          changeReason: input.changeReason || `Restored from version ${sourceVersion.versionNumber}`,
+        });
+
+        // Copy all components to new version
+        for (const comp of sourceComponents) {
+          await db.createFormulationComponent({
+            organizationId: ctx.user.organizationId,
+            versionId: newVersionId,
+            materialId: comp.material.id,
+            percentage: comp.component.percentage,
+            role: comp.component.role,
+            notes: comp.component.notes,
+          });
+        }
+
+        return { 
+          id: newVersionId, 
+          versionNumber: newVersionNumber,
+          message: `Successfully restored ${sourceVersion.versionNumber} as ${newVersionNumber}`,
+        };
+      }),
+
     exportPDF: protectedProcedure
       .input(z.object({ versionId: z.string().uuid() }))
       .mutation(async ({ ctx, input }) => {

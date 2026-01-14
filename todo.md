@@ -1730,3 +1730,40 @@
 - [x] UI components created with TypeScript type safety
 - [x] Run all unit tests (18 tests passing)
 - [x] Create checkpoint
+
+
+## Phase 31: Version Restore & Inline Editing ✅ COMPLETE
+
+### Version Restore Backend
+- [x] Create `formulations.restoreVersion` mutation to duplicate a version as new draft
+- [x] Copy all components from source version to new version
+- [x] Set parentVersionId to source version for lineage tracking
+- [x] Set status to "draft" and branchType to "revision"
+- [x] Add changeReason field explaining this is a restored version
+- [x] Return new version ID, versionNumber, and success message
+- [x] Auto-generate new version number (v{max+1}.0)
+
+### Version Restore UI
+- [x] Add "Restore This Version" button to version history cards
+- [x] Add confirmation dialog before restore (AlertDialog explaining it creates new draft)
+- [x] Show success toast with link to new draft version (with "View" action button)
+- [x] Add loading state during restore operation (disabled button with "Restoring..." text)
+- [x] Invalidate version list query after successful restore
+- [ ] Add restore button to comparison view (restore base or target)
+
+### Inline Editing in Comparison View
+- [x] Make percentage cells editable in comparison table (replaced with Input component)
+- [x] Add inline input fields with validation (0-100%, type="number" with min/max)
+- [x] Show edit icon for edited components (Edit2 icon appears when edited)
+- [x] Highlight edited cells with distinct color (blue border with ring-2)
+- [x] Add "Create New Version" button that appears when edits exist (with Reset button)
+- [x] Track all edited components in state (editedComponents Record<string, number>)
+- [x] Create new draft version with edited percentages (createVersion + addComponent mutations)
+- [x] Show success message with link to new version (toast with "View" action button)
+- [x] Show edited count in CardDescription
+
+### Testing
+- [x] Run all unit tests (18 tests passing)
+- [x] TypeScript compilation successful (0 errors)
+- [x] Input validation implemented (min=0, max=100, type=number)
+- [x] Create checkpoint

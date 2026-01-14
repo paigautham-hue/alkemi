@@ -4,7 +4,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
+import { useLocation } from "wouter";
 import {
   ArrowLeft,
   ArrowRight,
@@ -18,6 +21,8 @@ import {
   Calendar,
   User,
   AlertCircle,
+  Edit2,
+  Save,
 } from "lucide-react";
 
 interface FormulationComparisonProps {
@@ -28,6 +33,8 @@ interface FormulationComparisonProps {
 export function FormulationComparison({ familyId, onClose }: FormulationComparisonProps) {
   const [baseVersionId, setBaseVersionId] = useState<string>("");
   const [targetVersionId, setTargetVersionId] = useState<string>("");
+  const [editedComponents, setEditedComponents] = useState<Record<string, number>>({});
+  const [, setLocation] = useLocation();
 
   // Fetch all versions for this family
   const { data: versions, isLoading: versionsLoading } = trpc.formulations.listVersions.useQuery({
@@ -44,6 +51,69 @@ export function FormulationComparison({ familyId, onClose }: FormulationComparis
       enabled: !!baseVersionId && !!targetVersionId && baseVersionId !== targetVersionId,
     }
   );
+
+  // Create new version from edited components
+  const createVersionMutation = trpc.formulations.createVersion.useMutation({
+    onSuccess: async (data) => {
+      // After version is created, add all components
+      for (const comp of components) {
+        await trpc.formulations.addComponent.useMutation().mutateAsync({
+          versionId: data.id,
+          materialId: comp.materialId,
+          percentage: comp.percentage.toString(),
+          role: comp.role,
+        });
+      }
+      
+      toast.success("New version created!", {
+        description: `Version ${newVersionNumber} created with your changes`,
+        action: {
+          label: "View",
+          onClick: () => setLocation(`/formulations/${familyId}/versions/${data.id}`),
+        },
+      });
+      setEditedComponents({});
+      if (onClose) onClose();
+    },
+    onError: (error) => {
+      toast.error("Failed to create version", {
+        description: error.message,
+      });
+    },
+  });
+
+  let components: Array<{ materialId: string; percentage: number; role: "component" }>  = [];
+  let newVersionNumber = "";
+
+  const handleCreateNewVersion = async () => {
+    if (!comparison || Object.keys(editedComponents).length === 0) return;
+
+    // Get the latest version number to generate new version
+    const versionNumbers = versions?.map(v => {
+      const match = v.versionNumber.match(/\d+/);
+      return match ? parseInt(match[0]) : 0;
+    }) || [];
+    const maxVersion = Math.max(...versionNumbers, 0);
+    newVersionNumber = `v${maxVersion + 1}.0`;
+
+    // Prepare components with edited values
+    components = comparison.componentComparisons
+      .filter(comp => comp.targetPercentage !== null)
+      .map(comp => ({
+        materialId: comp.materialId,
+        percentage: editedComponents[comp.materialId] ?? parseFloat(comp.targetPercentage!),
+        role: "component" as const,
+      }));
+
+    createVersionMutation.mutate({
+      familyId,
+      versionNumber: newVersionNumber,
+      parentVersionId: targetVersionId,
+      branchType: "revision",
+      notes: `Created from comparison with ${Object.keys(editedComponents).length} edited component(s)`,
+      changeReason: `Modified ${Object.keys(editedComponents).length} component percentage(s) from ${comparison.targetVersion.versionNumber}`,
+    });
+  };
 
   const isLoading = versionsLoading || comparisonLoading;
   const showComparison = comparison && baseVersionId && targetVersionId && baseVersionId !== targetVersionId;
@@ -281,10 +351,39 @@ export function FormulationComparison({ familyId, onClose }: FormulationComparis
           {/* Component Comparison Table */}
           <Card className="glass">
             <CardHeader>
-              <CardTitle className="text-base">Component Comparison</CardTitle>
-              <CardDescription>
-                Ingredient composition differences between versions
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base">Component Comparison</CardTitle>
+                  <CardDescription>
+                    Ingredient composition differences between versions
+                    {Object.keys(editedComponents).length > 0 && (
+                      <span className="text-blue-600 dark:text-blue-400 font-medium ml-2">
+                        ({Object.keys(editedComponents).length} component{Object.keys(editedComponents).length > 1 ? 's' : ''} edited)
+                      </span>
+                    )}
+                  </CardDescription>
+                </div>
+                {Object.keys(editedComponents).length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setEditedComponents({})}
+                    >
+                      Reset
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="gradient"
+                      onClick={handleCreateNewVersion}
+                      disabled={createVersionMutation.isPending}
+                    >
+                      <Save className="mr-2 h-4 w-4" />
+                      {createVersionMutation.isPending ? "Creating..." : "Create New Version"}
+                    </Button>
+                  </div>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
@@ -329,7 +428,33 @@ export function FormulationComparison({ familyId, onClose }: FormulationComparis
                     </div>
                     <div className="col-span-2 text-right font-mono">
                       {comp.targetPercentage !== null ? (
-                        <span className="text-green-600 dark:text-green-400">{parseFloat(comp.targetPercentage).toFixed(2)}%</span>
+                        <div className="flex items-center justify-end gap-1 group">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            max="100"
+                            value={editedComponents[comp.materialId] ?? parseFloat(comp.targetPercentage)}
+                            onChange={(e) => {
+                              const value = parseFloat(e.target.value);
+                              if (!isNaN(value) && value >= 0 && value <= 100) {
+                                setEditedComponents(prev => ({
+                                  ...prev,
+                                  [comp.materialId]: value
+                                }));
+                              }
+                            }}
+                            className={`h-7 w-20 text-right font-mono text-sm ${
+                              editedComponents[comp.materialId] !== undefined
+                                ? "border-blue-500 ring-2 ring-blue-500/20"
+                                : ""
+                            }`}
+                          />
+                          <span className="text-xs text-muted-foreground">%</span>
+                          {editedComponents[comp.materialId] !== undefined && (
+                            <Edit2 className="h-3 w-3 text-blue-500" />
+                          )}
+                        </div>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}

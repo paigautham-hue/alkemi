@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AnimatedNumber, ConfidenceMeter } from "@/components/AnimatedProgressBar";
@@ -56,6 +56,9 @@ const CONFIDENCE_COLORS = {
  * Confidence Distribution Chart - Bar chart showing confidence levels for each parameter
  */
 export function ConfidenceDistributionChart({ technicalParameters }: { technicalParameters: Record<string, TechnicalParameter> }) {
+  const [zoomedData, setZoomedData] = useState<any[] | null>(null);
+  const [isZoomed, setIsZoomed] = useState(false);
+  
   const data = useMemo(() => {
     return Object.entries(technicalParameters)
       .map(([name, param]) => ({
@@ -87,15 +90,20 @@ export function ConfidenceDistributionChart({ technicalParameters }: { technical
             <XAxis type="number" domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
             <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 11 }} />
             <Tooltip
+              cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }}
               content={({ active, payload }) => {
                 if (active && payload && payload.length) {
                   const data = payload[0].payload;
                   return (
-                    <div className="bg-background border rounded-lg shadow-lg p-3">
-                      <p className="font-medium text-sm">{data.fullName}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Confidence: <span className="font-medium">{data.confidence}%</span>
-                      </p>
+                    <div className="glass border rounded-lg shadow-xl p-4 animate-in fade-in zoom-in duration-200">
+                      <p className="font-semibold text-sm mb-1">{data.fullName}</p>
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full" style={{ backgroundColor: data.fill }} />
+                        <p className="text-sm text-muted-foreground">
+                          Confidence: <span className="font-bold text-foreground">{data.confidence}%</span>
+                        </p>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">Click to zoom</p>
                     </div>
                   );
                 }
@@ -190,11 +198,18 @@ export function TestMethodCoverageChart({ testMethods }: { testMethods: string[]
               content={({ active, payload }) => {
                 if (active && payload && payload.length) {
                   const data = payload[0].payload;
+                  const percentage = ((data.value / testMethods.length) * 100).toFixed(1);
                   return (
-                    <div className="bg-background border rounded-lg shadow-lg p-3">
-                      <p className="font-medium text-sm">{data.name} Standards</p>
+                    <div className="glass border rounded-lg shadow-xl p-4 animate-in fade-in zoom-in duration-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="h-3 w-3 rounded-full" style={{ backgroundColor: data.color }} />
+                        <p className="font-semibold text-sm">{data.name} Standards</p>
+                      </div>
                       <p className="text-sm text-muted-foreground">
-                        Count: <span className="font-medium">{data.value}</span>
+                        Count: <span className="font-bold text-foreground">{data.value}</span>
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {percentage}% of total methods
                       </p>
                     </div>
                   );

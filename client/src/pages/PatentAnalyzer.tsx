@@ -1,4 +1,5 @@
 import DashboardLayout from "@/components/DashboardLayout";
+import { AnimatedPage } from "@/components/AnimatedPage";
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -100,7 +101,8 @@ export default function PatentAnalyzer() {
 
   return (
     <DashboardLayout>
-    <div className="container mx-auto py-6">
+      <AnimatedPage>
+        <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold">Patent & Literature Analyzer</h1>
@@ -422,6 +424,7 @@ export default function PatentAnalyzer() {
         </div>
       </div>
     </div>
+    </AnimatedPage>
     </DashboardLayout>
   );
 }

@@ -1,4 +1,5 @@
 import DashboardLayout from "@/components/DashboardLayout";
+import { AnimatedPage } from "@/components/AnimatedPage";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,7 @@ import { Building2, Plus, Search } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import SupplierCreateDialog from "@/components/SupplierCreateDialog";
+import { SkeletonTable } from "@/components/SkeletonLoaders";
 
 export default function Suppliers() {
   const [search, setSearch] = useState("");
@@ -31,6 +33,7 @@ export default function Suppliers() {
 
   return (
     <DashboardLayout>
+      <AnimatedPage>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -67,7 +70,7 @@ export default function Suppliers() {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">Loading suppliers...</div>
+              <SkeletonTable rows={8} columns={6} />
             ) : suppliers && suppliers.length > 0 ? (
               <Table>
                 <TableHeader>
@@ -137,6 +140,7 @@ export default function Suppliers() {
 
         <SupplierCreateDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
       </div>
+      </AnimatedPage>
     </DashboardLayout>
   );
 }

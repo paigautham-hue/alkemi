@@ -1,4 +1,5 @@
 import DashboardLayout from "@/components/DashboardLayout";
+import { AnimatedPage } from "@/components/AnimatedPage";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Link } from "wouter";
 import FormulationFamilyCreateDialog from "@/components/FormulationFamilyCreateDialog";
+import { SkeletonCard } from "@/components/SkeletonLoaders";
 
 export default function Formulations() {
   const [search, setSearch] = useState("");
@@ -27,7 +29,8 @@ export default function Formulations() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <AnimatedPage>
+        <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Formulations</h1>
@@ -63,7 +66,11 @@ export default function Formulations() {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">Loading formulations...</div>
+              <div className="grid gap-4">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <SkeletonCard key={i} />
+                ))}
+              </div>
             ) : families && families.length > 0 ? (
               <div className="grid gap-4">
                 {families.map((family) => (
@@ -142,6 +149,7 @@ export default function Formulations() {
           onOpenChange={setCreateDialogOpen}
         />
       </div>
+      </AnimatedPage>
     </DashboardLayout>
   );
 }

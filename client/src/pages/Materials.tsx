@@ -1,4 +1,5 @@
 import DashboardLayout from "@/components/DashboardLayout";
+import { AnimatedPage } from "@/components/AnimatedPage";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,7 @@ import { toast } from "sonner";
 import MaterialCreateDialog from "@/components/MaterialCreateDialog";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { SkeletonTable } from "@/components/SkeletonLoaders";
 
 export default function Materials() {
   const [search, setSearch] = useState("");
@@ -24,7 +26,8 @@ export default function Materials() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <AnimatedPage>
+        <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Materials</h1>
@@ -60,7 +63,7 @@ export default function Materials() {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">Loading materials...</div>
+              <SkeletonTable rows={8} columns={7} />
             ) : materials && materials.length > 0 ? (
               <Table>
                 <TableHeader>
@@ -193,6 +196,7 @@ export default function Materials() {
           </DialogContent>
         </Dialog>
       </div>
+      </AnimatedPage>
     </DashboardLayout>
   );
 }

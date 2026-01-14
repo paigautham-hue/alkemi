@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
+import { AnimatedPage } from "@/components/AnimatedPage";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { toast } from "sonner";
 import { AnalysisProgressIndicator, AnalysisResultsSkeleton } from "@/components/AnalysisProgressIndicator";
 import { AnalysisCharts } from "@/components/AnalysisCharts";
+import { SkeletonProductList, SkeletonAnalysisPanel } from "@/components/SkeletonLoaders";
 
 export default function ReverseEngineering() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -246,6 +248,7 @@ export default function ReverseEngineering() {
 
   return (
     <DashboardLayout>
+      <AnimatedPage>
     <div className="container mx-auto py-8">
       <div className="flex items-center justify-between mb-8">
         <div>
@@ -398,9 +401,7 @@ export default function ReverseEngineering() {
             </CardHeader>
             <CardContent>
               {isLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
+                <SkeletonProductList count={6} />
               ) : products && products.length > 0 ? (
                 <div className="space-y-2">
                   {products.map((product) => {
@@ -931,6 +932,7 @@ export default function ReverseEngineering() {
         </div>
       </div>
     </div>
+    </AnimatedPage>
     </DashboardLayout>
   );
 }

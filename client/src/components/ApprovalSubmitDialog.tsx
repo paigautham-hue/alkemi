@@ -48,7 +48,7 @@ export function ApprovalSubmitDialog({
   const handleSubmit = () => {
     submitMutation.mutate({
       formulationVersionId: versionId,
-      reviewers: [], // Empty array means auto-assign to all managers/admins
+      assignedTo: undefined, // Optional: can assign to specific reviewer
       comments: comments.trim() || undefined,
     });
   };

@@ -1,0 +1,8 @@
+{
+  "query": "SELECT ar.*, \n               fv.version_number as formulation_version_name,\n               ff.product_name as formulation_product_name,\n               u.name as requested_by_name\n        FROM approval_requests ar\n        LEFT JOIN formulation_versions fv ON ar.formulation_version_id = fv.id\n        LEFT JOIN formulation_families ff ON fv.family_id = ff.id\n        LEFT JOIN users u ON ar.requested_by = u.id\n        WHERE ar.organization_id = '6f2b4e9a-8c1d-4f3a-9b7e-5d8c3a1f6e2b'\n        AND ar.requested_by = '1'\n        ORDER BY ar.submitted_at DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2w11Z6tqxKEYk6i.b24f818d37b4 --database MSgBPeo7wAzRH3Z9eLPB2M --execute SELECT ar.*, \n               fv.version_number as formulation_version_name,\n               ff.product_name as formulation_product_name,\n               u.name as requested_by_name\n        FROM approval_requests ar\n        LEFT JOIN formulation_versions fv ON ar.formulation_version_id = fv.id\n        LEFT JOIN formulation_families ff ON fv.family_id = ff.id\n        LEFT JOIN users u ON ar.requested_by = u.id\n        WHERE ar.organization_id = '6f2b4e9a-8c1d-4f3a-9b7e-5d8c3a1f6e2b'\n        AND ar.requested_by = '1'\n        ORDER BY ar.submitted_at DESC LIMIT 5;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'ff.product_name' in 'field list'"
+  ]
+}

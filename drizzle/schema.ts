@@ -647,3 +647,81 @@ export const debateSessions = mysqlTable("debate_sessions", {
 
 export type DebateSession = typeof debateSessions.$inferSelect;
 export type InsertDebateSession = typeof debateSessions.$inferInsert;
+
+
+// ==========================================================
+// REVERSE ENGINEERING & COMPETITOR ANALYSIS
+// ==========================================================
+
+export const competitorProducts = mysqlTable("competitor_products", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  organizationId: varchar("organization_id", { length: 36 }).notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  userId: varchar("user_id", { length: 36 }).notNull().references(() => users.id),
+  
+  // Product identification
+  productName: text("product_name").notNull(),
+  manufacturer: text("manufacturer").notNull(),
+  productCode: varchar("product_code", { length: 255 }),
+  category: varchar("category", { length: 255 }),
+  domainId: varchar("domain_id", { length: 36 }).references(() => domains.id),
+  
+  // Product information
+  marketingClaims: json("marketing_claims").$type<string[]>(),
+  technicalDataSheet: text("technical_data_sheet"),
+  msdsData: text("msds_data"),
+  observedProperties: json("observed_properties").$type<Record<string, any>>(),
+  
+  // Analysis results
+  extractedParameters: json("extracted_parameters").$type<Record<string, any>>(),
+  suggestedFormulationStrategy: text("suggested_formulation_strategy"),
+  targetProductProfile: json("target_product_profile").$type<Record<string, any>>(),
+  confidenceScore: decimal("confidence_score", { precision: 5, scale: 2 }),
+  
+  // Metadata
+  analysisStatus: mysqlEnum("analysis_status", ["pending", "analyzing", "completed", "failed"]).default("pending"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow().onUpdateNow(),
+}, (table) => ({
+  orgIdx: index("idx_competitor_products_org").on(table.organizationId),
+  domainIdx: index("idx_competitor_products_domain").on(table.domainId),
+}));
+
+export const reverseEngineeringAnalyses = mysqlTable("reverse_engineering_analyses", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  organizationId: varchar("organization_id", { length: 36 }).notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  competitorProductId: varchar("competitor_product_id", { length: 36 }).notNull().references(() => competitorProducts.id, { onDelete: "cascade" }),
+  userId: varchar("user_id", { length: 36 }).notNull().references(() => users.id),
+  
+  // Analysis inputs
+  analysisType: mysqlEnum("analysis_type", [
+    "performance_translation",
+    "formulation_strategy",
+    "tpp_generation",
+    "cost_analysis",
+    "regulatory_comparison"
+  ]).notNull(),
+  inputData: json("input_data").$type<Record<string, any>>().notNull(),
+  
+  // Analysis outputs
+  results: json("results").$type<Record<string, any>>().notNull(),
+  recommendations: json("recommendations").$type<string[]>(),
+  alternativeMaterials: json("alternative_materials").$type<Array<{materialId: string, similarity: number, rationale: string}>>(),
+  estimatedCost: decimal("estimated_cost", { precision: 10, scale: 2 }),
+  feasibilityScore: decimal("feasibility_score", { precision: 5, scale: 2 }),
+  
+  // LLM tracking
+  llmModelUsed: varchar("llm_model_used", { length: 255 }),
+  tokensUsed: int("tokens_used"),
+  costUsd: decimal("cost_usd", { precision: 10, scale: 4 }),
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  orgIdx: index("idx_re_analyses_org").on(table.organizationId),
+  productIdx: index("idx_re_analyses_product").on(table.competitorProductId),
+}));
+
+export type CompetitorProduct = typeof competitorProducts.$inferSelect;
+export type InsertCompetitorProduct = typeof competitorProducts.$inferInsert;
+export type ReverseEngineeringAnalysis = typeof reverseEngineeringAnalyses.$inferSelect;
+export type InsertReverseEngineeringAnalysis = typeof reverseEngineeringAnalyses.$inferInsert;

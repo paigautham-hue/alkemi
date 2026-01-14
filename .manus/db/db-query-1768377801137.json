@@ -1,0 +1,46 @@
+{
+  "query": "SELECT * FROM approval_requests LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2w11Z6tqxKEYk6i.b24f818d37b4 --database MSgBPeo7wAzRH3Z9eLPB2M --execute SELECT * FROM approval_requests LIMIT 5;",
+  "rows": [
+    {
+      "id": "AtSBJ6zG83GjXI_2c70fa",
+      "organization_id": "43e2eb0d-b112-4930-8e85-1850a775af25",
+      "formulation_version_id": "a325a709-3543-4849-a2c3-8f0a27cd3824",
+      "status": "submitted",
+      "requested_by": "0f43b424-579b-40ae-914d-6ecf9911670f",
+      "assigned_to": "NULL",
+      "submitted_at": "2026-01-14 07:28:11",
+      "reviewed_at": "NULL",
+      "created_at": "2026-01-14 07:28:11",
+      "updated_at": "2026-01-14 07:28:11"
+    },
+    {
+      "id": "B9y7vRKssSWQLUyFvBEf9",
+      "organization_id": "43e2eb0d-b112-4930-8e85-1850a775af25",
+      "formulation_version_id": "a325a709-3543-4849-a2c3-8f0a27cd3824",
+      "status": "submitted",
+      "requested_by": "0f43b424-579b-40ae-914d-6ecf9911670f",
+      "assigned_to": "NULL",
+      "submitted_at": "2026-01-14 07:53:21",
+      "reviewed_at": "NULL",
+      "created_at": "2026-01-14 07:53:21",
+      "updated_at": "2026-01-14 07:53:21"
+    },
+    {
+      "id": "QgepH96slhLKb60pw9Cqb",
+      "organization_id": "43e2eb0d-b112-4930-8e85-1850a775af25",
+      "formulation_version_id": "a325a709-3543-4849-a2c3-8f0a27cd3824",
+      "status": "submitted",
+      "requested_by": "0f43b424-579b-40ae-914d-6ecf9911670f",
+      "assigned_to": "NULL",
+      "submitted_at": "2026-01-14 08:02:06",
+      "reviewed_at": "NULL",
+      "created_at": "2026-01-14 08:02:06",
+      "updated_at": "2026-01-14 08:02:06"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\torganization_id\tformulation_version_id\tstatus\trequested_by\tassigned_to\tsubmitted_at\treviewed_at\tcreated_at\tupdated_at\nAtSBJ6zG83GjXI_2c70fa\t43e2eb0d-b112-4930-8e85-1850a775af25\ta325a709-3543-4849-a2c3-8f0a27cd3824\tsubmitted\t0f43b424-579b-40ae-914d-6ecf9911670f\tNULL\t2026-01-14 07:28:11\tNULL\t2026-01-14 07:28:11\t2026-01-14 07:28:11\nB9y7vRKssSWQLUyFvBEf9\t43e2eb0d-b112-4930-8e85-1850a775af25\ta325a709-3543-4849-a2c3-8f0a27cd3824\tsubmitted\t0f43b424-579b-40ae-914d-6ecf9911670f\tNULL\t2026-01-14 07:53:21\tNULL\t2026-01-14 07:53:21\t2026-01-14 07:53:21\nQgepH96slhLKb60pw9Cqb\t43e2eb0d-b112-4930-8e85-1850a775af25\ta325a709-3543-4849-a2c3-8f0a27cd3824\tsubmitted\t0f43b424-579b-40ae-914d-6ecf9911670f\tNULL\t2026-01-14 08:02:06\tNULL\t2026-01-14 08:02:06\t2026-01-14 08:02:06\n",
+  "stderr": "",
+  "execution_time_ms": 1515
+}

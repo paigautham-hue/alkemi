@@ -684,3 +684,363 @@
 - [x] Build SupplierRiskDashboard UI component
 - [x] Add navigation link to dashboard
 - [x] Test risk assessment and alternatives features
+
+
+## Phase 17: Path to 100% Completion (NEW - January 2026)
+
+### [ ] Fix Approval Workflow 500 Error (CRITICAL)
+- Debug timestamp handling in createApprovalRequest function
+- Check date conversion in approval submission
+- Test approval flow end-to-end
+- Verify approval notifications work correctly
+
+### [ ] Formulation Export Enhancement
+- Add export to Excel format
+- Add export with trial results included
+- Add export with compliance status included
+- Add batch export for multiple formulations
+
+### [ ] Batch Formulation Optimization
+- Create batch optimization page
+- Add multi-objective optimization UI
+- Integrate with DOE generator
+- Add Pareto frontier visualization
+- Add constraint definition interface
+
+### [ ] Supplier Performance Tracking
+- Add historical metrics table (on-time delivery, quality scores, price trends)
+- Create supplier performance dashboard page
+- Add performance visualization charts
+- Link performance data to supplier risk assessment
+- Add performance trend analysis
+
+### [ ] Advanced Formulation Search Filters
+- Add filter by domain
+- Add filter by status (draft, submitted, approved, etc.)
+- Add filter by confidentiality level
+- Add filter by material composition (contains material X)
+- Add filter by property ranges
+- Add saved search functionality
+
+### [ ] Comments & Collaboration System
+- Add comments to formulations
+- Add comments to trials
+- Add @mentions for team collaboration
+- Add comment threading
+- Add comment notifications
+
+### [ ] Activity Feed
+- Create activity feed page
+- Show recent formulation changes
+- Show approval requests
+- Show trial results
+- Show compliance violations
+- Add filtering by activity type
+
+### [ ] Formulation Recommendations
+- Add "Similar formulations" feature
+- Add "Suggested improvements" based on trials
+- Add "Cost optimization suggestions"
+- Add "Compliance improvement suggestions"
+
+### [ ] Data Import/Export Enhancement
+- Add bulk material import (CSV/Excel)
+- Add bulk formulation import
+- Add import validation and error reporting
+- Add data export templates
+
+### [ ] Knowledge Graph Visualization
+- Visualize material relationships
+- Visualize formulation lineage
+- Visualize supplier networks
+- Add interactive graph exploration
+
+### [ ] Comprehensive Testing
+- Write unit tests for all services (target 80%+ coverage)
+- Write integration tests for all APIs
+- Write E2E tests for critical flows
+- Test all approval workflow transitions
+- Test RLS isolation across organizations
+
+### [ ] Performance Optimization
+- Add caching for frequently accessed data
+- Optimize database queries
+- Add pagination to all list views
+- Add lazy loading for large datasets
+- Verify latency budgets are met
+
+### [ ] Security Hardening
+- Add rate limiting
+- Add input validation on all endpoints
+- Add SQL injection prevention checks
+- Add XSS prevention checks
+- Add CSRF protection
+
+### [ ] Documentation
+- Create user guide
+- Create API documentation (OpenAPI/Swagger)
+- Create video tutorials
+- Create FAQ page
+- Create troubleshooting guide
+- Create architecture documentation
+
+### [ ] Specification Compliance Audit
+- Review Section 16: Formulation Editor completeness
+- Review Section 17: Approval Workflow UI completeness
+- Review Section 19: Scientific Prediction Engine completeness
+- Review Section 23: Multi-LLM Debate Engine completeness
+- Review Section 30: Supplier Intelligence completeness
+- Review Section 31: Regulatory Compliance Engine completeness
+- Review Section 33: Analytics & Reporting completeness
+
+
+## Phase 17: Fix Approval Workflow System (CURRENT - HIGH PRIORITY)
+- [ ] Analyze database schema vs code mismatches
+- [ ] Remove all references to non-existent `reviewers` column
+- [ ] Fix createApprovalRequest to match schema (use assignedTo, submittedAt)
+- [ ] Fix createApprovalReview to use `decision` instead of `action`
+- [ ] Fix getPendingApprovalRequests query (remove reviewers JSON_CONTAINS)
+- [ ] Fix completeApprovalRequest to use `reviewedAt` instead of `completed_at`
+- [ ] Test approval submission workflow end-to-end
+- [ ] Test approval review and state transitions
+- [ ] Verify approval history displays correctly
+
+## Phase 18: R&D Team Requirements - PDF Export
+- [ ] Design professional PDF layout for formulations
+- [ ] Implement PDF generation with composition table
+- [ ] Include material properties and supplier information
+- [ ] Add predicted properties section
+- [ ] Include version history and lineage
+- [ ] Add "Export PDF" button to formulation editor
+- [ ] Test PDF generation with various formulations
+
+## Phase 19: R&D Team Requirements - Reverse Engineering Assistant
+- [ ] Create competitor_products table
+- [ ] Build TDS/MSDS document parser
+- [ ] Implement performance claim → technical parameter translator
+- [ ] Create Target Product Profile (TPP) generator
+- [ ] Build reverse engineering hypothesis generator using LLM
+- [ ] Create ReverseEngineeringPage UI
+- [ ] Add competitor product upload and analysis
+- [ ] Test with sample competitor documents
+
+## Phase 20: R&D Team Requirements - Patent & Literature Analyzer
+- [ ] Create patents table and patent_extractions table
+- [ ] Build patent PDF parser with chemistry extraction
+- [ ] Implement reaction mechanism extractor
+- [ ] Create material function identifier (catalyst, binder, etc.)
+- [ ] Build technology landscape categorizer
+- [ ] Create PatentAnalyzerPage UI
+- [ ] Add patent summary generator
+- [ ] Implement technology maturity classifier
+- [ ] Test with sample patents
+
+## Phase 21: R&D Team Requirements - Equipment Database
+- [ ] Create equipment table with constraints
+- [ ] Add equipment_compatibility_checks table
+- [ ] Build equipment CRUD operations
+- [ ] Implement formulation-equipment compatibility checker
+- [ ] Create EquipmentPage UI
+- [ ] Add compatibility warnings in formulation editor
+- [ ] Implement equipment constraint validation
+- [ ] Test compatibility checking logic
+
+## Phase 22: R&D Team Requirements - Scale-Up Risk Analyzer
+- [ ] Create scale_up_analyses table
+- [ ] Build lab-to-pilot deviation analyzer
+- [ ] Implement scale-up risk assessment algorithm
+- [ ] Create scale-up risk checklist generator
+- [ ] Add operating parameter range recommender
+- [ ] Build ScaleUpAnalysisPage UI
+- [ ] Integrate with trials data
+- [ ] Test with real trial data
+
+## Phase 23: R&D Team Requirements - SOP Generator
+- [ ] Create manufacturing_sops table
+- [ ] Build SOP template generator
+- [ ] Implement batch process description generator
+- [ ] Create critical process parameter (CPP) identifier
+- [ ] Add process flow diagram generator
+- [ ] Create tech transfer checklist generator
+- [ ] Build ManufacturingDocsPage UI
+- [ ] Test SOP generation with approved formulations
+
+## Phase 24: R&D Team Requirements - Issue Tracking System
+- [ ] Create issues table with root cause tracking
+- [ ] Create issue_formulation_links table
+- [ ] Build issue CRUD operations
+- [ ] Implement historical issue analyzer
+- [ ] Create improvement recommendation engine using LLM
+- [ ] Add change impact predictor
+- [ ] Build IssueTrackingPage UI
+- [ ] Implement issue trend analysis
+- [ ] Test issue analysis and recommendations
+
+## Phase 25: Final Integration Testing & Delivery
+- [ ] Run comprehensive end-to-end tests for all features
+- [ ] Test multi-tenancy isolation
+- [ ] Verify all R&D workflows work together
+- [ ] Fix any bugs discovered during testing
+- [ ] Update all documentation
+- [ ] Create user guide for R&D team
+- [ ] Create final checkpoint
+- [ ] Deliver completed platform
+
+
+## Phase 17: Fix Approval Workflow (CRITICAL - COMPLETED)
+- [x] Fix 500 error when loading approvals page
+- [x] Fix schema mismatches (action→decision, reviewers column, version_name→version_number, product_name→name)
+- [x] Separate getPendingApprovalRequests and getMyApprovalRequests functions
+- [x] Fix query logic for assigned_to vs requested_by filtering
+- [x] Verify approval submission works
+- [x] Verify approval list loads successfully
+
+
+## Phase 17: Fix Approval Workflow (COMPLETED ✅)
+- [x] Fix 500 error when loading approvals page
+- [x] Fix schema mismatches (reviewers column, action vs decision)
+- [x] Fix column name mismatches (version_name, product_name)
+- [x] Separate getPendingApprovalRequests and getMyApprovalRequests functions
+- [x] Test end-to-end approval submission
+- [x] Verify approval requests display correctly
+
+## Phase 18: PDF Export (PARTIAL - Known Issue ⚠️)
+- [x] Create PDF export service with jsPDF
+- [x] Add exportPDF endpoint to formulations router
+- [x] Wire up Export PDF button in UI
+- [ ] Fix module import issue with jsPDF/autoTable in TypeScript (deferred)
+
+## Phase 19: R&D Team Requirements Implementation
+
+### Stage 1: Reverse Engineering Assistant (HIGH PRIORITY)
+- [x] Create competitor product analysis database schema
+- [x] Build reverse engineering service with LLM integration
+- [x] Implement performance claim to technical parameter translator
+- [x] Create Target Product Profile (TPP) generator
+- [x] Add reverse engineering tRPC router
+- [ ] Build ReverseEngineeringPage UI
+- [ ] Add competitor product input form
+- [ ] Implement analysis results visualization
+- [ ] Add TPP export functionality
+
+### Stage 2: Patent & Literature Analyzer (HIGH PRIORITY)
+- [ ] Create patent analysis database schema
+- [ ] Build patent text extraction service
+- [ ] Implement chemistry extraction from patents
+- [ ] Add reaction mechanism analyzer
+- [ ] Create technology landscape mapper
+- [ ] Build PatentAnalyzerPage UI
+- [ ] Add patent upload and processing
+- [ ] Implement search and filtering
+
+### Stage 3: Equipment Database & Compatibility Checker (MEDIUM PRIORITY)
+- [ ] Create equipment database schema
+- [ ] Add equipment specifications and constraints
+- [ ] Build equipment compatibility checker
+- [ ] Implement formulation-equipment matching
+- [ ] Create EquipmentPage UI
+- [ ] Add equipment management interface
+- [ ] Implement compatibility warnings
+
+### Stage 4: Scale-Up Risk Analyzer (MEDIUM PRIORITY)
+- [ ] Create scale-up analysis service
+- [ ] Implement reaction kinetics analyzer
+- [ ] Add heat/mass transfer calculations
+- [ ] Build lab-to-pilot risk assessment
+- [ ] Create ScaleUpAnalyzerPage UI
+- [ ] Add risk visualization
+- [ ] Implement mitigation recommendations
+
+### Stage 5: Manufacturing Documentation Generator (HIGH PRIORITY)
+- [ ] Create SOP template system
+- [ ] Build batch process description generator
+- [ ] Implement process flow diagram creator
+- [ ] Add tech transfer documentation generator
+- [ ] Create ManufacturingDocsPage UI
+- [ ] Add template customization
+- [ ] Implement document export (PDF, Word)
+
+### Stage 6: Issue Tracking & Improvement System (MEDIUM PRIORITY)
+- [ ] Create issue tracking database schema
+- [ ] Build historical issue analyzer
+- [ ] Implement improvement recommendation engine
+- [ ] Add root cause analysis tool
+- [ ] Create IssueTrackingPage UI
+- [ ] Add issue reporting interface
+- [ ] Implement analytics dashboard
+
+
+## Phase 17: Fix Approval Workflow (CRITICAL) ✅ COMPLETE
+- [x] Fix 500 error when loading approvals page
+- [x] Fix schema mismatches (reviewers column, action vs decision)
+- [x] Fix column name mismatches (version_name, product_name)
+- [x] Separate getPendingApprovalRequests and getMyApprovalRequests functions
+- [x] Test end-to-end approval submission
+- [x] Verify approval requests display correctly
+
+## Phase 18: PDF Export (PARTIAL - Known Issue)
+- [x] Create PDF export service with jsPDF
+- [x] Add exportPDF endpoint to formulations router
+- [x] Wire up Export PDF button in UI
+- [ ] Fix module import issue with jsPDF/autoTable in TypeScript (deferred)
+
+## Phase 19: R&D Team Requirements Implementation
+
+### Stage 1: Reverse Engineering Assistant (HIGH PRIORITY) ✅ COMPLETE
+- [x] Create competitor product analysis database schema
+- [x] Build reverse engineering service with LLM integration
+- [x] Implement performance claim to technical parameter translator
+- [x] Create Target Product Profile (TPP) generator
+- [x] Add reverse engineering tRPC router
+- [x] Build ReverseEngineeringPage UI with tabs
+- [x] Add competitor product input form
+- [x] Implement product list and detail view
+- [x] Add navigation menu item
+- [x] Test end-to-end workflow (product creation successful)
+
+### Stage 2: Patent & Literature Analyzer (HIGH PRIORITY)
+- [ ] Create patent analysis database schema
+- [ ] Build patent text extraction service
+- [ ] Implement chemistry extraction from patents
+- [ ] Create reaction mechanism analyzer
+- [ ] Build technology landscape mapper
+- [ ] Add patent search integration
+- [ ] Create PatentAnalyzerPage UI
+- [ ] Add patent upload and analysis workflow
+- [ ] Implement patent insights visualization
+
+### Stage 3: Equipment Database & Compatibility Checker (MEDIUM PRIORITY)
+- [ ] Create equipment database schema
+- [ ] Build equipment catalog with specifications
+- [ ] Implement formulation-equipment compatibility checker
+- [ ] Add equipment constraint validation
+- [ ] Create EquipmentPage UI
+- [ ] Add equipment search and filtering
+- [ ] Implement compatibility warnings in formulation editor
+
+### Stage 4: Scale-Up Risk Analyzer (MEDIUM PRIORITY)
+- [ ] Create scale-up analysis database schema
+- [ ] Build reaction kinetics analyzer
+- [ ] Implement heat/mass transfer calculations
+- [ ] Add lab-to-pilot difference analyzer
+- [ ] Create ScaleUpAnalyzerPage UI
+- [ ] Add scale-up risk visualization
+- [ ] Implement mitigation recommendations
+
+### Stage 5: Manufacturing Documentation Generator (HIGH PRIORITY)
+- [ ] Create SOP generation service with LLM
+- [ ] Build batch process description generator
+- [ ] Implement process flow diagram generator
+- [ ] Add tech transfer documentation templates
+- [ ] Create ManufacturingDocsPage UI
+- [ ] Add document preview and export
+- [ ] Implement document version control
+
+### Stage 6: Issue Tracking & Improvement System (MEDIUM PRIORITY)
+- [ ] Create issue tracking database schema
+- [ ] Build issue analysis service
+- [ ] Implement historical issue pattern detection
+- [ ] Add improvement recommendation engine
+- [ ] Create IssueTrackerPage UI
+- [ ] Add issue submission and tracking workflow
+- [ ] Implement improvement suggestions visualization

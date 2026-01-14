@@ -355,6 +355,28 @@ export const appRouter = router({
           ctx.user.organizationId
         );
       }),
+
+    exportPDF: protectedProcedure
+      .input(z.object({ versionId: z.string().uuid() }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          const pdfExport = await import("./pdfExport");
+          const pdfBuffer = await pdfExport.generateFormulationPDF(
+            input.versionId,
+            ctx.user.organizationId
+          );
+          
+          // Convert buffer to base64 for transmission
+          const base64Pdf = pdfBuffer.toString("base64");
+          return { pdf: base64Pdf };
+        } catch (error) {
+          console.error("PDF Export Error:", error);
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Failed to generate PDF: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          });
+        }
+      }),
   }),
 
   // ==========================================================
@@ -520,7 +542,7 @@ export const appRouter = router({
       .input(
         z.object({
           formulationVersionId: z.string(),
-          reviewers: z.array(z.string()),
+          assignedTo: z.string().optional(),
           comments: z.string().optional(),
         })
       )
@@ -531,7 +553,7 @@ export const appRouter = router({
           organizationId: ctx.user.organizationId,
           formulationVersionId: input.formulationVersionId,
           requestedBy: ctx.user.id,
-          reviewers: input.reviewers,
+          assignedTo: input.assignedTo,
           comments: input.comments,
         });
 
@@ -542,7 +564,7 @@ export const appRouter = router({
       .input(
         z.object({
           approvalRequestId: z.string(),
-          action: z.enum(["approve", "reject", "request_revision"]),
+          decision: z.enum(["approve", "reject", "request_revision"]),
           comments: z.string(),
         })
       )
@@ -552,7 +574,7 @@ export const appRouter = router({
         await approvalWorkflow.reviewApproval({
           approvalRequestId: input.approvalRequestId,
           reviewerId: ctx.user.id,
-          action: input.action,
+          decision: input.decision,
           comments: input.comments,
         });
 
@@ -583,7 +605,7 @@ export const appRouter = router({
     }),
 
     listMyRequests: protectedProcedure.query(async ({ ctx }) => {
-      return await db.getPendingApprovalRequests(
+      return await db.getMyApprovalRequests(
         ctx.user.organizationId,
         ctx.user.id
       );
@@ -1205,6 +1227,96 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         await db.deleteTrial(input.trialId, ctx.user.organizationId);
         return { success: true };
+      }),
+  }),
+
+  // ==========================================================
+  // REVERSE ENGINEERING & COMPETITOR ANALYSIS
+  // ==========================================================
+  reverseEngineering: router({
+    createCompetitorProduct: protectedProcedure
+      .input(z.object({
+        productName: z.string().min(1),
+        manufacturer: z.string().min(1),
+        productCode: z.string().optional(),
+        category: z.string().optional(),
+        domainId: z.string().uuid().optional(),
+        marketingClaims: z.array(z.string()).optional(),
+        technicalDataSheet: z.string().optional(),
+        msdsData: z.string().optional(),
+        observedProperties: z.record(z.string(), z.any()).optional(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const productId = await db.createCompetitorProduct({
+          organizationId: ctx.user.organizationId,
+          userId: ctx.user.id,
+          ...input,
+        });
+        return { success: true, productId };
+      }),
+
+    listCompetitorProducts: protectedProcedure
+      .input(z.object({
+        domainId: z.string().uuid().optional(),
+        category: z.string().optional(),
+        search: z.string().optional(),
+      }))
+      .query(async ({ ctx, input }) => {
+        const products = await db.listCompetitorProducts(ctx.user.organizationId, input);
+        return products;
+      }),
+
+    getCompetitorProduct: protectedProcedure
+      .input(z.object({ productId: z.string().uuid() }))
+      .query(async ({ ctx, input }) => {
+        const product = await db.getCompetitorProductById(input.productId, ctx.user.organizationId);
+        if (!product) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Competitor product not found" });
+        }
+        return product;
+      }),
+
+    deleteCompetitorProduct: protectedProcedure
+      .input(z.object({ productId: z.string().uuid() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.deleteCompetitorProduct(input.productId, ctx.user.organizationId);
+        return { success: true };
+      }),
+
+    analyzeProduct: protectedProcedure
+      .input(z.object({ productId: z.string().uuid() }))
+      .mutation(async ({ ctx, input }) => {
+        const { performCompleteAnalysis } = await import("./reverseEngineering");
+        const results = await performCompleteAnalysis(
+          input.productId,
+          ctx.user.organizationId,
+          ctx.user.id
+        );
+        return { success: true, results };
+      }),
+
+    listAnalyses: protectedProcedure
+      .input(z.object({ competitorProductId: z.string().uuid().optional() }))
+      .query(async ({ ctx, input }) => {
+        const analyses = await db.listReverseEngineeringAnalyses(
+          ctx.user.organizationId,
+          input.competitorProductId
+        );
+        return analyses;
+      }),
+
+    getAnalysis: protectedProcedure
+      .input(z.object({ analysisId: z.string().uuid() }))
+      .query(async ({ ctx, input }) => {
+        const analysis = await db.getReverseEngineeringAnalysisById(
+          input.analysisId,
+          ctx.user.organizationId
+        );
+        if (!analysis) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Analysis not found" });
+        }
+        return analysis;
       }),
   }),
 });

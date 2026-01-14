@@ -35,10 +35,10 @@ export default function FormulationEditor() {
   const [showComplianceDialog, setShowComplianceDialog] = useState(false);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
 
-  const generatePDF = trpc.reports.generateFormulationPDF.useMutation({
+  const generatePDF = trpc.formulations.exportPDF.useMutation({
     onSuccess: (data) => {
       // Convert base64 to blob and download
-      const byteCharacters = atob(data.data);
+      const byteCharacters = atob(data.pdf);
       const byteNumbers = new Array(byteCharacters.length);
       for (let i = 0; i < byteCharacters.length; i++) {
         byteNumbers[i] = byteCharacters.charCodeAt(i);
@@ -48,13 +48,13 @@ export default function FormulationEditor() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = data.filename;
+      link.download = `formulation-${currentVersion?.versionNumber || 'export'}.pdf`;
       link.click();
       window.URL.revokeObjectURL(url);
-      toast.success("PDF report generated successfully");
+      toast.success("PDF exported successfully");
     },
     onError: (error) => {
-      toast.error(`Failed to generate PDF: ${error.message}`);
+      toast.error(`Failed to export PDF: ${error.message}`);
     },
   });
 

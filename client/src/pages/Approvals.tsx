@@ -42,7 +42,7 @@ export default function Approvals() {
 
     reviewMutation.mutate({
       approvalRequestId: selectedRequest.id,
-      action: reviewAction,
+      decision: reviewAction,
       comments: reviewComments,
     });
   };

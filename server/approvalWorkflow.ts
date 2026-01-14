@@ -65,14 +65,14 @@ export interface CreateApprovalRequestParams {
   organizationId: string;
   formulationVersionId: string;
   requestedBy: string;
-  reviewers: string[]; // user IDs of reviewers
+  assignedTo?: string; // user ID of assigned reviewer (optional)
   comments?: string;
 }
 
 export interface ReviewApprovalParams {
   approvalRequestId: string;
   reviewerId: string;
-  action: "approve" | "reject" | "request_revision";
+  decision: "approve" | "reject" | "request_revision";
   comments: string;
 }
 
@@ -88,7 +88,7 @@ export async function createApprovalRequest(
     formulationVersionId: params.formulationVersionId,
     requestedBy: params.requestedBy,
     status: "submitted",
-    reviewers: params.reviewers,
+    assignedTo: params.assignedTo || null,
     submittedAt: new Date(),
   });
 
@@ -98,9 +98,8 @@ export async function createApprovalRequest(
       id: nanoid(),
       approvalRequestId: requestId,
       reviewerId: params.requestedBy,
-      action: "submit",
+      decision: "approve", // Initial submission is treated as self-approval for comment tracking
       comments: params.comments,
-      reviewedAt: new Date(),
     });
   }
 
@@ -117,14 +116,14 @@ export async function reviewApproval(
   }
 
   // Validate transition
-  if (!canTransition(request.status as ApprovalStatus, params.action)) {
+  if (!canTransition(request.status as ApprovalStatus, params.decision)) {
     throw new Error(
-      `Invalid transition: cannot ${params.action} from ${request.status}`
+      `Invalid transition: cannot ${params.decision} from ${request.status}`
     );
   }
 
   // Get next status
-  const nextStatus = getNextStatus(params.action);
+  const nextStatus = getNextStatus(params.decision);
 
   // Update approval request status
   await db.updateApprovalRequestStatus(params.approvalRequestId, nextStatus);
@@ -134,9 +133,8 @@ export async function reviewApproval(
     id: nanoid(),
     approvalRequestId: params.approvalRequestId,
     reviewerId: params.reviewerId,
-    action: params.action,
+    decision: params.decision,
     comments: params.comments,
-    reviewedAt: new Date(),
   });
 
   // If approved or rejected, set completed timestamp
@@ -156,7 +154,7 @@ export async function requestRevision(
   await reviewApproval({
     approvalRequestId,
     reviewerId,
-    action: "request_revision",
+    decision: "request_revision",
     comments,
   });
 }
@@ -183,9 +181,8 @@ export async function resubmitAfterRevision(
     id: nanoid(),
     approvalRequestId,
     reviewerId: userId,
-    action: "resubmit",
+    decision: "approve", // Resubmission treated as approval to continue workflow
     comments,
-    reviewedAt: new Date(),
   });
 }
 

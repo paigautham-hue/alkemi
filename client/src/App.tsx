@@ -21,6 +21,7 @@ import Settings from "@/pages/Settings";
 import Trials from "@/pages/Trials";
 import DOE from "@/pages/DOE";
 import Search from "@/pages/Search";
+import ReverseEngineering from "@/pages/ReverseEngineering";
 
 function Router() {
   return (
@@ -37,6 +38,7 @@ function Router() {
         <Route path="/doe" component={DOE} />
         <Route path="/search" component={Search} />
       <Route path="/debate" component={Debate} />
+        <Route path="/reverse-engineering" component={ReverseEngineering} />
         <Route path="/approvals" component={Approvals} />
         <Route path="/compliance-templates" component={ComplianceTemplates} />
       <Route path="/analytics" component={Analytics} />

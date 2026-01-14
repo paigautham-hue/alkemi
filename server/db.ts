@@ -1156,16 +1156,26 @@ export async function createApprovalRequest(data: {
   formulationVersionId: string;
   requestedBy: string;
   status: string;
-  reviewers: string[];
-  submittedAt: Date;
+  assignedTo?: string | null;
+  submittedAt?: Date | null;
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  await db.execute(
-    sql`INSERT INTO approval_requests (id, organization_id, formulation_version_id, requested_by, status, reviewers, submitted_at, created_at) 
-        VALUES (${data.id}, ${data.organizationId}, ${data.formulationVersionId}, ${data.requestedBy}, ${data.status}, ${JSON.stringify(data.reviewers)}, ${data.submittedAt.getTime()}, ${Date.now()})`
-  );
+  const now = new Date();
+  const submittedAtValue = data.submittedAt || now;
+
+  await db.insert(approvalRequests).values({
+    id: data.id,
+    organizationId: data.organizationId,
+    formulationVersionId: data.formulationVersionId,
+    requestedBy: data.requestedBy,
+    status: data.status as any,
+    assignedTo: data.assignedTo || null,
+    submittedAt: submittedAtValue,
+    createdAt: now,
+    updatedAt: now,
+  });
 
   return data.id;
 }
@@ -1190,12 +1200,12 @@ export async function updateApprovalRequestStatus(id: string, status: string) {
   );
 }
 
-export async function completeApprovalRequest(id: string, completedAt: Date) {
+export async function completeApprovalRequest(id: string, reviewedAt: Date) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
   await db.execute(
-    sql`UPDATE approval_requests SET completed_at = ${completedAt}, updated_at = NOW() WHERE id = ${id}`
+    sql`UPDATE approval_requests SET reviewed_at = ${reviewedAt}, updated_at = NOW() WHERE id = ${id}`
   );
 }
 
@@ -1203,17 +1213,22 @@ export async function createApprovalReview(data: {
   id: string;
   approvalRequestId: string;
   reviewerId: string;
-  action: string;
-  comments: string;
-  reviewedAt: Date;
+  decision: string;
+  comments?: string | null;
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  await db.execute(
-    sql`INSERT INTO approval_reviews (id, approval_request_id, reviewer_id, action, comments, reviewed_at, created_at) 
-        VALUES (${data.id}, ${data.approvalRequestId}, ${data.reviewerId}, ${data.action}, ${data.comments}, ${data.reviewedAt.getTime()}, ${Date.now()})`
-  );
+  const now = new Date();
+
+  await db.insert(approvalReviews).values({
+    id: data.id,
+    approvalRequestId: data.approvalRequestId,
+    reviewerId: data.reviewerId,
+    decision: data.decision as any,
+    comments: data.comments || null,
+    createdAt: now,
+  });
 
   return data.id;
 }
@@ -1235,14 +1250,14 @@ export async function getApprovalReviews(approvalRequestId: string) {
 
 export async function getPendingApprovalRequests(
   organizationId: string,
-  reviewerId?: string
+  userId?: string
 ) {
   const db = await getDb();
   if (!db) return [];
 
   let query = sql`SELECT ar.*, 
-                         fv.version_name as formulation_version_name,
-                         ff.product_name as formulation_product_name,
+                         fv.version_number as formulation_version_name,
+                         ff.name as formulation_product_name,
                          u.name as requested_by_name
                   FROM approval_requests ar
                   LEFT JOIN formulation_versions fv ON ar.formulation_version_id = fv.id
@@ -1251,13 +1266,37 @@ export async function getPendingApprovalRequests(
                   WHERE ar.organization_id = ${organizationId}
                   AND ar.status IN ('submitted', 'in_review', 'revision_requested')`;
 
-  if (reviewerId) {
-    query = sql`${query} AND JSON_CONTAINS(ar.reviewers, '"${reviewerId}"')`;
+  if (userId) {
+    query = sql`${query} AND (ar.assigned_to = ${userId} OR ar.assigned_to IS NULL)`;
   }
 
   query = sql`${query} ORDER BY ar.submitted_at DESC`;
 
   const result = await db.execute(query);
+
+  return result as any[];
+}
+
+export async function getMyApprovalRequests(
+  organizationId: string,
+  userId: string
+) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const result = await db.execute(
+    sql`SELECT ar.*, 
+               fv.version_number as formulation_version_name,
+               ff.name as formulation_product_name,
+               u.name as requested_by_name
+        FROM approval_requests ar
+        LEFT JOIN formulation_versions fv ON ar.formulation_version_id = fv.id
+        LEFT JOIN formulation_families ff ON fv.family_id = ff.id
+        LEFT JOIN users u ON ar.requested_by = u.id
+        WHERE ar.organization_id = ${organizationId}
+        AND ar.requested_by = ${userId}
+        ORDER BY ar.submitted_at DESC`
+  );
 
   return result as any[];
 }
@@ -1722,3 +1761,201 @@ export async function getComplianceRuleById(ruleId: string, organizationId: stri
 }
 
 
+
+// ==========================================================
+// REVERSE ENGINEERING & COMPETITOR ANALYSIS
+// ==========================================================
+
+export async function createCompetitorProduct(data: {
+  organizationId: string;
+  userId: string;
+  productName: string;
+  manufacturer: string;
+  productCode?: string;
+  category?: string;
+  domainId?: string;
+  marketingClaims?: string[];
+  technicalDataSheet?: string;
+  msdsData?: string;
+  observedProperties?: Record<string, any>;
+  notes?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const { competitorProducts } = await import("../drizzle/schema");
+
+  const id = crypto.randomUUID();
+  await db.insert(competitorProducts).values({
+    id,
+    organizationId: data.organizationId,
+    userId: data.userId,
+    productName: data.productName,
+    manufacturer: data.manufacturer,
+    productCode: data.productCode,
+    category: data.category,
+    domainId: data.domainId,
+    marketingClaims: data.marketingClaims,
+    technicalDataSheet: data.technicalDataSheet,
+    msdsData: data.msdsData,
+    observedProperties: data.observedProperties,
+    notes: data.notes,
+    analysisStatus: "pending",
+  });
+
+  return id;
+}
+
+export async function listCompetitorProducts(
+  organizationId: string,
+  filters?: { domainId?: string; category?: string; search?: string }
+) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const { competitorProducts } = await import("../drizzle/schema");
+
+  const conditions = [eq(competitorProducts.organizationId, organizationId)];
+
+  if (filters?.domainId) {
+    conditions.push(eq(competitorProducts.domainId, filters.domainId));
+  }
+
+  if (filters?.category) {
+    conditions.push(eq(competitorProducts.category, filters.category));
+  }
+
+  if (filters?.search) {
+    conditions.push(
+      or(
+        like(competitorProducts.productName, `%${filters.search}%`),
+        like(competitorProducts.manufacturer, `%${filters.search}%`)
+      )!
+    );
+  }
+
+  return db
+    .select()
+    .from(competitorProducts)
+    .where(and(...conditions))
+    .orderBy(desc(competitorProducts.createdAt));
+}
+
+export async function getCompetitorProductById(id: string, organizationId: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const { competitorProducts } = await import("../drizzle/schema");
+
+  const results = await db
+    .select()
+    .from(competitorProducts)
+    .where(and(eq(competitorProducts.id, id), eq(competitorProducts.organizationId, organizationId)))
+    .limit(1);
+
+  return results[0] || null;
+}
+
+export async function updateCompetitorProduct(
+  id: string,
+  organizationId: string,
+  updates: {
+    extractedParameters?: Record<string, any>;
+    suggestedFormulationStrategy?: string;
+    targetProductProfile?: Record<string, any>;
+    confidenceScore?: string;
+    analysisStatus?: "pending" | "analyzing" | "completed" | "failed";
+  }
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const { competitorProducts } = await import("../drizzle/schema");
+
+  await db
+    .update(competitorProducts)
+    .set(updates)
+    .where(and(eq(competitorProducts.id, id), eq(competitorProducts.organizationId, organizationId)));
+}
+
+export async function deleteCompetitorProduct(id: string, organizationId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const { competitorProducts } = await import("../drizzle/schema");
+
+  await db
+    .delete(competitorProducts)
+    .where(and(eq(competitorProducts.id, id), eq(competitorProducts.organizationId, organizationId)));
+}
+
+export async function createReverseEngineeringAnalysis(data: {
+  organizationId: string;
+  competitorProductId: string;
+  userId: string;
+  analysisType: "performance_translation" | "formulation_strategy" | "tpp_generation" | "cost_analysis" | "regulatory_comparison";
+  inputData: Record<string, any>;
+  results: Record<string, any>;
+  recommendations?: string[];
+  alternativeMaterials?: Array<{ materialId: string; similarity: number; rationale: string }>;
+  estimatedCost?: string;
+  feasibilityScore?: string;
+  llmModelUsed?: string;
+  tokensUsed?: number;
+  costUsd?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const { reverseEngineeringAnalyses } = await import("../drizzle/schema");
+
+  const id = crypto.randomUUID();
+  await db.insert(reverseEngineeringAnalyses).values({
+    id,
+    ...data,
+  });
+
+  return id;
+}
+
+export async function listReverseEngineeringAnalyses(
+  organizationId: string,
+  competitorProductId?: string
+) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const { reverseEngineeringAnalyses } = await import("../drizzle/schema");
+
+  const conditions = [eq(reverseEngineeringAnalyses.organizationId, organizationId)];
+
+  if (competitorProductId) {
+    conditions.push(eq(reverseEngineeringAnalyses.competitorProductId, competitorProductId));
+  }
+
+  return db
+    .select()
+    .from(reverseEngineeringAnalyses)
+    .where(and(...conditions))
+    .orderBy(desc(reverseEngineeringAnalyses.createdAt));
+}
+
+export async function getReverseEngineeringAnalysisById(id: string, organizationId: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const { reverseEngineeringAnalyses } = await import("../drizzle/schema");
+
+  const results = await db
+    .select()
+    .from(reverseEngineeringAnalyses)
+    .where(
+      and(
+        eq(reverseEngineeringAnalyses.id, id),
+        eq(reverseEngineeringAnalyses.organizationId, organizationId)
+      )
+    )
+    .limit(1);
+
+  return results[0] || null;
+}

@@ -1420,3 +1420,37 @@
 - [ ] Log model selection decisions
 - [ ] Track success/failure rates by model
 - [ ] Add cost tracking (if available)
+
+
+## Phase 22: LLM Reverse Engineering Fix ✅ COMPLETE
+
+### Root Cause Analysis
+- [x] Identified LLM returning empty technicalParameters despite valid marketing claims
+- [x] Traced issue to JSON schema with additionalProperties not being handled well by LLMs
+- [x] Confirmed marketing claims data was correctly stored and passed to LLM
+- [x] Verified all 4 LLM models available: claude-opus-4-5, gpt-5.2, claude-sonnet-4-5, gemini-2.5-flash
+
+### Two-Phase LLM Approach Implementation
+- [x] Phase 1: Use claude-sonnet-4-5 for detailed text analysis (best for technical analysis)
+- [x] Phase 2: Use gpt-5.2 for JSON structuring (best for structured output)
+- [x] Implement regex fallback extraction when JSON parsing fails
+- [x] Convert array-based parameters to object format for frontend compatibility
+- [x] Merge regex-extracted data with LLM-structured data for completeness
+
+### Validation and Error Handling
+- [x] Add empty claims array validation with clear error message
+- [x] Add comprehensive logging throughout the analysis pipeline
+- [x] Implement graceful fallback when JSON parsing fails
+
+### Testing
+- [x] Write unit tests for translatePerformanceClaims function
+- [x] Write unit tests for generateFormulationStrategy function
+- [x] Write unit tests for generateTargetProductProfile function
+- [x] All 18 tests passing (6 reverse engineering + 11 materials + 1 auth)
+
+### Results
+- [x] Technical Parameters now populated with 15+ detailed parameters
+- [x] Each parameter includes value, unit, test method, and confidence level
+- [x] Test Methods extracted (ASTM, ISO, EPA standards)
+- [x] Critical Properties identified
+- [x] Analysis Confidence calculated and displayed (85%)

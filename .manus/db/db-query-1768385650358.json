@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS patents (\n  id VARCHAR(255) PRIMARY KEY,\n  organization_id VARCHAR(255) NOT NULL,\n  title TEXT NOT NULL,\n  patent_number VARCHAR(255),\n  publication_date VARCHAR(255),\n  inventors TEXT,\n  assignee TEXT,\n  abstract TEXT,\n  full_text LONGTEXT,\n  pdf_url TEXT,\n  source_url TEXT,\n  uploaded_by VARCHAR(255) NOT NULL,\n  created_at VARCHAR(255) NOT NULL\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2w11Z6tqxKEYk6i.b24f818d37b4 --database MSgBPeo7wAzRH3Z9eLPB2M --execute CREATE TABLE IF NOT EXISTS patents (\n  id VARCHAR(255) PRIMARY KEY,\n  organization_id VARCHAR(255) NOT NULL,\n  title TEXT NOT NULL,\n  patent_number VARCHAR(255),\n  publication_date VARCHAR(255),\n  inventors TEXT,\n  assignee TEXT,\n  abstract TEXT,\n  full_text LONGTEXT,\n  pdf_url TEXT,\n  source_url TEXT,\n  uploaded_by VARCHAR(255) NOT NULL,\n  created_at VARCHAR(255) NOT NULL\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1820
+}

@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS manufacturing_documents (\n  id VARCHAR(36) PRIMARY KEY,\n  formulation_version_id VARCHAR(36) NOT NULL,\n  document_type ENUM('sop', 'batch_process', 'process_flow_diagram', 'tech_transfer_package') NOT NULL,\n  title VARCHAR(500) NOT NULL,\n  batch_size DECIMAL(10, 2),\n  batch_unit VARCHAR(50),\n  equipment_ids JSON,\n  safety_precautions JSON,\n  quality_checkpoints JSON,\n  generated_content TEXT,\n  status ENUM('draft', 'review', 'approved', 'obsolete') DEFAULT 'draft',\n  version INT DEFAULT 1,\n  created_by VARCHAR(36) NOT NULL,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  approved_by VARCHAR(36),\n  approved_at TIMESTAMP NULL\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2w11Z6tqxKEYk6i.b24f818d37b4 --database MSgBPeo7wAzRH3Z9eLPB2M --execute CREATE TABLE IF NOT EXISTS manufacturing_documents (\n  id VARCHAR(36) PRIMARY KEY,\n  formulation_version_id VARCHAR(36) NOT NULL,\n  document_type ENUM('sop', 'batch_process', 'process_flow_diagram', 'tech_transfer_package') NOT NULL,\n  title VARCHAR(500) NOT NULL,\n  batch_size DECIMAL(10, 2),\n  batch_unit VARCHAR(50),\n  equipment_ids JSON,\n  safety_precautions JSON,\n  quality_checkpoints JSON,\n  generated_content TEXT,\n  status ENUM('draft', 'review', 'approved', 'obsolete') DEFAULT 'draft',\n  version INT DEFAULT 1,\n  created_by VARCHAR(36) NOT NULL,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  approved_by VARCHAR(36),\n  approved_at TIMESTAMP NULL\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1755
+}

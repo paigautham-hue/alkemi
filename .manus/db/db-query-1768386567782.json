@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS scaleup_scenarios (\n  id VARCHAR(255) PRIMARY KEY,\n  organization_id VARCHAR(255) NOT NULL,\n  analysis_id VARCHAR(255) NOT NULL,\n  scenario_name VARCHAR(255) NOT NULL,\n  description TEXT,\n  temperature DECIMAL(10, 2),\n  pressure DECIMAL(10, 2),\n  mixing_speed DECIMAL(10, 2),\n  addition_rate DECIMAL(10, 2),\n  hold_time DECIMAL(10, 2),\n  predicted_yield DECIMAL(5, 2),\n  predicted_quality VARCHAR(100),\n  predicted_cycle_time DECIMAL(10, 2),\n  predicted_cost DECIMAL(15, 2),\n  success_probability DECIMAL(5, 2),\n  confidence_level DECIMAL(5, 2),\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n  INDEX idx_analysis (analysis_id)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2w11Z6tqxKEYk6i.b24f818d37b4 --database MSgBPeo7wAzRH3Z9eLPB2M --execute CREATE TABLE IF NOT EXISTS scaleup_scenarios (\n  id VARCHAR(255) PRIMARY KEY,\n  organization_id VARCHAR(255) NOT NULL,\n  analysis_id VARCHAR(255) NOT NULL,\n  scenario_name VARCHAR(255) NOT NULL,\n  description TEXT,\n  temperature DECIMAL(10, 2),\n  pressure DECIMAL(10, 2),\n  mixing_speed DECIMAL(10, 2),\n  addition_rate DECIMAL(10, 2),\n  hold_time DECIMAL(10, 2),\n  predicted_yield DECIMAL(5, 2),\n  predicted_quality VARCHAR(100),\n  predicted_cycle_time DECIMAL(10, 2),\n  predicted_cost DECIMAL(15, 2),\n  success_probability DECIMAL(5, 2),\n  confidence_level DECIMAL(5, 2),\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n  INDEX idx_analysis (analysis_id)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1667
+}

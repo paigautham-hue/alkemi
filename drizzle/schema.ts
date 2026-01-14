@@ -1,6 +1,7 @@
 import {
   bigint,
   boolean,
+  date,
   decimal,
   int,
   json,
@@ -725,3 +726,360 @@ export type CompetitorProduct = typeof competitorProducts.$inferSelect;
 export type InsertCompetitorProduct = typeof competitorProducts.$inferInsert;
 export type ReverseEngineeringAnalysis = typeof reverseEngineeringAnalyses.$inferSelect;
 export type InsertReverseEngineeringAnalysis = typeof reverseEngineeringAnalyses.$inferInsert;
+
+
+// Patent & Literature Analysis Tables
+export const patents = mysqlTable("patents", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  organizationId: text("organization_id").notNull(),
+  title: text("title").notNull(),
+  patentNumber: text("patent_number"),
+  publicationDate: text("publication_date"),
+  inventors: text("inventors"), // JSON array
+  assignee: text("assignee"),
+  abstract: text("abstract"),
+  fullText: text("full_text"),
+  pdfUrl: text("pdf_url"),
+  sourceUrl: text("source_url"),
+  uploadedBy: text("uploaded_by").notNull(),
+  createdAt: text("created_at").$defaultFn(() => new Date().toISOString()),
+});
+
+export const patent_analyses = mysqlTable("patent_analyses", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  patentId: text("patent_id").notNull().references(() => patents.id, { onDelete: "cascade" }),
+  organizationId: text("organization_id").notNull(),
+  
+  // Extracted Chemistry
+  chemicalCompounds: text("chemical_compounds"), // JSON array of {name, cas, role, concentration}
+  reactionMechanisms: text("reaction_mechanisms"), // JSON array of {type, description, conditions}
+  processingConditions: text("processing_conditions"), // JSON {temperature, pressure, time, equipment}
+  
+  // Technology Landscape
+  technologyCategory: text("technology_category"),
+  keyInnovations: text("key_innovations"), // JSON array
+  competitorAnalysis: text("competitor_analysis"), // JSON
+  marketApplications: text("market_applications"), // JSON array
+  
+  // Formulation Insights
+  formulationStrategies: text("formulation_strategies"), // JSON array
+  materialSuggestions: text("material_suggestions"), // JSON array
+  processOptimizations: text("process_optimizations"), // JSON array
+  
+  // Metadata
+  analysisDate: text("analysis_date").$defaultFn(() => new Date().toISOString()),
+  analyzedBy: text("analyzed_by"),
+  confidence: text("confidence"), // decimal as string
+  notes: text("notes"),
+});
+
+export const literature_papers = mysqlTable("literature_papers", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  organizationId: text("organization_id").notNull(),
+  title: text("title").notNull(),
+  authors: text("authors"), // JSON array
+  journal: text("journal"),
+  publicationYear: text("publication_year"),
+  doi: text("doi"),
+  abstract: text("abstract"),
+  fullText: text("full_text"),
+  pdfUrl: text("pdf_url"),
+  sourceUrl: text("source_url"),
+  keywords: text("keywords"), // JSON array
+  uploadedBy: text("uploaded_by").notNull(),
+  createdAt: text("created_at").$defaultFn(() => new Date().toISOString()),
+});
+
+export const literature_analyses = mysqlTable("literature_analyses", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  paperId: text("paper_id").notNull().references(() => literature_papers.id, { onDelete: "cascade" }),
+  organizationId: text("organization_id").notNull(),
+  
+  // Research Findings
+  keyFindings: text("key_findings"), // JSON array
+  methodologies: text("methodologies"), // JSON array
+  experimentalConditions: text("experimental_conditions"), // JSON
+  results: text("results"), // JSON
+  
+  // Chemistry Insights
+  chemicalCompounds: text("chemical_compounds"), // JSON array
+  reactionMechanisms: text("reaction_mechanisms"), // JSON array
+  formulationInsights: text("formulation_insights"), // JSON array
+  
+  // Relevance
+  relevanceScore: text("relevance_score"), // decimal as string
+  applicability: text("applicability"),
+  recommendations: text("recommendations"), // JSON array
+  
+  // Metadata
+  analysisDate: text("analysis_date").$defaultFn(() => new Date().toISOString()),
+  analyzedBy: text("analyzed_by"),
+  notes: text("notes"),
+});
+
+
+// Equipment Database Tables
+export const equipment = mysqlTable("equipment", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  organizationId: varchar("organization_id", { length: 36 }).notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  
+  // Equipment identification
+  name: text("name").notNull(),
+  equipmentType: varchar("equipment_type", { length: 255 }).notNull(), // mixer, reactor, extruder, coater, etc.
+  manufacturer: text("manufacturer"),
+  model: varchar("model", { length: 255 }),
+  serialNumber: varchar("serial_number", { length: 255 }),
+  location: text("location"), // plant, building, room
+  
+  // Technical specifications
+  capacity: json("capacity").$type<{ value: number; unit: string }>(), // e.g., {value: 500, unit: "L"}
+  operatingTemperatureRange: json("operating_temperature_range").$type<{ min: number; max: number; unit: string }>(),
+  operatingPressureRange: json("operating_pressure_range").$type<{ min: number; max: number; unit: string }>(),
+  mixingSpeedRange: json("mixing_speed_range").$type<{ min: number; max: number; unit: string }>(),
+  powerRating: json("power_rating").$type<{ value: number; unit: string }>(),
+  
+  // Material compatibility
+  compatibleMaterialTypes: json("compatible_material_types").$type<string[]>(), // solvents, polymers, pigments, etc.
+  incompatibleMaterials: json("incompatible_materials").$type<string[]>(),
+  materialContactSurfaces: json("material_contact_surfaces").$type<string[]>(), // stainless steel, glass-lined, PTFE, etc.
+  
+  // Process capabilities
+  supportedProcesses: json("supported_processes").$type<string[]>(), // mixing, heating, cooling, vacuum, etc.
+  cleaningRequirements: text("cleaning_requirements"),
+  changeoverTime: decimal("changeover_time", { precision: 10, scale: 2 }), // hours
+  
+  // Status and maintenance
+  status: mysqlEnum("status", ["operational", "maintenance", "offline", "decommissioned"]).default("operational"),
+  lastMaintenanceDate: timestamp("last_maintenance_date"),
+  nextMaintenanceDate: timestamp("next_maintenance_date"),
+  maintenanceNotes: text("maintenance_notes"),
+  
+  // Metadata
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow().onUpdateNow(),
+}, (table) => ({
+  orgIdx: index("idx_equipment_org").on(table.organizationId),
+  typeIdx: index("idx_equipment_type").on(table.equipmentType),
+}));
+
+export const formulation_equipment_compatibility = mysqlTable("formulation_equipment_compatibility", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  organizationId: varchar("organization_id", { length: 36 }).notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  formulationVersionId: varchar("formulation_version_id", { length: 36 }).notNull().references(() => formulationVersions.id, { onDelete: "cascade" }),
+  equipmentId: varchar("equipment_id", { length: 36 }).notNull().references(() => equipment.id, { onDelete: "cascade" }),
+  
+  // Compatibility assessment
+  isCompatible: boolean("is_compatible").notNull(),
+  compatibilityScore: decimal("compatibility_score", { precision: 5, scale: 2 }), // 0-100
+  
+  // Issues and constraints
+  incompatibilityReasons: json("incompatibility_reasons").$type<string[]>(),
+  requiredModifications: json("required_modifications").$type<string[]>(),
+  processingConstraints: json("processing_constraints").$type<Record<string, any>>(),
+  
+  // Analysis metadata
+  analyzedAt: timestamp("analyzed_at").notNull().defaultNow(),
+  analyzedBy: varchar("analyzed_by", { length: 36 }),
+  notes: text("notes"),
+}, (table) => ({
+  orgIdx: index("idx_formulation_equipment_org").on(table.organizationId),
+  formulationIdx: index("idx_formulation_equipment_formulation").on(table.formulationVersionId),
+  equipmentIdx: index("idx_formulation_equipment_equipment").on(table.equipmentId),
+}));
+
+
+// ============================================================================
+// Scale-Up Risk Analysis
+// ============================================================================
+
+export const scaleup_analyses = mysqlTable("scaleup_analyses", {
+  id: varchar("id", { length: 255 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  organizationId: varchar("organization_id", { length: 255 }).notNull(),
+  formulationVersionId: varchar("formulation_version_id", { length: 255 }).notNull(),
+  labScale: json("lab_scale").$type<{ volume: number; unit: string }>(),
+  pilotScale: json("pilot_scale").$type<{ volume: number; unit: string }>(),
+  targetScale: json("target_scale").$type<{ volume: number; unit: string }>(),
+  
+  // Reaction kinetics analysis
+  reactionType: varchar("reaction_type", { length: 100 }),
+  rateConstant: decimal("rate_constant", { precision: 20, scale: 10 }),
+  activationEnergy: decimal("activation_energy", { precision: 20, scale: 10 }),
+  reactionOrder: decimal("reaction_order", { precision: 10, scale: 2 }),
+  
+  // Heat transfer analysis
+  heatGenerationRate: decimal("heat_generation_rate", { precision: 20, scale: 10 }),
+  coolingCapacityLab: decimal("cooling_capacity_lab", { precision: 20, scale: 10 }),
+  coolingCapacityPilot: decimal("cooling_capacity_pilot", { precision: 20, scale: 10 }),
+  temperatureRisePrediction: decimal("temperature_rise_prediction", { precision: 10, scale: 2 }),
+  
+  // Mass transfer analysis
+  mixingTimeLab: decimal("mixing_time_lab", { precision: 10, scale: 2 }),
+  mixingTimePilot: decimal("mixing_time_pilot", { precision: 10, scale: 2 }),
+  reynoldsNumberLab: decimal("reynolds_number_lab", { precision: 20, scale: 2 }),
+  reynoldsNumberPilot: decimal("reynolds_number_pilot", { precision: 20, scale: 2 }),
+  powerPerVolumeLab: decimal("power_per_volume_lab", { precision: 20, scale: 10 }),
+  powerPerVolumePilot: decimal("power_per_volume_pilot", { precision: 20, scale: 10 }),
+  
+  // Risk assessment
+  overallRiskScore: decimal("overall_risk_score", { precision: 5, scale: 2 }),
+  riskLevel: varchar("risk_level", { length: 50 }), // low, medium, high, critical
+  identifiedRisks: json("identified_risks").$type<Array<{
+    category: string;
+    description: string;
+    severity: string;
+    likelihood: string;
+    mitigation: string;
+  }>>(),
+  
+  // Recommendations
+  processModifications: json("process_modifications").$type<string[]>(),
+  equipmentRecommendations: json("equipment_recommendations").$type<string[]>(),
+  controlStrategyChanges: json("control_strategy_changes").$type<string[]>(),
+  additionalTestingNeeded: json("additional_testing_needed").$type<string[]>(),
+  
+  // Analysis metadata
+  analyzedBy: varchar("analyzed_by", { length: 255 }),
+  analyzedAt: timestamp("analyzed_at").defaultNow(),
+  notes: text("notes"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+});
+
+export const scaleup_scenarios = mysqlTable("scaleup_scenarios", {
+  id: varchar("id", { length: 255 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  organizationId: varchar("organization_id", { length: 255 }).notNull(),
+  analysisId: varchar("analysis_id", { length: 255 }).notNull(),
+  scenarioName: varchar("scenario_name", { length: 255 }).notNull(),
+  description: text("description"),
+  
+  // Process parameters
+  temperature: decimal("temperature", { precision: 10, scale: 2 }),
+  pressure: decimal("pressure", { precision: 10, scale: 2 }),
+  mixingSpeed: decimal("mixing_speed", { precision: 10, scale: 2 }),
+  additionRate: decimal("addition_rate", { precision: 10, scale: 2 }),
+  holdTime: decimal("hold_time", { precision: 10, scale: 2 }),
+  
+  // Predicted outcomes
+  predictedYield: decimal("predicted_yield", { precision: 5, scale: 2 }),
+  predictedQuality: varchar("predicted_quality", { length: 100 }),
+  predictedCycleTime: decimal("predicted_cycle_time", { precision: 10, scale: 2 }),
+  predictedCost: decimal("predicted_cost", { precision: 15, scale: 2 }),
+  
+  // Success probability
+  successProbability: decimal("success_probability", { precision: 5, scale: 2 }),
+  confidenceLevel: decimal("confidence_level", { precision: 5, scale: 2 }),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+});
+
+
+// Manufacturing Documentation Tables
+export const manufacturing_documents = mysqlTable("manufacturing_documents", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  organizationId: varchar("organization_id", { length: 36 }).notNull(),
+  formulationVersionId: varchar("formulation_version_id", { length: 36 }).notNull(),
+  documentType: mysqlEnum("document_type", ["sop", "batch_process", "process_flow_diagram", "tech_transfer_package"]).notNull(),
+  title: varchar("title", { length: 500 }).notNull(),
+  batchSize: decimal("batch_size", { precision: 10, scale: 2 }),
+  batchUnit: varchar("batch_unit", { length: 50 }),
+  equipmentIds: json("equipment_ids").$type<string[]>(),
+  safetyPrecautions: json("safety_precautions").$type<string[]>(),
+  qualityCheckpoints: json("quality_checkpoints").$type<string[]>(),
+  generatedContent: text("generated_content"),
+  status: mysqlEnum("status", ["draft", "review", "approved", "obsolete"]).default("draft"),
+  version: int("version").default(1),
+  createdBy: varchar("created_by", { length: 36 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  approvedBy: varchar("approved_by", { length: 36 }),
+  approvedAt: timestamp("approved_at"),
+});
+
+export const manufacturing_steps = mysqlTable("manufacturing_steps", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  documentId: varchar("document_id", { length: 36 }).notNull(),
+  stepNumber: int("step_number").notNull(),
+  stepName: varchar("step_name", { length: 255 }).notNull(),
+  description: text("description"),
+  duration: int("duration"), // minutes
+  temperature: decimal("temperature", { precision: 5, scale: 1 }),
+  temperatureUnit: varchar("temperature_unit", { length: 10 }),
+  pressure: decimal("pressure", { precision: 8, scale: 2 }),
+  pressureUnit: varchar("pressure_unit", { length: 20 }),
+  mixingSpeed: decimal("mixing_speed", { precision: 8, scale: 1 }),
+  mixingSpeedUnit: varchar("mixing_speed_unit", { length: 20 }),
+  equipmentId: varchar("equipment_id", { length: 36 }),
+  criticalParameters: json("critical_parameters").$type<Record<string, any>>(),
+  safetyNotes: text("safety_notes"),
+  qualityChecks: json("quality_checks").$type<string[]>(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const process_flow_diagrams = mysqlTable("process_flow_diagrams", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  documentId: varchar("document_id", { length: 36 }).notNull(),
+  diagramData: json("diagram_data").$type<Record<string, any>>(), // Mermaid or similar format
+  imageUrl: varchar("image_url", { length: 1000 }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+
+// Issue Tracking & Improvement System Tables
+export const issues = mysqlTable("issues", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  organizationId: varchar("organization_id", { length: 36 }).notNull(),
+  formulationVersionId: varchar("formulation_version_id", { length: 36 }),
+  trialId: varchar("trial_id", { length: 36 }),
+  issueType: mysqlEnum("issue_type", ["quality_defect", "process_failure", "scale_up_issue", "supplier_issue", "equipment_malfunction", "safety_incident", "compliance_violation", "other"]).notNull(),
+  severity: mysqlEnum("severity", ["critical", "high", "medium", "low"]).notNull(),
+  status: mysqlEnum("status", ["open", "investigating", "resolved", "closed", "recurring"]).default("open"),
+  title: varchar("title", { length: 500 }).notNull(),
+  description: text("description").notNull(),
+  rootCause: text("root_cause"),
+  correctiveAction: text("corrective_action"),
+  preventiveAction: text("preventive_action"),
+  affectedBatches: json("affected_batches").$type<string[]>(),
+  costImpact: decimal("cost_impact", { precision: 12, scale: 2 }),
+  reportedBy: varchar("reported_by", { length: 36 }).notNull(),
+  assignedTo: varchar("assigned_to", { length: 36 }),
+  resolvedBy: varchar("resolved_by", { length: 36 }),
+  reportedAt: timestamp("reported_at").defaultNow(),
+  resolvedAt: timestamp("resolved_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+});
+
+export const issue_analysis = mysqlTable("issue_analysis", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  issueId: varchar("issue_id", { length: 36 }).notNull(),
+  analysisType: mysqlEnum("analysis_type", ["root_cause", "pattern_detection", "improvement_recommendation", "risk_assessment"]).notNull(),
+  findings: text("findings").notNull(),
+  recommendations: json("recommendations").$type<string[]>(),
+  similarIssues: json("similar_issues").$type<Array<{ issueId: string; similarity: number; title: string }>>(),
+  preventionStrategies: json("prevention_strategies").$type<string[]>(),
+  confidence: decimal("confidence", { precision: 3, scale: 2 }),
+  analyzedAt: timestamp("analyzed_at").defaultNow(),
+});
+
+export const improvement_actions = mysqlTable("improvement_actions", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  organizationId: varchar("organization_id", { length: 36 }).notNull(),
+  issueId: varchar("issue_id", { length: 36 }),
+  actionType: mysqlEnum("action_type", ["process_change", "training", "equipment_upgrade", "supplier_change", "formulation_modification", "procedure_update", "other"]).notNull(),
+  title: varchar("title", { length: 500 }).notNull(),
+  description: text("description").notNull(),
+  priority: mysqlEnum("priority", ["critical", "high", "medium", "low"]).notNull(),
+  status: mysqlEnum("status", ["planned", "in_progress", "completed", "cancelled"]).default("planned"),
+  expectedImpact: text("expected_impact"),
+  actualImpact: text("actual_impact"),
+  estimatedCost: decimal("estimated_cost", { precision: 12, scale: 2 }),
+  actualCost: decimal("actual_cost", { precision: 12, scale: 2 }),
+  assignedTo: varchar("assigned_to", { length: 36 }),
+  createdBy: varchar("created_by", { length: 36 }).notNull(),
+  dueDate: date("due_date"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+});

@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS manufacturing_steps (\n  id VARCHAR(36) PRIMARY KEY,\n  document_id VARCHAR(36) NOT NULL,\n  step_number INT NOT NULL,\n  step_name VARCHAR(255) NOT NULL,\n  description TEXT,\n  duration INT,\n  temperature DECIMAL(5, 1),\n  temperature_unit VARCHAR(10),\n  pressure DECIMAL(8, 2),\n  pressure_unit VARCHAR(20),\n  mixing_speed DECIMAL(8, 1),\n  mixing_speed_unit VARCHAR(20),\n  equipment_id VARCHAR(36),\n  critical_parameters JSON,\n  safety_notes TEXT,\n  quality_checks JSON,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n\nCREATE TABLE IF NOT EXISTS process_flow_diagrams (\n  id VARCHAR(36) PRIMARY KEY,\n  document_id VARCHAR(36) NOT NULL,\n  diagram_data JSON,\n  image_url VARCHAR(1000),\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2w11Z6tqxKEYk6i.b24f818d37b4 --database MSgBPeo7wAzRH3Z9eLPB2M --execute CREATE TABLE IF NOT EXISTS manufacturing_steps (\n  id VARCHAR(36) PRIMARY KEY,\n  document_id VARCHAR(36) NOT NULL,\n  step_number INT NOT NULL,\n  step_name VARCHAR(255) NOT NULL,\n  description TEXT,\n  duration INT,\n  temperature DECIMAL(5, 1),\n  temperature_unit VARCHAR(10),\n  pressure DECIMAL(8, 2),\n  pressure_unit VARCHAR(20),\n  mixing_speed DECIMAL(8, 1),\n  mixing_speed_unit VARCHAR(20),\n  equipment_id VARCHAR(36),\n  critical_parameters JSON,\n  safety_notes TEXT,\n  quality_checks JSON,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n\nCREATE TABLE IF NOT EXISTS process_flow_diagrams (\n  id VARCHAR(36) PRIMARY KEY,\n  document_id VARCHAR(36) NOT NULL,\n  diagram_data JSON,\n  image_url VARCHAR(1000),\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1993
+}

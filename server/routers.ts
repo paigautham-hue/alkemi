@@ -1319,5 +1319,752 @@ export const appRouter = router({
         return analysis;
       }),
   }),
+
+  // Patent & Literature Analysis
+  patents: router({
+    list: protectedProcedure
+      .query(async ({ ctx }) => {
+        const patents = await db.listPatents(ctx.user.organizationId);
+        return patents;
+      }),
+
+    get: protectedProcedure
+      .input(z.object({ id: z.string().uuid() }))
+      .query(async ({ ctx, input }) => {
+        const patent = await db.getPatentById(input.id, ctx.user.organizationId);
+        if (!patent) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Patent not found" });
+        }
+        return patent;
+      }),
+
+    create: protectedProcedure
+      .input(z.object({
+        title: z.string().min(1),
+        patentNumber: z.string().optional(),
+        publicationDate: z.string().optional(),
+        inventors: z.array(z.string()).optional(),
+        assignee: z.string().optional(),
+        abstract: z.string().optional(),
+        fullText: z.string().optional(),
+        pdfUrl: z.string().url().optional(),
+        sourceUrl: z.string().url().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const patentId = await db.createPatent({
+          organizationId: ctx.user.organizationId,
+          uploadedBy: ctx.user.id,
+          ...input,
+        });
+        return { patentId };
+      }),
+
+    delete: protectedProcedure
+      .input(z.object({ id: z.string().uuid() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.deletePatent(input.id, ctx.user.organizationId);
+        return { success: true };
+      }),
+
+    analyze: protectedProcedure
+      .input(z.object({ patentId: z.string().uuid() }))
+      .mutation(async ({ ctx, input }) => {
+        const patent = await db.getPatentById(input.patentId, ctx.user.organizationId);
+        if (!patent) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Patent not found" });
+        }
+
+        if (!patent.fullText) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Patent must have full text to analyze" });
+        }
+
+        const { analyzePatent } = await import("./patentAnalysis");
+        const analysis = await analyzePatent(
+          patent.id,
+          patent.title,
+          patent.abstract || "",
+          patent.fullText
+        );
+
+        const analysisId = await db.createPatentAnalysis({
+          patentId: patent.id,
+          organizationId: ctx.user.organizationId,
+          chemicalCompounds: analysis.compounds,
+          reactionMechanisms: analysis.mechanisms,
+          processingConditions: analysis.processingConditions,
+          technologyCategory: analysis.technologyLandscape.category,
+          keyInnovations: analysis.technologyLandscape.keyInnovations,
+          competitorAnalysis: analysis.technologyLandscape.competitorAnalysis,
+          marketApplications: analysis.technologyLandscape.marketApplications,
+          formulationStrategies: analysis.formulationStrategies,
+          analyzedBy: ctx.user.id,
+        });
+
+        return { analysisId, analysis };
+      }),
+
+    getAnalysis: protectedProcedure
+      .input(z.object({ patentId: z.string().uuid() }))
+      .query(async ({ ctx, input }) => {
+        const analysis = await db.getPatentAnalysisByPatentId(input.patentId, ctx.user.organizationId);
+        return analysis;
+      }),
+  }),
+
+  // Equipment Management & Compatibility
+  equipment: router({
+    list: protectedProcedure
+      .input(z.object({
+        equipmentType: z.string().optional(),
+        status: z.enum(["operational", "maintenance", "offline", "decommissioned"]).optional(),
+      }).optional())
+      .query(async ({ ctx, input }) => {
+        const equipment = await db.listEquipment(ctx.user.organizationId, input);
+        return equipment;
+      }),
+
+    get: protectedProcedure
+      .input(z.object({ id: z.string().uuid() }))
+      .query(async ({ ctx, input }) => {
+        const equipment = await db.getEquipmentById(input.id, ctx.user.organizationId);
+        if (!equipment) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Equipment not found" });
+        }
+        return equipment;
+      }),
+
+    create: protectedProcedure
+      .input(z.object({
+        name: z.string().min(1),
+        equipmentType: z.string().min(1),
+        manufacturer: z.string().optional(),
+        model: z.string().optional(),
+        serialNumber: z.string().optional(),
+        location: z.string().optional(),
+        capacity: z.object({ value: z.number(), unit: z.string() }).optional(),
+        operatingTemperatureRange: z.object({ min: z.number(), max: z.number(), unit: z.string() }).optional(),
+        operatingPressureRange: z.object({ min: z.number(), max: z.number(), unit: z.string() }).optional(),
+        mixingSpeedRange: z.object({ min: z.number(), max: z.number(), unit: z.string() }).optional(),
+        powerRating: z.object({ value: z.number(), unit: z.string() }).optional(),
+        compatibleMaterialTypes: z.array(z.string()).optional(),
+        incompatibleMaterials: z.array(z.string()).optional(),
+        materialContactSurfaces: z.array(z.string()).optional(),
+        supportedProcesses: z.array(z.string()).optional(),
+        cleaningRequirements: z.string().optional(),
+        changeoverTime: z.string().optional(),
+        status: z.enum(["operational", "maintenance", "offline", "decommissioned"]).optional(),
+        lastMaintenanceDate: z.date().optional(),
+        nextMaintenanceDate: z.date().optional(),
+        maintenanceNotes: z.string().optional(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const result = await db.createEquipment({
+          organizationId: ctx.user.organizationId,
+          ...input,
+        });
+        return { equipmentId: result.insertId };
+      }),
+
+    update: protectedProcedure
+      .input(z.object({
+        id: z.string().uuid(),
+        name: z.string().min(1).optional(),
+        equipmentType: z.string().min(1).optional(),
+        manufacturer: z.string().optional(),
+        model: z.string().optional(),
+        serialNumber: z.string().optional(),
+        location: z.string().optional(),
+        capacity: z.object({ value: z.number(), unit: z.string() }).optional(),
+        operatingTemperatureRange: z.object({ min: z.number(), max: z.number(), unit: z.string() }).optional(),
+        operatingPressureRange: z.object({ min: z.number(), max: z.number(), unit: z.string() }).optional(),
+        mixingSpeedRange: z.object({ min: z.number(), max: z.number(), unit: z.string() }).optional(),
+        powerRating: z.object({ value: z.number(), unit: z.string() }).optional(),
+        compatibleMaterialTypes: z.array(z.string()).optional(),
+        incompatibleMaterials: z.array(z.string()).optional(),
+        materialContactSurfaces: z.array(z.string()).optional(),
+        supportedProcesses: z.array(z.string()).optional(),
+        cleaningRequirements: z.string().optional(),
+        changeoverTime: z.string().optional(),
+        status: z.enum(["operational", "maintenance", "offline", "decommissioned"]).optional(),
+        lastMaintenanceDate: z.date().optional(),
+        nextMaintenanceDate: z.date().optional(),
+        maintenanceNotes: z.string().optional(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { id, ...data } = input;
+        await db.updateEquipment(id, ctx.user.organizationId, data);
+        return { success: true };
+      }),
+
+    delete: protectedProcedure
+      .input(z.object({ id: z.string().uuid() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.deleteEquipment(input.id, ctx.user.organizationId);
+        return { success: true };
+      }),
+
+    analyzeCompatibility: protectedProcedure
+      .input(z.object({
+        formulationVersionId: z.string().uuid(),
+        equipmentId: z.string().uuid(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Get formulation version with components
+        const formulation = await db.getFormulationVersionById(input.formulationVersionId, ctx.user.organizationId);
+        if (!formulation) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Formulation not found" });
+        }
+
+        const components = await db.getFormulationComponents(input.formulationVersionId, ctx.user.organizationId);
+
+        // Get equipment
+        const equipment = await db.getEquipmentById(input.equipmentId, ctx.user.organizationId);
+        if (!equipment) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Equipment not found" });
+        }
+
+        // Perform compatibility analysis
+        const { analyzeEquipmentCompatibility } = await import("./equipmentCompatibility");
+        const analysis = await analyzeEquipmentCompatibility(
+          {
+            id: formulation.id,
+            versionNumber: formulation.versionNumber,
+            components: components.map(c => ({
+              materialId: c.component.materialId,
+              materialName: c.material.name || "",
+              percentage: parseFloat(c.component.percentage),
+            })),
+
+          },
+          equipment as any
+        );
+
+        // Save analysis to database
+        await db.createCompatibilityAnalysis({
+          organizationId: ctx.user.organizationId,
+          formulationVersionId: input.formulationVersionId,
+          equipmentId: input.equipmentId,
+          isCompatible: analysis.isCompatible,
+          compatibilityScore: analysis.compatibilityScore.toString(),
+          incompatibilityReasons: analysis.incompatibilityReasons,
+          requiredModifications: analysis.requiredModifications,
+          processingConstraints: analysis.processingConstraints,
+          analyzedBy: ctx.user.id,
+        });
+
+        return analysis;
+      }),
+
+    getCompatibilityAnalysis: protectedProcedure
+      .input(z.object({
+        formulationVersionId: z.string().uuid(),
+        equipmentId: z.string().uuid(),
+      }))
+      .query(async ({ ctx, input }) => {
+        const analysis = await db.getCompatibilityAnalysis(
+          input.formulationVersionId,
+          input.equipmentId,
+          ctx.user.organizationId
+        );
+        return analysis;
+      }),
+
+    listCompatibilityAnalyses: protectedProcedure
+      .input(z.object({ formulationVersionId: z.string().uuid() }))
+      .query(async ({ ctx, input }) => {
+        const analyses = await db.listCompatibilityAnalyses(
+          input.formulationVersionId,
+          ctx.user.organizationId
+        );
+        return analyses;
+      }),
+
+    findCompatibleEquipment: protectedProcedure
+      .input(z.object({
+        formulationVersionId: z.string().uuid(),
+        minCompatibilityScore: z.number().min(0).max(100).optional(),
+      }))
+      .query(async ({ ctx, input }) => {
+        // Get formulation
+        const formulation = await db.getFormulationVersionById(input.formulationVersionId, ctx.user.organizationId);
+        if (!formulation) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Formulation not found" });
+        }
+
+        const components = await db.getFormulationComponents(input.formulationVersionId, ctx.user.organizationId);
+
+        // Get all equipment
+        const allEquipment = await db.listEquipment(ctx.user.organizationId, { status: "operational" });
+
+        // Find compatible equipment
+        const { findCompatibleEquipment } = await import("./equipmentCompatibility");
+        const compatibleEquipment = await findCompatibleEquipment(
+          {
+            id: formulation.id,
+            versionNumber: formulation.versionNumber,
+            components: components.map(c => ({
+              materialId: c.component.materialId,
+              materialName: c.material.name || "",
+              percentage: parseFloat(c.component.percentage),
+            })),
+
+          },
+          allEquipment as any,
+          input.minCompatibilityScore
+        );
+
+        return compatibleEquipment;
+      }),
+  }),
+
+  // Scale-Up Risk Analysis
+  scaleup: router({
+    analyze: protectedProcedure
+      .input(z.object({
+        formulationVersionId: z.string().uuid(),
+        labScale: z.object({ volume: z.number(), unit: z.string() }),
+        pilotScale: z.object({ volume: z.number(), unit: z.string() }),
+        targetScale: z.object({ volume: z.number(), unit: z.string() }).optional(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Get formulation
+        const formulation = await db.getFormulationVersionById(input.formulationVersionId, ctx.user.organizationId);
+        if (!formulation) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Formulation not found" });
+        }
+
+        const components = await db.getFormulationComponents(input.formulationVersionId, ctx.user.organizationId);
+
+        // Perform scale-up analysis
+        const { analyzeScaleUpRisks } = await import("./scaleUpAnalysis");
+        const analysis = await analyzeScaleUpRisks(
+          {
+            id: formulation.id,
+            versionNumber: formulation.versionNumber,
+            components: components.map(c => ({
+              materialId: c.component.materialId,
+              materialName: c.material.name || "",
+              percentage: parseFloat(c.component.percentage),
+            })),
+          },
+          input.labScale,
+          input.pilotScale,
+          input.targetScale
+        );
+
+        // Save analysis to database
+        const result = await db.createScaleUpAnalysis({
+          organizationId: ctx.user.organizationId,
+          formulationVersionId: input.formulationVersionId,
+          labScale: input.labScale,
+          pilotScale: input.pilotScale,
+          targetScale: input.targetScale,
+          reactionType: analysis.reactionType,
+          rateConstant: analysis.rateConstant,
+          activationEnergy: analysis.activationEnergy,
+          reactionOrder: analysis.reactionOrder,
+          heatGenerationRate: analysis.heatGenerationRate,
+          coolingCapacityLab: analysis.coolingCapacityLab,
+          coolingCapacityPilot: analysis.coolingCapacityPilot,
+          temperatureRisePrediction: analysis.temperatureRisePrediction,
+          mixingTimeLab: analysis.mixingTimeLab,
+          mixingTimePilot: analysis.mixingTimePilot,
+          reynoldsNumberLab: analysis.reynoldsNumberLab,
+          reynoldsNumberPilot: analysis.reynoldsNumberPilot,
+          powerPerVolumeLab: analysis.powerPerVolumeLab,
+          powerPerVolumePilot: analysis.powerPerVolumePilot,
+          overallRiskScore: analysis.overallRiskScore,
+          riskLevel: analysis.riskLevel,
+          identifiedRisks: analysis.identifiedRisks,
+          processModifications: analysis.processModifications,
+          equipmentRecommendations: analysis.equipmentRecommendations,
+          controlStrategyChanges: analysis.controlStrategyChanges,
+          additionalTestingNeeded: analysis.additionalTestingNeeded,
+          analyzedBy: ctx.user.id,
+          notes: input.notes,
+        });
+
+        return result;
+      }),
+
+    list: protectedProcedure
+      .input(z.object({ formulationVersionId: z.string().uuid() }))
+      .query(async ({ ctx, input }) => {
+        const analyses = await db.listScaleUpAnalyses(
+          input.formulationVersionId,
+          ctx.user.organizationId
+        );
+        return analyses;
+      }),
+
+    getById: protectedProcedure
+      .input(z.object({ id: z.string().uuid() }))
+      .query(async ({ ctx, input }) => {
+        const analysis = await db.getScaleUpAnalysisById(input.id, ctx.user.organizationId);
+        if (!analysis) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Analysis not found" });
+        }
+        return analysis;
+      }),
+
+    delete: protectedProcedure
+      .input(z.object({ id: z.string().uuid() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.deleteScaleUpAnalysis(input.id, ctx.user.organizationId);
+        return { success: true };
+      }),
+
+    generateScenarios: protectedProcedure
+      .input(z.object({
+        analysisId: z.string().uuid(),
+        formulationVersionId: z.string().uuid(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Get formulation and analysis
+        const formulation = await db.getFormulationVersionById(input.formulationVersionId, ctx.user.organizationId);
+        if (!formulation) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Formulation not found" });
+        }
+
+        const analysis = await db.getScaleUpAnalysisById(input.analysisId, ctx.user.organizationId);
+        if (!analysis) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Analysis not found" });
+        }
+
+        const components = await db.getFormulationComponents(input.formulationVersionId, ctx.user.organizationId);
+
+        // Generate scenarios
+        const { generateScaleUpScenarios } = await import("./scaleUpAnalysis");
+        const scenarios = await generateScaleUpScenarios(
+          {
+            id: formulation.id,
+            versionNumber: formulation.versionNumber,
+            components: components.map(c => ({
+              materialId: c.component.materialId,
+              materialName: c.material.name || "",
+              percentage: parseFloat(c.component.percentage),
+            })),
+          },
+          input.analysisId,
+          {
+            labScale: analysis.labScale as { volume: number; unit: string },
+            pilotScale: analysis.pilotScale as { volume: number; unit: string },
+          }
+        );
+
+        // Save scenarios to database
+        const savedScenarios = await Promise.all(
+          scenarios.map(scenario =>
+            db.createScaleUpScenario({
+              organizationId: ctx.user.organizationId,
+              analysisId: input.analysisId,
+              scenarioName: scenario.scenarioName,
+              description: scenario.description,
+              temperature: scenario.temperature,
+              pressure: scenario.pressure,
+              mixingSpeed: scenario.mixingSpeed,
+              additionRate: scenario.additionRate,
+              holdTime: scenario.holdTime,
+              predictedYield: scenario.predictedYield,
+              predictedQuality: scenario.predictedQuality,
+              predictedCycleTime: scenario.predictedCycleTime,
+              predictedCost: scenario.predictedCost,
+              successProbability: scenario.successProbability,
+              confidenceLevel: scenario.confidenceLevel,
+            })
+          )
+        );
+
+        return savedScenarios;
+      }),
+
+    listScenarios: protectedProcedure
+      .input(z.object({ analysisId: z.string().uuid() }))
+      .query(async ({ ctx, input }) => {
+        const scenarios = await db.listScaleUpScenarios(
+          input.analysisId,
+          ctx.user.organizationId
+        );
+        return scenarios;
+      }),
+  }),
+
+  manufacturingDocs: router({
+    generateSOP: protectedProcedure
+      .input(
+        z.object({
+          formulationVersionId: z.string().uuid(),
+          batchSize: z.number().positive(),
+          batchUnit: z.string(),
+          equipmentIds: z.array(z.string().uuid()).optional(),
+          safetyLevel: z.enum(["standard", "high", "critical"]).optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const { generateSOP } = await import("./manufacturingDocs");
+        const result = await generateSOP({
+          ...input,
+          organizationId: ctx.user.organizationId,
+        });
+
+        const doc = await db.createManufacturingDocument({
+          formulationVersionId: input.formulationVersionId,
+          organizationId: ctx.user.organizationId,
+          documentType: "sop",
+          title: result.title,
+          batchSize: input.batchSize,
+          batchUnit: input.batchUnit,
+          equipmentIds: input.equipmentIds,
+          safetyPrecautions: result.safetyPrecautions,
+          qualityCheckpoints: result.qualityCheckpoints,
+          generatedContent: result.content,
+          createdBy: ctx.user.id,
+        });
+
+        for (const step of result.steps) {
+          await db.createManufacturingStep({
+            documentId: doc.insertId as any,
+            stepNumber: step.stepNumber,
+            stepName: step.stepName,
+            description: step.description,
+            duration: step.duration,
+            temperature: step.temperature,
+            temperatureUnit: step.temperatureUnit,
+            criticalParameters: step.criticalParameters,
+            safetyNotes: step.safetyNotes,
+            qualityChecks: step.qualityChecks || undefined,
+          });
+        }
+
+        return { documentId: doc.insertId, ...result };
+      }),
+
+    generateBatchProcess: protectedProcedure
+      .input(
+        z.object({
+          formulationVersionId: z.string().uuid(),
+          batchSize: z.number().positive(),
+          batchUnit: z.string(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const { generateBatchProcess } = await import("./manufacturingDocs");
+        const result = await generateBatchProcess({
+          ...input,
+          organizationId: ctx.user.organizationId,
+        });
+
+        const doc = await db.createManufacturingDocument({
+          formulationVersionId: input.formulationVersionId,
+          organizationId: ctx.user.organizationId,
+          documentType: "batch_process",
+          title: result.title,
+          batchSize: input.batchSize,
+          batchUnit: input.batchUnit,
+          generatedContent: result.content,
+          createdBy: ctx.user.id,
+        });
+
+        return { documentId: doc.insertId, ...result };
+      }),
+
+    generateProcessFlowDiagram: protectedProcedure
+      .input(z.object({ formulationVersionId: z.string().uuid() }))
+      .mutation(async ({ ctx, input }) => {
+        const { generateProcessFlowDiagram } = await import("./manufacturingDocs");
+        const result = await generateProcessFlowDiagram(
+          input.formulationVersionId,
+          ctx.user.organizationId
+        );
+        return result;
+      }),
+
+    listDocuments: protectedProcedure
+      .input(z.object({ documentType: z.string().optional() }))
+      .query(async ({ ctx, input }) => {
+        return db.listManufacturingDocuments(
+          ctx.user.organizationId,
+          input.documentType
+        );
+      }),
+
+    getDocument: protectedProcedure
+      .input(z.object({ id: z.string().uuid() }))
+      .query(async ({ ctx, input }) => {
+        const doc = await db.getManufacturingDocumentById(
+          input.id,
+          ctx.user.organizationId
+        );
+        if (!doc) throw new TRPCError({ code: "NOT_FOUND" });
+        const steps = await db.listManufacturingSteps(input.id);
+        return { ...doc, steps };
+      }),
+  }),
+
+  // Issue Tracking & Improvement System
+  issues: router({
+    create: protectedProcedure
+      .input(
+        z.object({
+          formulationVersionId: z.string().uuid().optional(),
+          trialId: z.string().uuid().optional(),
+          issueType: z.enum([
+            "quality_defect",
+            "process_failure",
+            "scale_up_issue",
+            "supplier_issue",
+            "equipment_malfunction",
+            "safety_incident",
+            "compliance_violation",
+            "other",
+          ]),
+          severity: z.enum(["critical", "high", "medium", "low"]),
+          title: z.string().min(1),
+          description: z.string().min(1),
+          affectedBatches: z.array(z.string()).optional(),
+          costImpact: z.number().optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        return db.createIssue({
+          ...input,
+          organizationId: ctx.user.organizationId,
+          reportedBy: ctx.user.id,
+        });
+      }),
+
+    list: protectedProcedure
+      .input(
+        z.object({
+          status: z.string().optional(),
+          severity: z.string().optional(),
+          issueType: z.string().optional(),
+        })
+      )
+      .query(async ({ ctx, input }) => {
+        return db.listIssues(ctx.user.organizationId, input);
+      }),
+
+    get: protectedProcedure
+      .input(z.object({ id: z.string().uuid() }))
+      .query(async ({ ctx, input }) => {
+        const issue = await db.getIssueById(input.id, ctx.user.organizationId);
+        if (!issue) throw new TRPCError({ code: "NOT_FOUND" });
+        const analyses = await db.getIssueAnalyses(input.id);
+        return { ...issue, analyses };
+      }),
+
+    update: protectedProcedure
+      .input(
+        z.object({
+          id: z.string().uuid(),
+          status: z.string().optional(),
+          rootCause: z.string().optional(),
+          correctiveAction: z.string().optional(),
+          preventiveAction: z.string().optional(),
+          assignedTo: z.string().uuid().optional(),
+          resolvedBy: z.string().uuid().optional(),
+          resolvedAt: z.date().optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const { id, ...data } = input;
+        return db.updateIssue(id, ctx.user.organizationId, data);
+      }),
+
+    delete: protectedProcedure
+      .input(z.object({ id: z.string().uuid() }))
+      .mutation(async ({ ctx, input }) => {
+        return db.deleteIssue(input.id, ctx.user.organizationId);
+      }),
+
+    analyzeRootCause: protectedProcedure
+      .input(z.object({ issueId: z.string().uuid() }))
+      .mutation(async ({ ctx, input }) => {
+        const { analyzeRootCause } = await import("./issueTracking");
+        return analyzeRootCause(input.issueId, ctx.user.organizationId);
+      }),
+
+    detectPatterns: protectedProcedure.query(async ({ ctx }) => {
+      const { detectIssuePatterns } = await import("./issueTracking");
+      return detectIssuePatterns(ctx.user.organizationId);
+    }),
+
+    findSimilar: protectedProcedure
+      .input(z.object({ issueId: z.string().uuid() }))
+      .mutation(async ({ ctx, input }) => {
+        const { findSimilarIssues } = await import("./issueTracking");
+        return findSimilarIssues(input.issueId, ctx.user.organizationId);
+      }),
+
+    generateRecommendations: protectedProcedure
+      .input(z.object({ issueId: z.string().uuid() }))
+      .mutation(async ({ ctx, input }) => {
+        const { generateImprovementRecommendations } = await import("./issueTracking");
+        return generateImprovementRecommendations(input.issueId, ctx.user.organizationId);
+      }),
+  }),
+
+  improvementActions: router({
+    create: protectedProcedure
+      .input(
+        z.object({
+          issueId: z.string().uuid().optional(),
+          actionType: z.enum([
+            "process_change",
+            "training",
+            "equipment_upgrade",
+            "supplier_change",
+            "formulation_modification",
+            "procedure_update",
+            "other",
+          ]),
+          title: z.string().min(1),
+          description: z.string().min(1),
+          priority: z.enum(["critical", "high", "medium", "low"]),
+          expectedImpact: z.string().optional(),
+          estimatedCost: z.number().optional(),
+          assignedTo: z.string().uuid().optional(),
+          dueDate: z.date().optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        return db.createImprovementAction({
+          ...input,
+          organizationId: ctx.user.organizationId,
+          createdBy: ctx.user.id,
+        });
+      }),
+
+    list: protectedProcedure
+      .input(
+        z.object({
+          status: z.string().optional(),
+          priority: z.string().optional(),
+          issueId: z.string().uuid().optional(),
+        })
+      )
+      .query(async ({ ctx, input }) => {
+        return db.listImprovementActions(ctx.user.organizationId, input);
+      }),
+
+    update: protectedProcedure
+      .input(
+        z.object({
+          id: z.string().uuid(),
+          status: z.string().optional(),
+          actualImpact: z.string().optional(),
+          actualCost: z.number().optional(),
+          completedAt: z.date().optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const { id, ...data } = input;
+        return db.updateImprovementAction(id, ctx.user.organizationId, data);
+      }),
+  }),
 });
 export type AppRouter = typeof appRouter;

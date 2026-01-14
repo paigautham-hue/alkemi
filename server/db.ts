@@ -1959,3 +1959,1063 @@ export async function getReverseEngineeringAnalysisById(id: string, organization
 
   return results[0] || null;
 }
+
+
+// ==================== Patent & Literature Analysis ====================
+
+export async function createPatent(data: {
+  organizationId: string;
+  title: string;
+  patentNumber?: string;
+  publicationDate?: string;
+  inventors?: string[];
+  assignee?: string;
+  abstract?: string;
+  fullText?: string;
+  pdfUrl?: string;
+  sourceUrl?: string;
+  uploadedBy: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const { patents } = await import("../drizzle/schema");
+  const id = crypto.randomUUID();
+
+  await db.insert(patents).values({
+    id,
+    organizationId: data.organizationId,
+    title: data.title,
+    patentNumber: data.patentNumber || null,
+    publicationDate: data.publicationDate || null,
+    inventors: data.inventors ? JSON.stringify(data.inventors) : null,
+    assignee: data.assignee || null,
+    abstract: data.abstract || null,
+    fullText: data.fullText || null,
+    pdfUrl: data.pdfUrl || null,
+    sourceUrl: data.sourceUrl || null,
+    uploadedBy: data.uploadedBy,
+    createdAt: new Date().toISOString(),
+  });
+
+  return id;
+}
+
+export async function listPatents(organizationId: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const { patents } = await import("../drizzle/schema");
+
+  return db
+    .select()
+    .from(patents)
+    .where(eq(patents.organizationId, organizationId))
+    .orderBy(desc(patents.createdAt));
+}
+
+export async function getPatentById(id: string, organizationId: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const { patents } = await import("../drizzle/schema");
+
+  const results = await db
+    .select()
+    .from(patents)
+    .where(
+      and(
+        eq(patents.id, id),
+        eq(patents.organizationId, organizationId)
+      )
+    )
+    .limit(1);
+
+  return results[0] || null;
+}
+
+export async function deletePatent(id: string, organizationId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const { patents } = await import("../drizzle/schema");
+
+  await db
+    .delete(patents)
+    .where(
+      and(
+        eq(patents.id, id),
+        eq(patents.organizationId, organizationId)
+      )
+    );
+}
+
+export async function createPatentAnalysis(data: {
+  patentId: string;
+  organizationId: string;
+  chemicalCompounds?: any[];
+  reactionMechanisms?: any[];
+  processingConditions?: any;
+  technologyCategory?: string;
+  keyInnovations?: string[];
+  competitorAnalysis?: any;
+  marketApplications?: string[];
+  formulationStrategies?: any[];
+  materialSuggestions?: any[];
+  processOptimizations?: any[];
+  analyzedBy?: string;
+  confidence?: string;
+  notes?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const { patent_analyses } = await import("../drizzle/schema");
+  const id = crypto.randomUUID();
+
+  await db.insert(patent_analyses).values({
+    id,
+    patentId: data.patentId,
+    organizationId: data.organizationId,
+    chemicalCompounds: data.chemicalCompounds ? JSON.stringify(data.chemicalCompounds) : null,
+    reactionMechanisms: data.reactionMechanisms ? JSON.stringify(data.reactionMechanisms) : null,
+    processingConditions: data.processingConditions ? JSON.stringify(data.processingConditions) : null,
+    technologyCategory: data.technologyCategory || null,
+    keyInnovations: data.keyInnovations ? JSON.stringify(data.keyInnovations) : null,
+    competitorAnalysis: data.competitorAnalysis ? JSON.stringify(data.competitorAnalysis) : null,
+    marketApplications: data.marketApplications ? JSON.stringify(data.marketApplications) : null,
+    formulationStrategies: data.formulationStrategies ? JSON.stringify(data.formulationStrategies) : null,
+    materialSuggestions: data.materialSuggestions ? JSON.stringify(data.materialSuggestions) : null,
+    processOptimizations: data.processOptimizations ? JSON.stringify(data.processOptimizations) : null,
+    analysisDate: new Date().toISOString(),
+    analyzedBy: data.analyzedBy || null,
+    confidence: data.confidence || null,
+    notes: data.notes || null,
+  });
+
+  return id;
+}
+
+export async function getPatentAnalysisByPatentId(patentId: string, organizationId: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const { patent_analyses } = await import("../drizzle/schema");
+
+  const results = await db
+    .select()
+    .from(patent_analyses)
+    .where(
+      and(
+        eq(patent_analyses.patentId, patentId),
+        eq(patent_analyses.organizationId, organizationId)
+      )
+    )
+    .orderBy(desc(patent_analyses.analysisDate))
+    .limit(1);
+
+  return results[0] || null;
+}
+
+export async function createLiteraturePaper(data: {
+  organizationId: string;
+  title: string;
+  authors?: string[];
+  journal?: string;
+  publicationYear?: string;
+  doi?: string;
+  abstract?: string;
+  fullText?: string;
+  pdfUrl?: string;
+  sourceUrl?: string;
+  keywords?: string[];
+  uploadedBy: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const { literature_papers } = await import("../drizzle/schema");
+  const id = crypto.randomUUID();
+
+  await db.insert(literature_papers).values({
+    id,
+    organizationId: data.organizationId,
+    title: data.title,
+    authors: data.authors ? JSON.stringify(data.authors) : null,
+    journal: data.journal || null,
+    publicationYear: data.publicationYear || null,
+    doi: data.doi || null,
+    abstract: data.abstract || null,
+    fullText: data.fullText || null,
+    pdfUrl: data.pdfUrl || null,
+    sourceUrl: data.sourceUrl || null,
+    keywords: data.keywords ? JSON.stringify(data.keywords) : null,
+    uploadedBy: data.uploadedBy,
+    createdAt: new Date().toISOString(),
+  });
+
+  return id;
+}
+
+export async function listLiteraturePapers(organizationId: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const { literature_papers } = await import("../drizzle/schema");
+
+  return db
+    .select()
+    .from(literature_papers)
+    .where(eq(literature_papers.organizationId, organizationId))
+    .orderBy(desc(literature_papers.createdAt));
+}
+
+export async function getLiteraturePaperById(id: string, organizationId: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const { literature_papers } = await import("../drizzle/schema");
+
+  const results = await db
+    .select()
+    .from(literature_papers)
+    .where(
+      and(
+        eq(literature_papers.id, id),
+        eq(literature_papers.organizationId, organizationId)
+      )
+    )
+    .limit(1);
+
+  return results[0] || null;
+}
+
+export async function deleteLiteraturePaper(id: string, organizationId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const { literature_papers } = await import("../drizzle/schema");
+
+  await db
+    .delete(literature_papers)
+    .where(
+      and(
+        eq(literature_papers.id, id),
+        eq(literature_papers.organizationId, organizationId)
+      )
+    );
+}
+
+
+// ============================================================================
+// Equipment Management
+// ============================================================================
+
+export async function createEquipment(data: {
+  organizationId: string;
+  name: string;
+  equipmentType: string;
+  manufacturer?: string;
+  model?: string;
+  serialNumber?: string;
+  location?: string;
+  capacity?: { value: number; unit: string };
+  operatingTemperatureRange?: { min: number; max: number; unit: string };
+  operatingPressureRange?: { min: number; max: number; unit: string };
+  mixingSpeedRange?: { min: number; max: number; unit: string };
+  powerRating?: { value: number; unit: string };
+  compatibleMaterialTypes?: string[];
+  incompatibleMaterials?: string[];
+  materialContactSurfaces?: string[];
+  supportedProcesses?: string[];
+  cleaningRequirements?: string;
+  changeoverTime?: string;
+  status?: "operational" | "maintenance" | "offline" | "decommissioned";
+  lastMaintenanceDate?: Date;
+  nextMaintenanceDate?: Date;
+  maintenanceNotes?: string;
+  notes?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const { equipment } = await import("../drizzle/schema");
+
+  const [result] = await db.insert(equipment).values(data);
+  return result;
+}
+
+export async function listEquipment(organizationId: string, filters?: {
+  equipmentType?: string;
+  status?: string;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const { equipment } = await import("../drizzle/schema");
+
+  const conditions = [eq(equipment.organizationId, organizationId)];
+
+  if (filters?.equipmentType) {
+    conditions.push(eq(equipment.equipmentType, filters.equipmentType));
+  }
+
+  if (filters?.status) {
+    conditions.push(eq(equipment.status, filters.status as any));
+  }
+
+  const results = await db
+    .select()
+    .from(equipment)
+    .where(and(...conditions))
+    .orderBy(desc(equipment.createdAt));
+    
+  return results;
+}
+
+export async function getEquipmentById(id: string, organizationId: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const { equipment } = await import("../drizzle/schema");
+
+  const results = await db
+    .select()
+    .from(equipment)
+    .where(
+      and(
+        eq(equipment.id, id),
+        eq(equipment.organizationId, organizationId)
+      )
+    )
+    .limit(1);
+
+  return results[0] || null;
+}
+
+export async function updateEquipment(
+  id: string,
+  organizationId: string,
+  data: Partial<{
+    name: string;
+    equipmentType: string;
+    manufacturer: string;
+    model: string;
+    serialNumber: string;
+    location: string;
+    capacity: { value: number; unit: string };
+    operatingTemperatureRange: { min: number; max: number; unit: string };
+    operatingPressureRange: { min: number; max: number; unit: string };
+    mixingSpeedRange: { min: number; max: number; unit: string };
+    powerRating: { value: number; unit: string };
+    compatibleMaterialTypes: string[];
+    incompatibleMaterials: string[];
+    materialContactSurfaces: string[];
+    supportedProcesses: string[];
+    cleaningRequirements: string;
+    changeoverTime: string;
+    status: "operational" | "maintenance" | "offline" | "decommissioned";
+    lastMaintenanceDate: Date;
+    nextMaintenanceDate: Date;
+    maintenanceNotes: string;
+    notes: string;
+  }>
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const { equipment } = await import("../drizzle/schema");
+
+  await db
+    .update(equipment)
+    .set(data)
+    .where(
+      and(
+        eq(equipment.id, id),
+        eq(equipment.organizationId, organizationId)
+      )
+    );
+}
+
+export async function deleteEquipment(id: string, organizationId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const { equipment } = await import("../drizzle/schema");
+
+  await db
+    .delete(equipment)
+    .where(
+      and(
+        eq(equipment.id, id),
+        eq(equipment.organizationId, organizationId)
+      )
+    );
+}
+
+// ============================================================================
+// Equipment Compatibility Analysis
+// ============================================================================
+
+export async function createCompatibilityAnalysis(data: {
+  organizationId: string;
+  formulationVersionId: string;
+  equipmentId: string;
+  isCompatible: boolean;
+  compatibilityScore?: string;
+  incompatibilityReasons?: string[];
+  requiredModifications?: string[];
+  processingConstraints?: Record<string, any>;
+  analyzedBy?: string;
+  notes?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const { formulation_equipment_compatibility } = await import("../drizzle/schema");
+
+  const [result] = await db.insert(formulation_equipment_compatibility).values(data);
+  return result;
+}
+
+export async function getCompatibilityAnalysis(
+  formulationVersionId: string,
+  equipmentId: string,
+  organizationId: string
+) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const { formulation_equipment_compatibility } = await import("../drizzle/schema");
+
+  const results = await db
+    .select()
+    .from(formulation_equipment_compatibility)
+    .where(
+      and(
+        eq(formulation_equipment_compatibility.formulationVersionId, formulationVersionId),
+        eq(formulation_equipment_compatibility.equipmentId, equipmentId),
+        eq(formulation_equipment_compatibility.organizationId, organizationId)
+      )
+    )
+    .orderBy(desc(formulation_equipment_compatibility.analyzedAt))
+    .limit(1);
+
+  return results[0] || null;
+}
+
+export async function listCompatibilityAnalyses(
+  formulationVersionId: string,
+  organizationId: string
+) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const { formulation_equipment_compatibility, equipment } = await import("../drizzle/schema");
+
+  const results = await db
+    .select({
+      id: formulation_equipment_compatibility.id,
+      formulationVersionId: formulation_equipment_compatibility.formulationVersionId,
+      equipmentId: formulation_equipment_compatibility.equipmentId,
+      equipmentName: equipment.name,
+      equipmentType: equipment.equipmentType,
+      isCompatible: formulation_equipment_compatibility.isCompatible,
+      compatibilityScore: formulation_equipment_compatibility.compatibilityScore,
+      incompatibilityReasons: formulation_equipment_compatibility.incompatibilityReasons,
+      requiredModifications: formulation_equipment_compatibility.requiredModifications,
+      processingConstraints: formulation_equipment_compatibility.processingConstraints,
+      analyzedAt: formulation_equipment_compatibility.analyzedAt,
+      notes: formulation_equipment_compatibility.notes,
+    })
+    .from(formulation_equipment_compatibility)
+    .leftJoin(equipment, eq(formulation_equipment_compatibility.equipmentId, equipment.id))
+    .where(
+      and(
+        eq(formulation_equipment_compatibility.formulationVersionId, formulationVersionId),
+        eq(formulation_equipment_compatibility.organizationId, organizationId)
+      )
+    )
+    .orderBy(desc(formulation_equipment_compatibility.analyzedAt));
+
+  return results;
+}
+
+
+// ============================================================================
+// Scale-Up Risk Analysis
+// ============================================================================
+
+export async function createScaleUpAnalysis(data: {
+  organizationId: string;
+  formulationVersionId: string;
+  labScale: { volume: number; unit: string };
+  pilotScale: { volume: number; unit: string };
+  targetScale?: { volume: number; unit: string };
+  reactionType: string;
+  rateConstant: number;
+  activationEnergy: number;
+  reactionOrder: number;
+  heatGenerationRate: number;
+  coolingCapacityLab: number;
+  coolingCapacityPilot: number;
+  temperatureRisePrediction: number;
+  mixingTimeLab: number;
+  mixingTimePilot: number;
+  reynoldsNumberLab: number;
+  reynoldsNumberPilot: number;
+  powerPerVolumeLab: number;
+  powerPerVolumePilot: number;
+  overallRiskScore: number;
+  riskLevel: string;
+  identifiedRisks: Array<any>;
+  processModifications: string[];
+  equipmentRecommendations: string[];
+  controlStrategyChanges: string[];
+  additionalTestingNeeded: string[];
+  analyzedBy: string;
+  notes?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const { scaleup_analyses } = await import("../drizzle/schema");
+
+  const [result] = await db.insert(scaleup_analyses).values({
+    ...data,
+    rateConstant: data.rateConstant.toString(),
+    activationEnergy: data.activationEnergy.toString(),
+    reactionOrder: data.reactionOrder.toString(),
+    heatGenerationRate: data.heatGenerationRate.toString(),
+    coolingCapacityLab: data.coolingCapacityLab.toString(),
+    coolingCapacityPilot: data.coolingCapacityPilot.toString(),
+    temperatureRisePrediction: data.temperatureRisePrediction.toString(),
+    mixingTimeLab: data.mixingTimeLab.toString(),
+    mixingTimePilot: data.mixingTimePilot.toString(),
+    reynoldsNumberLab: data.reynoldsNumberLab.toString(),
+    reynoldsNumberPilot: data.reynoldsNumberPilot.toString(),
+    powerPerVolumeLab: data.powerPerVolumeLab.toString(),
+    powerPerVolumePilot: data.powerPerVolumePilot.toString(),
+    overallRiskScore: data.overallRiskScore.toString(),
+  });
+  return result;
+}
+
+export async function listScaleUpAnalyses(
+  formulationVersionId: string,
+  organizationId: string
+) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const { scaleup_analyses } = await import("../drizzle/schema");
+
+  return db
+    .select()
+    .from(scaleup_analyses)
+    .where(
+      and(
+        eq(scaleup_analyses.formulationVersionId, formulationVersionId),
+        eq(scaleup_analyses.organizationId, organizationId)
+      )
+    )
+    .orderBy(desc(scaleup_analyses.analyzedAt));
+}
+
+export async function getScaleUpAnalysisById(id: string, organizationId: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const { scaleup_analyses } = await import("../drizzle/schema");
+
+  const results = await db
+    .select()
+    .from(scaleup_analyses)
+    .where(
+      and(
+        eq(scaleup_analyses.id, id),
+        eq(scaleup_analyses.organizationId, organizationId)
+      )
+    )
+    .limit(1);
+
+  return results[0] || null;
+}
+
+export async function deleteScaleUpAnalysis(id: string, organizationId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const { scaleup_analyses } = await import("../drizzle/schema");
+
+  await db
+    .delete(scaleup_analyses)
+    .where(
+      and(
+        eq(scaleup_analyses.id, id),
+        eq(scaleup_analyses.organizationId, organizationId)
+      )
+    );
+}
+
+export async function createScaleUpScenario(data: {
+  organizationId: string;
+  analysisId: string;
+  scenarioName: string;
+  description?: string;
+  temperature?: number;
+  pressure?: number;
+  mixingSpeed?: number;
+  additionRate?: number;
+  holdTime?: number;
+  predictedYield?: number;
+  predictedQuality?: string;
+  predictedCycleTime?: number;
+  predictedCost?: number;
+  successProbability?: number;
+  confidenceLevel?: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const { scaleup_scenarios } = await import("../drizzle/schema");
+
+  const [result] = await db.insert(scaleup_scenarios).values({
+    ...data,
+    temperature: data.temperature?.toString(),
+    pressure: data.pressure?.toString(),
+    mixingSpeed: data.mixingSpeed?.toString(),
+    additionRate: data.additionRate?.toString(),
+    holdTime: data.holdTime?.toString(),
+    predictedYield: data.predictedYield?.toString(),
+    predictedCycleTime: data.predictedCycleTime?.toString(),
+    predictedCost: data.predictedCost?.toString(),
+    successProbability: data.successProbability?.toString(),
+    confidenceLevel: data.confidenceLevel?.toString(),
+  });
+  return result;
+}
+
+export async function listScaleUpScenarios(analysisId: string, organizationId: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const { scaleup_scenarios } = await import("../drizzle/schema");
+
+  return db
+    .select()
+    .from(scaleup_scenarios)
+    .where(
+      and(
+        eq(scaleup_scenarios.analysisId, analysisId),
+        eq(scaleup_scenarios.organizationId, organizationId)
+      )
+    )
+    .orderBy(desc(scaleup_scenarios.createdAt));
+}
+
+
+// Manufacturing Documentation Functions
+export async function createManufacturingDocument(data: {
+  formulationVersionId: string;
+  organizationId: string;
+  documentType: "sop" | "batch_process" | "process_flow_diagram" | "tech_transfer_package";
+  title: string;
+  batchSize?: number;
+  batchUnit?: string;
+  equipmentIds?: string[];
+  safetyPrecautions?: string[];
+  qualityCheckpoints?: string[];
+  generatedContent?: string;
+  createdBy: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const { manufacturing_documents } = await import("../drizzle/schema");
+
+  const values: any = {
+    organizationId: data.organizationId,
+    formulationVersionId: data.formulationVersionId,
+    documentType: data.documentType,
+    title: data.title,
+    createdBy: data.createdBy,
+  };
+
+  if (data.batchSize !== undefined) values.batchSize = data.batchSize.toString();
+  if (data.batchUnit) values.batchUnit = data.batchUnit;
+  if (data.equipmentIds) values.equipmentIds = data.equipmentIds;
+  if (data.safetyPrecautions) values.safetyPrecautions = data.safetyPrecautions;
+  if (data.qualityCheckpoints) values.qualityCheckpoints = data.qualityCheckpoints;
+  if (data.generatedContent) values.generatedContent = data.generatedContent;
+
+  const [result] = await db.insert(manufacturing_documents).values(values);
+  return result;
+}
+
+export async function getManufacturingDocumentById(id: string, organizationId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const { manufacturing_documents } = await import("../drizzle/schema");
+
+  const [result] = await db
+    .select()
+    .from(manufacturing_documents)
+    .where(
+      and(
+        eq(manufacturing_documents.id, id),
+        eq(manufacturing_documents.organizationId, organizationId)
+      )
+    );
+  return result;
+}
+
+export async function listManufacturingDocuments(organizationId: string, documentType?: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const { manufacturing_documents } = await import("../drizzle/schema");
+
+  const conditions = [eq(manufacturing_documents.organizationId, organizationId)];
+  if (documentType) {
+    conditions.push(eq(manufacturing_documents.documentType, documentType as any));
+  }
+
+  return db
+    .select()
+    .from(manufacturing_documents)
+    .where(and(...conditions))
+    .orderBy(desc(manufacturing_documents.createdAt));
+}
+
+export async function createManufacturingStep(data: {
+  documentId: string;
+  stepNumber: number;
+  stepName: string;
+  description?: string;
+  duration?: number;
+  temperature?: number;
+  temperatureUnit?: string;
+  pressure?: number;
+  pressureUnit?: string;
+  mixingSpeed?: number;
+  mixingSpeedUnit?: string;
+  equipmentId?: string;
+  criticalParameters?: Record<string, any>;
+  safetyNotes?: string;
+  qualityChecks?: string[];
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const { manufacturing_steps } = await import("../drizzle/schema");
+
+  const values: any = {
+    documentId: data.documentId,
+    stepNumber: data.stepNumber,
+    stepName: data.stepName,
+  };
+
+  if (data.description) values.description = data.description;
+  if (data.duration !== undefined) values.duration = data.duration;
+  if (data.temperature !== undefined) values.temperature = data.temperature.toString();
+  if (data.temperatureUnit) values.temperatureUnit = data.temperatureUnit;
+  if (data.pressure !== undefined) values.pressure = data.pressure.toString();
+  if (data.pressureUnit) values.pressureUnit = data.pressureUnit;
+  if (data.mixingSpeed !== undefined) values.mixingSpeed = data.mixingSpeed.toString();
+  if (data.mixingSpeedUnit) values.mixingSpeedUnit = data.mixingSpeedUnit;
+  if (data.equipmentId) values.equipmentId = data.equipmentId;
+  if (data.criticalParameters) values.criticalParameters = data.criticalParameters;
+  if (data.safetyNotes) values.safetyNotes = data.safetyNotes;
+  if (data.qualityChecks) values.qualityChecks = data.qualityChecks;
+
+  const [result] = await db.insert(manufacturing_steps).values(values);
+  return result;
+}
+
+export async function listManufacturingSteps(documentId: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const { manufacturing_steps } = await import("../drizzle/schema");
+
+  return db
+    .select()
+    .from(manufacturing_steps)
+    .where(eq(manufacturing_steps.documentId, documentId))
+    .orderBy(manufacturing_steps.stepNumber);
+}
+
+
+// ============================================================================
+// Issue Tracking & Improvement System
+// ============================================================================
+
+export async function createIssue(data: {
+  organizationId: string;
+  formulationVersionId?: string;
+  trialId?: string;
+  issueType: string;
+  severity: string;
+  title: string;
+  description: string;
+  reportedBy: string;
+  affectedBatches?: string[];
+  costImpact?: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const { issues } = await import("../drizzle/schema");
+
+  const values: any = {
+    organizationId: data.organizationId,
+    issueType: data.issueType,
+    severity: data.severity,
+    title: data.title,
+    description: data.description,
+    reportedBy: data.reportedBy,
+  };
+
+  if (data.formulationVersionId) values.formulationVersionId = data.formulationVersionId;
+  if (data.trialId) values.trialId = data.trialId;
+  if (data.affectedBatches) values.affectedBatches = data.affectedBatches;
+  if (data.costImpact !== undefined) values.costImpact = data.costImpact.toString();
+
+  const [result] = await db.insert(issues).values(values);
+  return result;
+}
+
+export async function getIssueById(issueId: string, organizationId: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const { issues } = await import("../drizzle/schema");
+
+  const [issue] = await db
+    .select()
+    .from(issues)
+    .where(and(eq(issues.id, issueId), eq(issues.organizationId, organizationId)));
+
+  return issue;
+}
+
+export async function listIssues(organizationId: string, filters?: {
+  status?: string;
+  severity?: string;
+  issueType?: string;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const { issues } = await import("../drizzle/schema");
+
+  const conditions = [eq(issues.organizationId, organizationId)];
+
+  if (filters?.status) {
+    conditions.push(eq(issues.status, filters.status as any));
+  }
+  if (filters?.severity) {
+    conditions.push(eq(issues.severity, filters.severity as any));
+  }
+  if (filters?.issueType) {
+    conditions.push(eq(issues.issueType, filters.issueType as any));
+  }
+
+  return db
+    .select()
+    .from(issues)
+    .where(and(...conditions))
+    .orderBy(desc(issues.reportedAt));
+}
+
+export async function updateIssue(
+  issueId: string,
+  organizationId: string,
+  data: {
+    status?: string;
+    rootCause?: string;
+    correctiveAction?: string;
+    preventiveAction?: string;
+    assignedTo?: string;
+    resolvedBy?: string;
+    resolvedAt?: Date;
+  }
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const { issues } = await import("../drizzle/schema");
+
+  const values: any = {};
+  if (data.status) values.status = data.status;
+  if (data.rootCause) values.rootCause = data.rootCause;
+  if (data.correctiveAction) values.correctiveAction = data.correctiveAction;
+  if (data.preventiveAction) values.preventiveAction = data.preventiveAction;
+  if (data.assignedTo) values.assignedTo = data.assignedTo;
+  if (data.resolvedBy) values.resolvedBy = data.resolvedBy;
+  if (data.resolvedAt) values.resolvedAt = data.resolvedAt;
+
+  await db
+    .update(issues)
+    .set(values)
+    .where(and(eq(issues.id, issueId), eq(issues.organizationId, organizationId)));
+
+  return getIssueById(issueId, organizationId);
+}
+
+export async function deleteIssue(issueId: string, organizationId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const { issues } = await import("../drizzle/schema");
+
+  await db
+    .delete(issues)
+    .where(and(eq(issues.id, issueId), eq(issues.organizationId, organizationId)));
+
+  return true;
+}
+
+export async function createIssueAnalysis(data: {
+  issueId: string;
+  analysisType: string;
+  findings: string;
+  recommendations?: string[];
+  similarIssues?: Array<{ issueId: string; similarity: number; title: string }>;
+  preventionStrategies?: string[];
+  confidence?: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const { issue_analysis } = await import("../drizzle/schema");
+
+  const values: any = {
+    issueId: data.issueId,
+    analysisType: data.analysisType,
+    findings: data.findings,
+  };
+
+  if (data.recommendations) values.recommendations = data.recommendations;
+  if (data.similarIssues) values.similarIssues = data.similarIssues;
+  if (data.preventionStrategies) values.preventionStrategies = data.preventionStrategies;
+  if (data.confidence !== undefined) values.confidence = data.confidence.toString();
+
+  const [result] = await db.insert(issue_analysis).values(values);
+  return result;
+}
+
+export async function getIssueAnalyses(issueId: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const { issue_analysis } = await import("../drizzle/schema");
+
+  return db
+    .select()
+    .from(issue_analysis)
+    .where(eq(issue_analysis.issueId, issueId))
+    .orderBy(desc(issue_analysis.analyzedAt));
+}
+
+export async function createImprovementAction(data: {
+  organizationId: string;
+  issueId?: string;
+  actionType: string;
+  title: string;
+  description: string;
+  priority: string;
+  createdBy: string;
+  expectedImpact?: string;
+  estimatedCost?: number;
+  assignedTo?: string;
+  dueDate?: Date;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const { improvement_actions } = await import("../drizzle/schema");
+
+  const values: any = {
+    organizationId: data.organizationId,
+    actionType: data.actionType,
+    title: data.title,
+    description: data.description,
+    priority: data.priority,
+    createdBy: data.createdBy,
+  };
+
+  if (data.issueId) values.issueId = data.issueId;
+  if (data.expectedImpact) values.expectedImpact = data.expectedImpact;
+  if (data.estimatedCost !== undefined) values.estimatedCost = data.estimatedCost.toString();
+  if (data.assignedTo) values.assignedTo = data.assignedTo;
+  if (data.dueDate) values.dueDate = data.dueDate;
+
+  const [result] = await db.insert(improvement_actions).values(values);
+  return result;
+}
+
+export async function listImprovementActions(organizationId: string, filters?: {
+  status?: string;
+  priority?: string;
+  issueId?: string;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const { improvement_actions } = await import("../drizzle/schema");
+
+  const conditions = [eq(improvement_actions.organizationId, organizationId)];
+
+  if (filters?.status) {
+    conditions.push(eq(improvement_actions.status, filters.status as any));
+  }
+  if (filters?.priority) {
+    conditions.push(eq(improvement_actions.priority, filters.priority as any));
+  }
+  if (filters?.issueId) {
+    conditions.push(eq(improvement_actions.issueId, filters.issueId));
+  }
+
+  return db
+    .select()
+    .from(improvement_actions)
+    .where(and(...conditions))
+    .orderBy(desc(improvement_actions.createdAt));
+}
+
+export async function updateImprovementAction(
+  actionId: string,
+  organizationId: string,
+  data: {
+    status?: string;
+    actualImpact?: string;
+    actualCost?: number;
+    completedAt?: Date;
+  }
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const { improvement_actions } = await import("../drizzle/schema");
+
+  const values: any = {};
+  if (data.status) values.status = data.status;
+  if (data.actualImpact) values.actualImpact = data.actualImpact;
+  if (data.actualCost !== undefined) values.actualCost = data.actualCost.toString();
+  if (data.completedAt) values.completedAt = data.completedAt;
+
+  await db
+    .update(improvement_actions)
+    .set(values)
+    .where(
+      and(
+        eq(improvement_actions.id, actionId),
+        eq(improvement_actions.organizationId, organizationId)
+      )
+    );
+
+  return true;
+}

@@ -5,6 +5,7 @@ import { AnimatedPage } from "@/components/AnimatedPage";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,6 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { trpc } from "@/lib/trpc";
 import { FormulationComparison } from "@/components/FormulationComparison";
+import { VersionTree } from "@/components/VersionTree";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -27,6 +29,8 @@ import {
   FileText,
   Beaker,
   RotateCcw,
+  List,
+  GitBranch,
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -80,6 +84,10 @@ export default function FormulationDetail() {
     }
   };
 
+  const handleVersionClick = (versionId: string) => {
+    setLocation(`/formulations/${familyId}/versions/${versionId}`);
+  };
+
   const isLoading = familyLoading || versionsLoading;
 
   if (showComparison) {
@@ -98,61 +106,30 @@ export default function FormulationDetail() {
   return (
     <DashboardLayout>
       <AnimatedPage>
-        <div className="space-y-6">
+        <div className="container py-6 space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Link href="/formulations">
-                <Button variant="ghost" size="icon">
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-              </Link>
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-                  {family?.name}
-                  {family?.code && (
-                    <Badge variant="outline" className="text-sm font-normal">
-                      {family.code}
-                    </Badge>
-                  )}
+            <div className="space-y-1">
+              <div className="flex items-center gap-3">
+                <Link href="/formulations">
+                  <Button variant="ghost" size="sm">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back
+                  </Button>
+                </Link>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-cyan-500 bg-clip-text text-transparent">
+                  {family?.name || "Loading..."}
                 </h1>
-                <p className="text-muted-foreground mt-1">
-                  {family?.description || "Formulation family details and version history"}
-                </p>
               </div>
+              {family?.description && (
+                <p className="text-muted-foreground ml-24">{family.description}</p>
+              )}
             </div>
-            <Button onClick={() => setShowComparison(true)} variant="gradient">
+            <Button variant="gradient" onClick={() => setShowComparison(true)}>
               <GitCompare className="mr-2 h-4 w-4" />
               Compare Versions
             </Button>
           </div>
-
-          {/* Family Details */}
-          {family && (
-            <Card className="glass">
-              <CardHeader>
-                <CardTitle className="text-base">Family Information</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Code:</span>
-                    <p className="font-medium mt-1">{family.code}</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Domain:</span>
-                    <p className="font-medium mt-1">{family.domainId}</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Confidentiality:</span>
-                    <Badge className="mt-1" variant="secondary">
-                      {family.confidentialityLevel}
-                    </Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           {/* Version History */}
           <Card className="glass">
@@ -171,83 +148,122 @@ export default function FormulationDetail() {
               </div>
             </CardHeader>
             <CardContent>
-              {isLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-                </div>
-              ) : versions && versions.length > 0 ? (
-                <div className="space-y-3">
-                  {versions.map((version, index) => (
-                    <div
-                      key={version.id}
-                      className="glass border rounded-lg p-4 hover-lift transition-all"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-2 flex-1">
-                          <div className="flex items-center gap-3">
-                            <span className="text-lg font-semibold">{version.versionNumber}</span>
-                            <Badge variant="secondary">{version.status}</Badge>
-                            {version.branchType && (
-                              <Badge variant="outline" className="text-xs">
-                                {version.branchType}
-                              </Badge>
-                            )}
-                            {index === 0 && (
-                              <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white">
-                                Latest
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              <span>{new Date(version.createdAt).toLocaleDateString()}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <User className="h-3 w-3" />
-                              <span>Created by {version.createdBy}</span>
-                            </div>
-                          </div>
-                          {version.notes && (
-                            <div className="flex items-start gap-2 text-sm">
-                              <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
-                              <p className="text-muted-foreground">{version.notes}</p>
-                            </div>
-                          )}
-                          {version.changeReason && (
-                            <div className="text-sm bg-muted/50 rounded-md p-2">
-                              <span className="font-medium">Change Reason:</span> {version.changeReason}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => handleRestoreClick(version.id)}
-                            disabled={restoreMutation.isPending}
-                          >
-                            <RotateCcw className="mr-2 h-4 w-4" />
-                            Restore
-                          </Button>
-                          <Button size="sm" variant="outline">
-                            <Beaker className="mr-2 h-4 w-4" />
-                            View
-                          </Button>
-                        </div>
-                      </div>
+              <Tabs defaultValue="list" className="w-full">
+                <TabsList className="grid w-full max-w-md grid-cols-2 mb-4">
+                  <TabsTrigger value="list" className="flex items-center gap-2">
+                    <List className="h-4 w-4" />
+                    List View
+                  </TabsTrigger>
+                  <TabsTrigger value="tree" className="flex items-center gap-2">
+                    <GitBranch className="h-4 w-4" />
+                    Tree View
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* List View */}
+                <TabsContent value="list" className="mt-0">
+                  {isLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <Beaker className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">No versions found</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Create the first version to get started
-                  </p>
-                </div>
-              )}
+                  ) : versions && versions.length > 0 ? (
+                    <div className="space-y-3">
+                      {versions.map((version, index) => (
+                        <div
+                          key={version.id}
+                          className="glass border rounded-lg p-4 hover-lift transition-all"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="space-y-2 flex-1">
+                              <div className="flex items-center gap-3">
+                                <span className="text-lg font-semibold">{version.versionNumber}</span>
+                                <Badge variant="secondary">{version.status}</Badge>
+                                {version.branchType && (
+                                  <Badge variant="outline" className="text-xs">
+                                    {version.branchType}
+                                  </Badge>
+                                )}
+                                {index === 0 && (
+                                  <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white">
+                                    Latest
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  <span>{new Date(version.createdAt).toLocaleDateString()}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <User className="h-3 w-3" />
+                                  <span>Created by {version.createdBy}</span>
+                                </div>
+                              </div>
+                              {version.notes && (
+                                <div className="flex items-start gap-2 text-sm">
+                                  <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                  <p className="text-muted-foreground">{version.notes}</p>
+                                </div>
+                              )}
+                              {version.changeReason && (
+                                <div className="text-sm bg-muted/50 rounded-md p-2">
+                                  <span className="font-medium">Change Reason:</span> {version.changeReason}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => handleRestoreClick(version.id)}
+                                disabled={restoreMutation.isPending}
+                              >
+                                <RotateCcw className="mr-2 h-4 w-4" />
+                                Restore
+                              </Button>
+                              <Button size="sm" variant="outline">
+                                <Beaker className="mr-2 h-4 w-4" />
+                                View
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <Beaker className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">No versions found</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Create the first version to get started
+                      </p>
+                    </div>
+                  )}
+                </TabsContent>
+
+                {/* Tree View */}
+                <TabsContent value="tree" className="mt-0">
+                  {isLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                    </div>
+                  ) : versions && versions.length > 0 ? (
+                    <VersionTree
+                      versions={versions}
+                      onVersionClick={handleVersionClick}
+                      highlightVersionId={versions[0]?.id}
+                    />
+                  ) : (
+                    <div className="text-center py-12">
+                      <GitBranch className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">No versions found</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Create the first version to get started
+                      </p>
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
         </div>

@@ -1767,3 +1767,37 @@
 - [x] TypeScript compilation successful (0 errors)
 - [x] Input validation implemented (min=0, max=100, type=number)
 - [x] Create checkpoint
+
+
+## Phase 32: Version Branching Visualization ✅ COMPLETE
+
+### Library Setup
+- [x] Install React Flow library for tree diagrams (reactflow 11.11.4)
+- [x] Install dagre library for automatic tree layout (dagre 0.8.5, @types/dagre 0.7.53)
+- [ ] Add React Flow CSS imports
+
+### VersionTree Component
+- [x] Create VersionTree component with React Flow
+- [x] Build tree data structure from version list (nodes and edges)
+- [x] Implement automatic tree layout with dagre (TB direction, ranksep 80, nodesep 50)
+- [x] Add custom node styling (status colors, branch type badges, glassmorphism)
+- [x] Add interactive features (zoom, pan, node click callback)
+- [x] Add node tooltips with version details (notes and changeReason with title attribute)
+- [x] Highlight current version in tree (ring-4 ring-primary)
+- [x] Add legend for node colors and branch types (bottom-left overlay)
+- [x] Add animated edges for draft versions
+- [x] Add MiniMap for navigation
+- [x] Add Background and Controls
+
+### Integration
+- [x] Add "Version Tree" tab to FormulationDetail page
+- [x] Add toggle between list view and tree view (Tabs component with List and GitBranch icons)
+- [x] Add click handler to navigate to version details (onVersionClick callback)
+- [x] Add minimap for large trees (MiniMap with status-based colors)
+- [x] Add controls (zoom in/out, fit view) (Controls component from React Flow)
+- [x] Add React Flow CSS imports ("reactflow/dist/style.css")
+
+### Testing
+- [x] Run all unit tests (18 tests passing)
+- [x] TypeScript compilation successful (0 errors)
+- [x] Create checkpoint

@@ -9,6 +9,7 @@ import Materials from "./pages/Materials";
 import Suppliers from "./pages/Suppliers";
 import SupplierRiskDashboard from "./pages/SupplierRiskDashboard";
 import Formulations from "./pages/Formulations";
+import FormulationDetail from "./pages/FormulationDetail";
 import FormulationEditor from "./pages/FormulationEditor";
 import Predictions from "./pages/Predictions";
 import TestConditions from "./pages/TestConditions";
@@ -37,7 +38,8 @@ function Router() {
       <Route path="/suppliers" component={Suppliers} />
       <Route path="/supplier-risk" component={SupplierRiskDashboard} />
         <Route path="/formulations" component={Formulations} />
-      <Route path="/formulations/:id" component={FormulationEditor} />
+      <Route path="/formulations/:id" component={FormulationDetail} />
+      <Route path="/formulations/:familyId/versions/:versionId" component={FormulationEditor} />
       <Route path="/predictions" component={Predictions} />
       <Route path="/test-conditions" component={TestConditions} />
       <Route path="/trials" component={Trials} />

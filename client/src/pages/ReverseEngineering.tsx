@@ -333,15 +333,18 @@ export default function ReverseEngineering() {
       <div className="grid grid-cols-12 gap-6">
         {/* Products List */}
         <div className="col-span-4">
-          <Card>
+          <Card className="glass border-0">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Competitor Products</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Beaker className="h-5 w-5 text-primary" />
+                    Competitor Products
+                  </CardTitle>
                   <CardDescription>Select a product to view analysis</CardDescription>
                 </div>
                 {selectedForExport.size > 0 && (
-                  <Badge variant="secondary">
+                  <Badge className="gradient-primary text-white border-0 shadow-lg">
                     {selectedForExport.size} selected
                   </Badge>
                 )}
@@ -400,49 +403,59 @@ export default function ReverseEngineering() {
                 </div>
               ) : products && products.length > 0 ? (
                 <div className="space-y-2">
-                  {products.map((product) => (
-                    <Card
-                      key={product.id}
-                      className={`cursor-pointer transition-colors hover:bg-accent ${
-                        selectedProduct === product.id ? "border-primary bg-accent" : ""
-                      } ${selectedForExport.has(product.id) ? "ring-2 ring-primary" : ""}`}
-                      onClick={() => setSelectedProduct(product.id)}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-start gap-3 flex-1">
-                            {product.analysisStatus === 'completed' && (
-                              <Checkbox
-                                checked={selectedForExport.has(product.id)}
-                                onClick={(e) => toggleProductSelection(product.id, e)}
-                                className="mt-1"
-                              />
-                            )}
-                            <div className="flex-1">
-                              <h3 className="font-semibold">{product.productName}</h3>
-                              <p className="text-sm text-muted-foreground">{product.manufacturer}</p>
-                              {product.category && (
-                                <Badge variant="secondary" className="mt-2">
-                                  {product.category}
-                                </Badge>
+                  {products.map((product) => {
+                    const isSelected = selectedProduct === product.id;
+                    const isExportSelected = selectedForExport.has(product.id);
+                    const isCompleted = product.analysisStatus === 'completed';
+                    const isAnalyzing = product.analysisStatus === 'analyzing';
+                    
+                    return (
+                      <Card
+                        key={product.id}
+                        className={`cursor-pointer transition-smooth hover-lift relative overflow-hidden ${
+                          isSelected ? "glass border-primary/50 shadow-lg" : "border-border/50"
+                        } ${isExportSelected ? "ring-2 ring-primary shadow-primary/20" : ""}`}
+                        onClick={() => setSelectedProduct(product.id)}
+                      >
+                        {isSelected && (
+                          <div className="absolute inset-0 gradient-primary opacity-5" />
+                        )}
+                        <CardContent className="p-4 relative z-10">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-3 flex-1">
+                              {isCompleted && (
+                                <Checkbox
+                                  checked={isExportSelected}
+                                  onClick={(e) => toggleProductSelection(product.id, e)}
+                                  className="mt-1"
+                                />
                               )}
+                              <div className="flex-1">
+                                <h3 className="font-semibold text-foreground">{product.productName}</h3>
+                                <p className="text-sm text-muted-foreground">{product.manufacturer}</p>
+                                {product.category && (
+                                  <Badge variant="secondary" className="mt-2">
+                                    {product.category}
+                                  </Badge>
+                                )}
+                              </div>
                             </div>
+                            {isCompleted && (
+                              <Badge className="gradient-success text-white border-0 shadow-md ml-2">
+                                Analyzed
+                              </Badge>
+                            )}
+                            {isAnalyzing && (
+                              <Badge variant="outline" className="ml-2 border-primary/50 bg-primary/5">
+                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                Analyzing
+                              </Badge>
+                            )}
                           </div>
-                          {product.analysisStatus === "completed" && (
-                            <Badge variant="default" className="ml-2">
-                              Analyzed
-                            </Badge>
-                          )}
-                          {product.analysisStatus === "analyzing" && (
-                            <Badge variant="outline" className="ml-2">
-                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                              Analyzing
-                            </Badge>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
@@ -493,12 +506,14 @@ export default function ReverseEngineering() {
               </TabsList>
 
               <TabsContent value="overview">
-                <Card>
+                <Card className="glass border-0 hover-lift">
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <div>
-                        <CardTitle>{selectedProductData.productName}</CardTitle>
-                        <CardDescription>{selectedProductData.manufacturer}</CardDescription>
+                        <CardTitle className="text-2xl bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent">
+                          {selectedProductData.productName}
+                        </CardTitle>
+                        <CardDescription className="text-base mt-1">{selectedProductData.manufacturer}</CardDescription>
                       </div>
                       <div className="flex gap-2">
                         {selectedProductData.analysisStatus !== "completed" && (

@@ -128,6 +128,7 @@ export default function Dashboard() {
                 onClick={handleLoadDemoData}
                 disabled={isSeeding || isClearing}
                 size="lg"
+                variant="gradient"
                 data-tour="load-demo-data"
                 className="w-full sm:w-auto"
               >
@@ -149,94 +150,114 @@ export default function Dashboard() {
           )}
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3" data-tour="stats-cards">
-          {stats.map((stat) => (
-            <Link key={stat.title} href={stat.href}>
-              <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-                  <stat.icon className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stat.value}</div>
-                  <p className="text-xs text-muted-foreground mt-1">{stat.description}</p>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+        <div className="grid gap-6 md:grid-cols-3" data-tour="stats-cards">
+          {stats.map((stat, index) => {
+            const gradients = ['gradient-primary', 'gradient-secondary', 'gradient-accent'];
+            return (
+              <Link key={stat.title} href={stat.href}>
+                <Card className="hover-lift glass border-0 overflow-hidden relative group">
+                  <div className={`absolute inset-0 ${gradients[index]} opacity-10 group-hover:opacity-20 transition-opacity`} />
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+                    <CardTitle className="text-sm font-medium text-foreground">{stat.title}</CardTitle>
+                    <div className={`p-2 rounded-lg ${gradients[index]}`}>
+                      <stat.icon className="h-5 w-5 text-white" />
+                    </div>
+                  </CardHeader>
+                  <CardContent className="relative z-10">
+                    <div className="text-3xl font-bold bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-transparent">
+                      {stat.value}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">{stat.description}</p>
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
         </div>
 
         <div className="grid gap-4 md:grid-cols-2" data-tour="getting-started-section">
-          <Card data-tour="quick-actions">
+          <Card data-tour="quick-actions" className="glass border-0 hover-lift">
             <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <span className="text-lg">Quick Actions</span>
+                <Sparkles className="h-5 w-5 text-primary" />
+              </CardTitle>
               <CardDescription>Common tasks and workflows</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="space-y-3">
               <Link href="/materials">
-                <Button variant="outline" className="w-full justify-start">
-                  <Package className="mr-2 h-4 w-4" />
-                  Add New Material
+                <Button variant="outline" className="w-full justify-start transition-smooth hover:border-primary/50 hover:bg-primary/5 group">
+                  <div className="p-1.5 rounded-md gradient-primary mr-3">
+                    <Package className="h-4 w-4 text-white" />
+                  </div>
+                  <span className="group-hover:translate-x-1 transition-transform">Add New Material</span>
                 </Button>
               </Link>
               <Link href="/formulations">
-                <Button variant="outline" className="w-full justify-start">
-                  <FlaskConical className="mr-2 h-4 w-4" />
-                  Create Formulation
+                <Button variant="outline" className="w-full justify-start transition-smooth hover:border-primary/50 hover:bg-primary/5 group">
+                  <div className="p-1.5 rounded-md gradient-secondary mr-3">
+                    <FlaskConical className="h-4 w-4 text-white" />
+                  </div>
+                  <span className="group-hover:translate-x-1 transition-transform">Create Formulation</span>
                 </Button>
               </Link>
               <Link href="/suppliers">
-                <Button variant="outline" className="w-full justify-start">
-                  <Building2 className="mr-2 h-4 w-4" />
-                  Add Supplier
+                <Button variant="outline" className="w-full justify-start transition-smooth hover:border-primary/50 hover:bg-primary/5 group">
+                  <div className="p-1.5 rounded-md gradient-accent mr-3">
+                    <Building2 className="h-4 w-4 text-white" />
+                  </div>
+                  <span className="group-hover:translate-x-1 transition-transform">Add Supplier</span>
                 </Button>
               </Link>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="glass border-0 hover-lift">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Getting Started</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <span className="text-lg">Getting Started</span>
+                    <Beaker className="h-5 w-5 text-primary" />
+                  </CardTitle>
                   <CardDescription>Set up your formulation workspace</CardDescription>
                 </div>
-                <Button variant="outline" size="sm" onClick={handleStartTour}>
+                <Button variant="outline" size="sm" onClick={handleStartTour} className="transition-smooth hover:border-primary/50 hover:bg-primary/5">
                   <MapIcon className="mr-2 h-4 w-4" />
                   Start Tour
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <div className="flex items-start gap-3">
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium">
+            <CardContent className="space-y-4 text-sm">
+              <div className="flex items-start gap-3 group">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full gradient-primary text-white text-sm font-bold shadow-lg group-hover:scale-110 transition-transform">
                   1
                 </div>
-                <div>
-                  <p className="font-medium">Add Materials</p>
-                  <p className="text-muted-foreground text-xs">
+                <div className="flex-1">
+                  <p className="font-semibold text-foreground">Add Materials</p>
+                  <p className="text-muted-foreground text-xs mt-0.5">
                     Build your materials library with properties and suppliers
                   </p>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium">
+              <div className="flex items-start gap-3 group">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full gradient-secondary text-white text-sm font-bold shadow-lg group-hover:scale-110 transition-transform">
                   2
                 </div>
-                <div>
-                  <p className="font-medium">Create Formulations</p>
-                  <p className="text-muted-foreground text-xs">
+                <div className="flex-1">
+                  <p className="font-semibold text-foreground">Create Formulations</p>
+                  <p className="text-muted-foreground text-xs mt-0.5">
                     Design formulations with version control and branching
                   </p>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium">
+              <div className="flex items-start gap-3 group">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full gradient-accent text-white text-sm font-bold shadow-lg group-hover:scale-110 transition-transform">
                   3
                 </div>
-                <div>
-                  <p className="font-medium">Run Predictions</p>
-                  <p className="text-muted-foreground text-xs">
+                <div className="flex-1">
+                  <p className="font-semibold text-foreground">Run Predictions</p>
+                  <p className="text-muted-foreground text-xs mt-0.5">
                     Use AI to predict properties and optimize formulations
                   </p>
                 </div>

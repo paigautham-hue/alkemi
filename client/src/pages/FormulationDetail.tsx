@@ -223,7 +223,11 @@ export default function FormulationDetail() {
                                 <RotateCcw className="mr-2 h-4 w-4" />
                                 Restore
                               </Button>
-                              <Button size="sm" variant="outline">
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => setLocation(`/formulations/${familyId}/versions/${version.id}`)}
+                              >
                                 <Beaker className="mr-2 h-4 w-4" />
                                 View
                               </Button>

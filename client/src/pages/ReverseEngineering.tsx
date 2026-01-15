@@ -333,9 +333,9 @@ export default function ReverseEngineering() {
         </div>
       </div>
 
-      <div className="grid grid-cols-12 gap-6">
+      <div className="flex flex-col lg:grid lg:grid-cols-12 gap-6">
         {/* Products List */}
-        <div className="col-span-4">
+        <div className="lg:col-span-4">
           <Card className="glass border-0">
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -470,7 +470,7 @@ export default function ReverseEngineering() {
         </div>
 
         {/* Product Details & Analysis */}
-        <div className="col-span-8">
+        <div className="lg:col-span-8">
           {/* Analysis Progress Indicator */}
           {isAnalyzing && selectedProductData && (
             <div className="mb-6">

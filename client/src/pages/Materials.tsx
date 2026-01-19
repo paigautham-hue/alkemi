@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
-import { Plus, Search, GitBranch, TrendingDown, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Plus, Search, GitBranch, TrendingDown, AlertTriangle, CheckCircle2, Download, Trash2, CheckSquare, Square } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import MaterialCreateDialog from "@/components/MaterialCreateDialog";
@@ -18,6 +18,7 @@ export default function Materials() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [alternativesDialogOpen, setAlternativesDialogOpen] = useState(false);
   const [selectedMaterialId, setSelectedMaterialId] = useState<string | null>(null);
+  const [selectedMaterials, setSelectedMaterials] = useState<Set<string>>(new Set());
   const { data: materials, isLoading } = trpc.materials.list.useQuery({ search });
   const { data: alternatives, isLoading: alternativesLoading } = trpc.supplierIntelligence.findAlternatives.useQuery(
     { materialId: selectedMaterialId! },
@@ -65,9 +66,104 @@ export default function Materials() {
             {isLoading ? (
               <SkeletonTable rows={8} columns={7} />
             ) : materials && materials.length > 0 ? (
+              <>
+              {selectedMaterials.size > 0 && (
+                <div className="mb-4 flex items-center gap-2 p-3 bg-primary/10 border border-primary/20 rounded-lg">
+                  <Badge variant="default" className="px-3 py-1">
+                    {selectedMaterials.size} selected
+                  </Badge>
+                  <div className="flex gap-2 ml-auto">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        // Export selected materials as CSV
+                        const selectedData = materials?.filter(m => selectedMaterials.has(m.id)) || [];
+                        const csv = [
+                          ['Code', 'Name', 'Category', 'CAS Number', 'Density', 'Cost/kg', 'Currency'].join(','),
+                          ...selectedData.map(m => [
+                            m.code,
+                            m.name,
+                            m.category || '',
+                            m.casNumber || '',
+                            m.density || '',
+                            m.costPerKg || '',
+                            m.currency || ''
+                          ].join(','))
+                        ].join('\n');
+                        const blob = new Blob([csv], { type: 'text/csv' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `materials-${new Date().toISOString().split('T')[0]}.csv`;
+                        a.click();
+                        toast.success('Exported materials', { description: `${selectedMaterials.size} materials exported to CSV` });
+                      }}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Export CSV
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const selectedData = materials?.filter(m => selectedMaterials.has(m.id)) || [];
+                        const json = JSON.stringify(selectedData, null, 2);
+                        const blob = new Blob([json], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `materials-${new Date().toISOString().split('T')[0]}.json`;
+                        a.click();
+                        toast.success('Exported materials', { description: `${selectedMaterials.size} materials exported to JSON` });
+                      }}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Export JSON
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => {
+                        toast.error('Bulk delete not implemented', {
+                          description: 'This feature requires backend support for bulk deletion'
+                        });
+                      }}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete Selected
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setSelectedMaterials(new Set())}
+                    >
+                      Clear Selection
+                    </Button>
+                  </div>
+                </div>
+              )}
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-12">
+                      <button
+                        onClick={() => {
+                          if (selectedMaterials.size === materials?.length) {
+                            setSelectedMaterials(new Set());
+                          } else {
+                            setSelectedMaterials(new Set(materials?.map(m => m.id) || []));
+                          }
+                        }}
+                        className="flex items-center justify-center w-full h-full"
+                      >
+                        {selectedMaterials.size === materials?.length && materials?.length > 0 ? (
+                          <CheckSquare className="h-4 w-4 text-primary" />
+                        ) : (
+                          <Square className="h-4 w-4" />
+                        )}
+                      </button>
+                    </TableHead>
                     <TableHead>Code</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Category</TableHead>
@@ -79,7 +175,27 @@ export default function Materials() {
                 </TableHeader>
                 <TableBody>
                   {materials.map((material) => (
-                    <TableRow key={material.id}>
+                    <TableRow key={material.id} className={selectedMaterials.has(material.id) ? 'bg-primary/5' : ''}>
+                      <TableCell>
+                        <button
+                          onClick={() => {
+                            const newSelected = new Set(selectedMaterials);
+                            if (newSelected.has(material.id)) {
+                              newSelected.delete(material.id);
+                            } else {
+                              newSelected.add(material.id);
+                            }
+                            setSelectedMaterials(newSelected);
+                          }}
+                          className="flex items-center justify-center w-full h-full"
+                        >
+                          {selectedMaterials.has(material.id) ? (
+                            <CheckSquare className="h-4 w-4 text-primary" />
+                          ) : (
+                            <Square className="h-4 w-4" />
+                          )}
+                        </button>
+                      </TableCell>
                       <TableCell className="font-medium">{material.code}</TableCell>
                       <TableCell>{material.name}</TableCell>
                       <TableCell>{material.category || "-"}</TableCell>
@@ -116,6 +232,7 @@ export default function Materials() {
                   ))}
                 </TableBody>
               </Table>
+              </>
             ) : (
               <div className="text-center py-12">
                 <Package className="mx-auto h-12 w-12 text-muted-foreground/50" />

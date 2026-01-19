@@ -3,9 +3,13 @@
  * 
  * This module provides property prediction for formulations using LLM-based reasoning
  * with uncertainty quantification, confidence intervals, and feature importance.
+ * 
+ * UPGRADED: Uses Claude Sonnet 4.5 (balanced speed/quality) with fallback to Gemini 3 Flash
+ * for fast, accurate property predictions.
  */
 
 import { invokeLLM } from "./_core/llm";
+import { invokeLLMWithFallback } from "./services/llmService";
 import * as db from "./db";
 import * as physics from "./physicsModels";
 

@@ -13,6 +13,7 @@
 
 import { invokeLLM } from "./_core/llm";
 import * as db from "./db";
+import { invokeLLMWithFallback } from "./services/llmService";
 
 export interface PerformanceTranslationResult {
   technicalParameters: Record<string, { value: string; unit: string; confidence: number }>;
@@ -152,10 +153,12 @@ At the end, list:
 
   let textAnalysis: string;
   try {
-    const textResponse = await invokeLLM({
-      model: "claude-sonnet-4-5",
+    // Use upgraded LLM service with GPT-5.2 (superior reasoning) and fallback chain
+    const textResponse = await invokeLLMWithFallback({
+      useCase: "reverse-engineering",
+      enableFallback: true,
       temperature: 0.4,
-      max_tokens: 4000,
+      maxTokens: 4000,
       messages: [
         {
           role: "system",
@@ -168,8 +171,9 @@ At the end, list:
       ],
     });
     
-    textAnalysis = textResponse.choices[0].message.content as string;
-    console.log('[ReverseEngineering] Phase 1 text analysis received:', textAnalysis.substring(0, 500) + '...');
+    textAnalysis = textResponse.content;
+    console.log(`[ReverseEngineering] Phase 1 completed with ${textResponse.model} (${textResponse.latencyMs}ms, ${textResponse.tokensUsed} tokens, fallback: ${textResponse.fallbackUsed})`);
+    console.log('[ReverseEngineering] Analysis preview:', textAnalysis.substring(0, 500) + '...');
   } catch (error) {
     console.error('[ReverseEngineering] Phase 1 failed:', error);
     throw new Error('Failed to get text analysis from LLM');

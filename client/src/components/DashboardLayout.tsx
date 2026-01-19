@@ -27,6 +27,10 @@ import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { KeyboardShortcutsDialog } from './KeyboardShortcutsDialog';
+import { Keyboard } from 'lucide-react';
+import { toast } from 'sonner';
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
@@ -136,6 +140,43 @@ function DashboardLayoutContent({
   const sidebarRef = useRef<HTMLDivElement>(null);
   const activeMenuItem = menuItems.find(item => item.path === location);
   const isMobile = useIsMobile();
+  const [showShortcutsDialog, setShowShortcutsDialog] = useState(false);
+  const [showSearchDialog, setShowSearchDialog] = useState(false);
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts([
+    {
+      key: 'k',
+      ctrlKey: true,
+      callback: () => setShowSearchDialog(true),
+      description: 'Open global search',
+      category: 'Navigation',
+    },
+    {
+      key: 'n',
+      ctrlKey: true,
+      callback: () => {
+        setLocation('/formulations');
+        toast.success('Navigate to Formulations page to create a new formulation');
+      },
+      description: 'Create new formulation',
+      category: 'Actions',
+    },
+    {
+      key: 'b',
+      ctrlKey: true,
+      callback: () => toggleSidebar(),
+      description: 'Toggle sidebar',
+      category: 'Navigation',
+    },
+    {
+      key: '/',
+      ctrlKey: true,
+      callback: () => setShowShortcutsDialog(true),
+      description: 'Show keyboard shortcuts',
+      category: 'Help',
+    },
+  ]);
 
   useEffect(() => {
     if (isCollapsed) {
@@ -256,6 +297,13 @@ function DashboardLayoutContent({
                   <ThemeToggle />
                 </div>
                 <DropdownMenuItem
+                  onClick={() => setShowShortcutsDialog(true)}
+                  className="cursor-pointer"
+                >
+                  <Keyboard className="mr-2 h-4 w-4" />
+                  <span>Keyboard Shortcuts</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
                   onClick={logout}
                   className="cursor-pointer text-destructive focus:text-destructive"
                 >
@@ -294,6 +342,30 @@ function DashboardLayoutContent({
         )}
         <main className="flex-1 p-4">{children}</main>
       </SidebarInset>
+
+      <KeyboardShortcutsDialog
+        open={showShortcutsDialog}
+        onOpenChange={setShowShortcutsDialog}
+      />
+
+      {/* Global Search Dialog - Placeholder for now */}
+      {showSearchDialog && (
+        <div
+          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-start justify-center pt-20"
+          onClick={() => setShowSearchDialog(false)}
+        >
+          <div
+            className="w-full max-w-2xl bg-card border border-border rounded-lg shadow-lg p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-lg font-semibold mb-4">Global Search</h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Search functionality coming soon. This will allow you to search across materials, suppliers, formulations, and more.
+            </p>
+            <Button onClick={() => setShowSearchDialog(false)}>Close</Button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

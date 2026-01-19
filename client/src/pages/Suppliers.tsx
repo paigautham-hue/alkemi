@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
-import { Building2, Plus, Search } from "lucide-react";
+import { Building2, Plus, Search, Download, Trash2, CheckSquare, Square } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import SupplierCreateDialog from "@/components/SupplierCreateDialog";
@@ -15,6 +15,7 @@ import { SkeletonTable } from "@/components/SkeletonLoaders";
 export default function Suppliers() {
   const [search, setSearch] = useState("");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [selectedSuppliers, setSelectedSuppliers] = useState<Set<string>>(new Set());
   const { data: suppliers, isLoading } = trpc.suppliers.list.useQuery({ search });
 
   const getStatusBadge = (status: string) => {
@@ -72,9 +73,91 @@ export default function Suppliers() {
             {isLoading ? (
               <SkeletonTable rows={8} columns={6} />
             ) : suppliers && suppliers.length > 0 ? (
+              <>
+              {selectedSuppliers.size > 0 && (
+                <div className="mb-4 flex items-center gap-2 p-3 bg-primary/10 border border-primary/20 rounded-lg">
+                  <Badge variant="default" className="px-3 py-1">
+                    {selectedSuppliers.size} selected
+                  </Badge>
+                  <div className="flex gap-2 ml-auto">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const selectedData = suppliers?.filter(s => selectedSuppliers.has(s.id)) || [];
+                        const csv = [
+                          ['Code', 'Name', 'Country', 'Contact Email', 'Contact Phone', 'Risk Score', 'Status'].join(','),
+                          ...selectedData.map(s => [
+                            s.code,
+                            s.name,
+                            s.country || '',
+                            s.contactEmail || '',
+                            s.contactPhone || '',
+                            s.riskScore || '',
+                            s.qualificationStatus
+                          ].join(','))
+                        ].join('\n');
+                        const blob = new Blob([csv], { type: 'text/csv' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `suppliers-${new Date().toISOString().split('T')[0]}.csv`;
+                        a.click();
+                        toast.success('Exported suppliers', { description: `${selectedSuppliers.size} suppliers exported to CSV` });
+                      }}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Export CSV
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const selectedData = suppliers?.filter(s => selectedSuppliers.has(s.id)) || [];
+                        const json = JSON.stringify(selectedData, null, 2);
+                        const blob = new Blob([json], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `suppliers-${new Date().toISOString().split('T')[0]}.json`;
+                        a.click();
+                        toast.success('Exported suppliers', { description: `${selectedSuppliers.size} suppliers exported to JSON` });
+                      }}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Export JSON
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setSelectedSuppliers(new Set())}
+                    >
+                      Clear Selection
+                    </Button>
+                  </div>
+                </div>
+              )}
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-12">
+                      <button
+                        onClick={() => {
+                          if (selectedSuppliers.size === suppliers?.length) {
+                            setSelectedSuppliers(new Set());
+                          } else {
+                            setSelectedSuppliers(new Set(suppliers?.map(s => s.id) || []));
+                          }
+                        }}
+                        className="flex items-center justify-center w-full h-full"
+                      >
+                        {selectedSuppliers.size === suppliers?.length && suppliers?.length > 0 ? (
+                          <CheckSquare className="h-4 w-4 text-primary" />
+                        ) : (
+                          <Square className="h-4 w-4" />
+                        )}
+                      </button>
+                    </TableHead>
                     <TableHead>Code</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Country</TableHead>
@@ -86,7 +169,27 @@ export default function Suppliers() {
                 </TableHeader>
                 <TableBody>
                   {suppliers.map((supplier) => (
-                    <TableRow key={supplier.id}>
+                    <TableRow key={supplier.id} className={selectedSuppliers.has(supplier.id) ? 'bg-primary/5' : ''}>
+                      <TableCell>
+                        <button
+                          onClick={() => {
+                            const newSelected = new Set(selectedSuppliers);
+                            if (newSelected.has(supplier.id)) {
+                              newSelected.delete(supplier.id);
+                            } else {
+                              newSelected.add(supplier.id);
+                            }
+                            setSelectedSuppliers(newSelected);
+                          }}
+                          className="flex items-center justify-center w-full h-full"
+                        >
+                          {selectedSuppliers.has(supplier.id) ? (
+                            <CheckSquare className="h-4 w-4 text-primary" />
+                          ) : (
+                            <Square className="h-4 w-4" />
+                          )}
+                        </button>
+                      </TableCell>
                       <TableCell className="font-medium">{supplier.code}</TableCell>
                       <TableCell>{supplier.name}</TableCell>
                       <TableCell>{supplier.country || "-"}</TableCell>
@@ -122,6 +225,7 @@ export default function Suppliers() {
                   ))}
                 </TableBody>
               </Table>
+              </>
             ) : (
               <div className="text-center py-12">
                 <Building2 className="mx-auto h-12 w-12 text-muted-foreground/50" />

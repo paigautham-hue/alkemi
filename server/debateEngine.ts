@@ -4,9 +4,14 @@
  * This module implements a sophisticated debate system where multiple LLMs with
  * different personas discuss complex chemistry questions, critique each other's
  * responses, and synthesize a final answer with confidence scoring.
+ * 
+ * UPGRADED: Uses multi-model debate with GPT-5.2 (frontier reasoning), 
+ * Claude Opus 4.5 (nuanced perspectives), and Gemini 3 Pro (data-driven insights)
+ * for diverse expert consultation.
  */
 
 import { routeLLMRequest } from "./llmRouter";
+import { invokeMultiModelDebate, invokeLLMWithFallback } from "./services/llmService";
 import type { Message } from "./_core/llm";
 
 export interface DebateRequest {

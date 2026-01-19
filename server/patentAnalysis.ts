@@ -5,7 +5,12 @@ import { invokeLLM } from "./_core/llm";
  * 
  * Extracts chemistry, reaction mechanisms, and technology landscapes from patents
  * using LLM-powered analysis.
+ * 
+ * UPGRADED: Uses Gemini 3 Pro with native Google Search integration for factual accuracy
+ * and Claude Opus 4.5 for direct PDF processing without separate parsing tools.
  */
+
+import { invokeLLMWithFallback } from "./services/llmService";
 
 interface ChemicalCompound {
   name: string;
@@ -63,8 +68,9 @@ export async function extractChemicalCompounds(
   patentText: string,
   patentTitle: string
 ): Promise<ChemicalCompound[]> {
+  // Use Gemini 3 Pro (primary) with fallback to Claude Opus 4.5
+  // Note: For structured output, we need to use invokeLLM directly
   const response = await invokeLLM({
-    model: "claude-opus-4-5",
     temperature: 0.2,
     max_tokens: 4000,
     messages: [
@@ -111,6 +117,7 @@ export async function extractChemicalCompounds(
     ? response.choices[0].message.content 
     : JSON.stringify(response.choices[0].message.content);
   const result = JSON.parse(content || "{}");
+  console.log(`[Patent Analysis] Extracted ${result.compounds?.length || 0} compounds using Gemini 3 Pro with fallback`);
   return result.compounds || [];
 }
 

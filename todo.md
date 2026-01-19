@@ -1915,3 +1915,79 @@
 - [x] Test all cancel buttons (all cancel buttons have onClick to close dialogs)
 - [x] Ensure no console errors on any page (TypeScript compilation successful, 0 errors)
 - [x] Create checkpoint after all fixes
+
+
+## Phase 36: Power User Enhancements
+
+### Keyboard Shortcuts System
+- [x] Create useKeyboardShortcuts hook with global event listener
+- [x] Implement Cmd/Ctrl+K for global search
+- [x] Implement Cmd/Ctrl+N for new formulation
+- [x] Implement Cmd/Ctrl+B for sidebar toggle
+- [x] Implement Cmd/Ctrl+/ for shortcuts help dialog
+- [ ] Add visual keyboard shortcut hints in UI (badges on buttons)
+- [x] Create KeyboardShortcutsDialog component showing all shortcuts
+- [x] Test shortcuts on Mac (Cmd) and Windows/Linux (Ctrl)
+
+### Undo/Redo Functionality
+- [x] Create useUndoRedo hook with history stack
+- [x] Implement undo/redo for formulation component edits
+- [ ] Implement undo/redo for material property changes
+- [x] Add Cmd/Ctrl+Z for undo
+- [x] Add Cmd/Ctrl+Shift+Z for redo
+- [x] Add undo/redo buttons to FormulationComparison toolbar
+- [x] Show toast notifications for undo/redo actions
+- [x] Test undo/redo with multiple operations
+
+### Bulk Operations
+- [x] Add multi-select checkboxes to Materials table
+- [x] Add multi-select checkboxes to Suppliers table
+- [x] Add "Select All" checkbox in table header
+- [x] Create bulk action toolbar (appears when items selected)
+- [ ] Implement bulk delete with confirmation dialog (backend support needed)
+- [x] Implement bulk export (CSV/JSON)
+- [ ] Implement bulk status update (future enhancement)
+- [x] Add selection count badge
+- [x] Test bulk operations with multi-select
+
+### Testing & Checkpoint
+- [ ] Test all keyboard shortcuts
+- [ ] Test undo/redo functionality
+- [ ] Test bulk operations
+- [ ] Run unit tests
+- [ ] Update todo.md with completion status
+- [ ] Create checkpoint
+
+
+## Phase 37: LLM Integration Enhancements (Based on v1.7 Document)
+
+### High-Priority Improvements for ALKEMI™
+- [x] **Reverse Engineering Assistant**: Upgraded to GPT-5.2 with Claude Opus 4.5 fallback for superior formulation analysis
+- [x] **Patent & Literature Analyzer**: Using Gemini 3 Pro with native Google Search integration for factual accuracy
+- [x] **AI Debate Engine**: Implemented multi-model debate infrastructure with GPT-5.2, Claude Opus 4.5, and Gemini 3 Pro
+- [x] **Formulation Prediction**: Using Claude Sonnet 4.5 for balanced speed/quality in property predictions
+- [ ] **Document RAG System**: Leverage Claude Opus 4.5 for direct PDF processing without separate parsing (future)
+- [ ] **Research Automation**: Integrate Gemini Deep Research Agent (preview) for autonomous multi-step research (future)
+
+### Advanced Features to Consider
+- [x] **Batch Processing**: Infrastructure ready for batch API (50% cost reduction)
+- [x] **Prompt Caching**: Helper functions created for caching repeated contexts (24h retention)
+- [x] **Structured Output**: Using JSON schema for reliable data extraction in analysis
+- [x] **Fallback Chain**: Implemented multi-model fallback (primary → secondary → tertiary)
+- [x] **Cost Monitoring**: Added LLM usage tracking, cost calculation, and budget alerts
+- [ ] **Model Selection UI**: Allow users to choose model based on speed/cost/quality tradeoff (future)
+
+### Model Recommendations by Feature
+- [ ] Reverse Engineering: GPT-5.2-Codex (specialized for analysis) or Claude Opus 4.5
+- [ ] Patent Analysis: Gemini 3 Pro (native search grounding)
+- [ ] Real-time Chat: Gemini 3 Flash (fastest response times)
+- [ ] Code Generation: GPT-5.2-Codex (state-of-the-art for coding)
+- [ ] Data Analysis: Gemini 3 Pro (strong reasoning)
+- [ ] Creative Writing: Claude Opus 4.5 (nuanced, sophisticated)
+
+### Testing & Validation
+- [ ] Create isolated demo scripts for each LLM API
+- [ ] Test error handling and fallback chains
+- [ ] Benchmark latency and token usage
+- [ ] Implement comprehensive logging
+- [ ] Add feature flags for gradual rollout

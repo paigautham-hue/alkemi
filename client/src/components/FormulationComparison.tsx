@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
+import { useUndoRedo } from "@/hooks/useUndoRedo";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import {
   ArrowLeft,
   ArrowRight,
@@ -23,6 +25,8 @@ import {
   AlertCircle,
   Edit2,
   Save,
+  Undo2,
+  Redo2,
 } from "lucide-react";
 
 interface FormulationComparisonProps {
@@ -33,8 +37,37 @@ interface FormulationComparisonProps {
 export function FormulationComparison({ familyId, onClose }: FormulationComparisonProps) {
   const [baseVersionId, setBaseVersionId] = useState<string>("");
   const [targetVersionId, setTargetVersionId] = useState<string>("");
-  const [editedComponents, setEditedComponents] = useState<Record<string, number>>({});
+  const [editedComponents, undoRedoActions] = useUndoRedo<Record<string, number>>({});
   const [, setLocation] = useLocation();
+
+  // Keyboard shortcuts for undo/redo
+  useKeyboardShortcuts([
+    {
+      key: 'z',
+      ctrlKey: true,
+      callback: () => {
+        if (undoRedoActions.canUndo) {
+          undoRedoActions.undo();
+          toast.success('Undo', { description: 'Reverted last change' });
+        }
+      },
+      description: 'Undo',
+      category: 'Editing',
+    },
+    {
+      key: 'z',
+      ctrlKey: true,
+      shiftKey: true,
+      callback: () => {
+        if (undoRedoActions.canRedo) {
+          undoRedoActions.redo();
+          toast.success('Redo', { description: 'Reapplied last change' });
+        }
+      },
+      description: 'Redo',
+      category: 'Editing',
+    },
+  ]);
 
   // Fetch all versions for this family
   const { data: versions, isLoading: versionsLoading } = trpc.formulations.listVersions.useQuery({
@@ -72,7 +105,7 @@ export function FormulationComparison({ familyId, onClose }: FormulationComparis
           onClick: () => setLocation(`/formulations/${familyId}/versions/${data.id}`),
         },
       });
-      setEditedComponents({});
+      undoRedoActions.reset({});
       if (onClose) onClose();
     },
     onError: (error) => {
@@ -104,6 +137,9 @@ export function FormulationComparison({ familyId, onClose }: FormulationComparis
         percentage: editedComponents[comp.materialId] ?? parseFloat(comp.targetPercentage!),
         role: "component" as const,
       }));
+
+    // Reset undo/redo history after creating version
+    undoRedoActions.reset({});
 
     createVersionMutation.mutate({
       familyId,
@@ -368,9 +404,27 @@ export function FormulationComparison({ familyId, onClose }: FormulationComparis
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => setEditedComponents({})}
+                      onClick={() => undoRedoActions.reset({})}
                     >
                       Reset
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => undoRedoActions.undo()}
+                      disabled={!undoRedoActions.canUndo}
+                    >
+                      <Undo2 className="mr-2 h-4 w-4" />
+                      Undo
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => undoRedoActions.redo()}
+                      disabled={!undoRedoActions.canRedo}
+                    >
+                      <Redo2 className="mr-2 h-4 w-4" />
+                      Redo
                     </Button>
                     <Button
                       size="sm"
@@ -438,10 +492,10 @@ export function FormulationComparison({ familyId, onClose }: FormulationComparis
                             onChange={(e) => {
                               const value = parseFloat(e.target.value);
                               if (!isNaN(value) && value >= 0 && value <= 100) {
-                                setEditedComponents(prev => ({
-                                  ...prev,
+                                undoRedoActions.set({
+                                  ...editedComponents,
                                   [comp.materialId]: value
-                                }));
+                                });
                               }
                             }}
                             className={`h-7 w-20 text-right font-mono text-sm ${

@@ -1,0 +1,8 @@
+{
+  "query": "ALTER TABLE materials \nADD COLUMN hansen_d DECIMAL(6, 2) COMMENT 'Hansen Dispersion Parameter (MPa^0.5)',\nADD COLUMN hansen_p DECIMAL(6, 2) COMMENT 'Hansen Polar Parameter (MPa^0.5)',\nADD COLUMN hansen_h DECIMAL(6, 2) COMMENT 'Hansen Hydrogen Bonding Parameter (MPa^0.5)';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2w11Z6tqxKEYk6i.b24f818d37b4 --database MSgBPeo7wAzRH3Z9eLPB2M --execute ALTER TABLE materials \nADD COLUMN hansen_d DECIMAL(6, 2) COMMENT 'Hansen Dispersion Parameter (MPa^0.5)',\nADD COLUMN hansen_p DECIMAL(6, 2) COMMENT 'Hansen Polar Parameter (MPa^0.5)',\nADD COLUMN hansen_h DECIMAL(6, 2) COMMENT 'Hansen Hydrogen Bonding Parameter (MPa^0.5)';",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1060 (42S21) at line 1: Duplicate column name 'hansen_d'"
+  ]
+}

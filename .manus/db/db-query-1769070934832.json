@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS compliance_sources (\n  id VARCHAR(36) PRIMARY KEY,\n  code VARCHAR(50) NOT NULL UNIQUE COMMENT 'e.g., ECHA_SVHC, FDA_FCN',\n  name VARCHAR(255) NOT NULL,\n  description TEXT,\n  url VARCHAR(500) COMMENT 'Official source URL for audit',\n  organization_id VARCHAR(36),\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n  FOREIGN KEY (organization_id) REFERENCES organizations(id)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2w11Z6tqxKEYk6i.b24f818d37b4 --database MSgBPeo7wAzRH3Z9eLPB2M --execute CREATE TABLE IF NOT EXISTS compliance_sources (\n  id VARCHAR(36) PRIMARY KEY,\n  code VARCHAR(50) NOT NULL UNIQUE COMMENT 'e.g., ECHA_SVHC, FDA_FCN',\n  name VARCHAR(255) NOT NULL,\n  description TEXT,\n  url VARCHAR(500) COMMENT 'Official source URL for audit',\n  organization_id VARCHAR(36),\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n  FOREIGN KEY (organization_id) REFERENCES organizations(id)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1513
+}

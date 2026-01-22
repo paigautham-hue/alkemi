@@ -13,6 +13,9 @@ import { invokeLLMWithFallback } from "./services/llmService";
 import * as db from "./db";
 import * as physics from "./physicsModels";
 import { retrieveMemories, injectMemoryContext } from "./services/agentMemorySystem";
+import { physicsValidator } from "./services/physicsValidation";
+import { uncertaintyQuantifier } from "./services/uncertaintyQuantification";
+import { contentRedactor } from "./services/contentRedaction";
 
 export interface PredictionRequest {
   organizationId: string;
@@ -34,6 +37,19 @@ export interface PredictionResult {
   uncertaintyUpper: number;
   confidenceLevel: number;
   probabilityInSpec?: number;
+  uncertaintyBreakdown?: {
+    sources: {
+      model: number;
+      data: number;
+      extrapolation: number;
+    };
+    riskLevel: {
+      level: 'low' | 'moderate' | 'high' | 'very_high';
+      color: string;
+      recommendation: string;
+    };
+    formattedPrediction: string;
+  };
   modelName: string;
   modelVersion: string;
   featureImportance: Array<{
@@ -45,6 +61,12 @@ export interface PredictionResult {
   physicsBasedPredictions?: physics.PhysicsPredictionResult[];
   compatibilityAssessment?: ReturnType<typeof physics.assessCompatibility>;
   hansenParameters?: ReturnType<typeof physics.calculateFormulationHSP>;
+  physicsValidation?: {
+    isValid: boolean;
+    errors: string[];
+    warnings: string[];
+    calculations?: any;
+  };
   memorySources?: Array<{
     id: number;
     fact: string;
@@ -94,7 +116,36 @@ export async function predictProperty(
     })
   );
 
-  // 3.5 Run physics-based predictions
+  // 3.5 Validate formulation physics BEFORE prediction
+  const validationComponents = materialsWithProperties.map(mp => ({
+    materialId: mp.component.materialId,
+    materialName: mp.material?.name || 'Unknown',
+    percentage: parseFloat(mp.component.percentage),
+    viscosity: mp.material?.viscosity ? parseFloat(mp.material.viscosity) : undefined,
+    hansen_d: mp.material?.hansenD ? parseFloat(mp.material.hansenD) : undefined,
+    hansen_p: mp.material?.hansenP ? parseFloat(mp.material.hansenP) : undefined,
+    hansen_h: mp.material?.hansenH ? parseFloat(mp.material.hansenH) : undefined,
+  }));
+  
+  const physicsValidation = await physicsValidator.validate({
+    id: formulation.id,
+    name: `Formulation ${formulation.versionNumber}`,
+    components: validationComponents,
+  });
+  
+  // If physics validation fails, throw error with details
+  if (!physicsValidation.isValid) {
+    throw new Error(
+      `Physics validation failed:\n${physicsValidation.errors.join('\n')}`
+    );
+  }
+  
+  // Log warnings but continue
+  if (physicsValidation.warnings.length > 0) {
+    console.warn('[PredictionEngine] Physics warnings:', physicsValidation.warnings);
+  }
+
+  // 3.6 Run physics-based predictions
   const physicsComponents: physics.FormulationComponent[] = materialsWithProperties.map(mp => ({
     materialId: mp.component.materialId,
     percentage: parseFloat(mp.component.percentage),
@@ -168,23 +219,46 @@ export async function predictProperty(
     relevantMemories
   );
 
-  // 6. Calculate probability in spec if target spec provided
+  // 6. Calculate probability in spec using new UQ service
   let probabilityInSpec: number | undefined;
-  if (request.targetSpec && (request.targetSpec.min !== undefined || request.targetSpec.max !== undefined)) {
-    probabilityInSpec = calculateProbabilityInSpec(
+  let uncertaintyBreakdown: any;
+  
+  if (request.targetSpec && request.targetSpec.min !== undefined && request.targetSpec.max !== undefined) {
+    // Calculate standard deviation from confidence interval
+    const sigma = (prediction.uncertaintyUpper - prediction.uncertaintyLower) / (2 * 1.96);
+    
+    // Use new uncertainty quantification service
+    const uqResult = uncertaintyQuantifier.quantify(
       prediction.predictedValue,
-      prediction.uncertaintyLower,
-      prediction.uncertaintyUpper,
-      request.targetSpec
+      sigma,
+      {
+        minValue: request.targetSpec.min,
+        maxValue: request.targetSpec.max,
+        unit: request.targetSpec.unit || '',
+      },
+      {
+        modelConfidence: prediction.confidenceLevel,
+        dataQuality: 0.85, // Heuristic - would come from training data quality in production
+        isExtrapolation: false, // Would check if formulation is outside training range
+      }
     );
+    
+    probabilityInSpec = uqResult.probabilityInSpec;
+    uncertaintyBreakdown = {
+      sources: uqResult.uncertaintySources,
+      riskLevel: uncertaintyQuantifier.getRiskLevel(uqResult.probabilityInSpec),
+      formattedPrediction: uncertaintyQuantifier.formatPrediction(uqResult, request.targetSpec.unit || ''),
+    };
   }
 
   return {
     ...prediction,
     probabilityInSpec,
+    uncertaintyBreakdown,
     physicsBasedPredictions: physicsResults.predictions,
     compatibilityAssessment: physicsResults.compatibility,
     hansenParameters: physicsResults.hsp,
+    physicsValidation,
   };
 }
 

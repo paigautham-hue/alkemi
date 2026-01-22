@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS compliance_datasets (\n  id VARCHAR(36) PRIMARY KEY,\n  source_id VARCHAR(36) NOT NULL,\n  version VARCHAR(50) NOT NULL COMMENT 'e.g., 2026-01-15, v2.3',\n  effective_date DATE NOT NULL COMMENT 'When this version became effective',\n  is_current BOOLEAN DEFAULT FALSE COMMENT 'Is this the current active version?',\n  description TEXT,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  FOREIGN KEY (source_id) REFERENCES compliance_sources(id) ON DELETE CASCADE,\n  UNIQUE KEY unique_source_version (source_id, version)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2w11Z6tqxKEYk6i.b24f818d37b4 --database MSgBPeo7wAzRH3Z9eLPB2M --execute CREATE TABLE IF NOT EXISTS compliance_datasets (\n  id VARCHAR(36) PRIMARY KEY,\n  source_id VARCHAR(36) NOT NULL,\n  version VARCHAR(50) NOT NULL COMMENT 'e.g., 2026-01-15, v2.3',\n  effective_date DATE NOT NULL COMMENT 'When this version became effective',\n  is_current BOOLEAN DEFAULT FALSE COMMENT 'Is this the current active version?',\n  description TEXT,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  FOREIGN KEY (source_id) REFERENCES compliance_sources(id) ON DELETE CASCADE,\n  UNIQUE KEY unique_source_version (source_id, version)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1557
+}

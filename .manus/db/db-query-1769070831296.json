@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS test_condition_parameters (\n  id VARCHAR(36) PRIMARY KEY,\n  condition_set_id VARCHAR(36) NOT NULL,\n  condition_type_id VARCHAR(36) NOT NULL,\n  value VARCHAR(255) NOT NULL,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  FOREIGN KEY (condition_set_id) REFERENCES test_condition_sets(id) ON DELETE CASCADE,\n  FOREIGN KEY (condition_type_id) REFERENCES test_condition_types(id),\n  UNIQUE KEY unique_set_type (condition_set_id, condition_type_id)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2w11Z6tqxKEYk6i.b24f818d37b4 --database MSgBPeo7wAzRH3Z9eLPB2M --execute CREATE TABLE IF NOT EXISTS test_condition_parameters (\n  id VARCHAR(36) PRIMARY KEY,\n  condition_set_id VARCHAR(36) NOT NULL,\n  condition_type_id VARCHAR(36) NOT NULL,\n  value VARCHAR(255) NOT NULL,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  FOREIGN KEY (condition_set_id) REFERENCES test_condition_sets(id) ON DELETE CASCADE,\n  FOREIGN KEY (condition_type_id) REFERENCES test_condition_types(id),\n  UNIQUE KEY unique_set_type (condition_set_id, condition_type_id)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1517
+}

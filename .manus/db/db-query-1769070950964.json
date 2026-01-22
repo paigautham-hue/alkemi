@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS compliance_rules (\n  id VARCHAR(36) PRIMARY KEY,\n  dataset_id VARCHAR(36) NOT NULL,\n  cas_number VARCHAR(50),\n  material_name VARCHAR(255),\n  rule_type ENUM('banned', 'restricted', 'notification_required', 'approved') NOT NULL,\n  max_concentration_pct DECIMAL(5, 2) COMMENT 'Maximum allowed concentration (%)',\n  rationale TEXT COMMENT 'Why this rule exists (provenance)',\n  reference_document VARCHAR(500) COMMENT 'Official document reference',\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  FOREIGN KEY (dataset_id) REFERENCES compliance_datasets(id) ON DELETE CASCADE,\n  INDEX idx_cas_number (cas_number),\n  INDEX idx_material_name (material_name)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2w11Z6tqxKEYk6i.b24f818d37b4 --database MSgBPeo7wAzRH3Z9eLPB2M --execute CREATE TABLE IF NOT EXISTS compliance_rules (\n  id VARCHAR(36) PRIMARY KEY,\n  dataset_id VARCHAR(36) NOT NULL,\n  cas_number VARCHAR(50),\n  material_name VARCHAR(255),\n  rule_type ENUM('banned', 'restricted', 'notification_required', 'approved') NOT NULL,\n  max_concentration_pct DECIMAL(5, 2) COMMENT 'Maximum allowed concentration (%)',\n  rationale TEXT COMMENT 'Why this rule exists (provenance)',\n  reference_document VARCHAR(500) COMMENT 'Official document reference',\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  FOREIGN KEY (dataset_id) REFERENCES compliance_datasets(id) ON DELETE CASCADE,\n  INDEX idx_cas_number (cas_number),\n  INDEX idx_material_name (material_name)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1498
+}

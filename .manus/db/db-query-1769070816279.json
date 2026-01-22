@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS test_condition_types (\n  id VARCHAR(36) PRIMARY KEY,\n  domain_id VARCHAR(36) NOT NULL,\n  `key` VARCHAR(50) NOT NULL,\n  name VARCHAR(100) NOT NULL,\n  value_type ENUM('numeric', 'text', 'enum') NOT NULL,\n  unit VARCHAR(20),\n  enum_values JSON,\n  default_value VARCHAR(100),\n  min_value DECIMAL(10, 4),\n  max_value DECIMAL(10, 4),\n  is_required BOOLEAN DEFAULT FALSE,\n  display_order INT DEFAULT 0,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  FOREIGN KEY (domain_id) REFERENCES domains(id),\n  UNIQUE KEY unique_domain_key (domain_id, `key`)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2w11Z6tqxKEYk6i.b24f818d37b4 --database MSgBPeo7wAzRH3Z9eLPB2M --execute CREATE TABLE IF NOT EXISTS test_condition_types (\n  id VARCHAR(36) PRIMARY KEY,\n  domain_id VARCHAR(36) NOT NULL,\n  `key` VARCHAR(50) NOT NULL,\n  name VARCHAR(100) NOT NULL,\n  value_type ENUM('numeric', 'text', 'enum') NOT NULL,\n  unit VARCHAR(20),\n  enum_values JSON,\n  default_value VARCHAR(100),\n  min_value DECIMAL(10, 4),\n  max_value DECIMAL(10, 4),\n  is_required BOOLEAN DEFAULT FALSE,\n  display_order INT DEFAULT 0,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  FOREIGN KEY (domain_id) REFERENCES domains(id),\n  UNIQUE KEY unique_domain_key (domain_id, `key`)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1854
+}

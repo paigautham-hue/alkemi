@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { useLocation } from "wouter";
 import { useUndoRedo } from "@/hooks/useUndoRedo";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { PhysicsValidationPanel } from "@/components/PhysicsValidationPanel";
 import {
   ArrowLeft,
   ArrowRight,
@@ -326,6 +327,20 @@ export function FormulationComparison({ familyId, onClose }: FormulationComparis
               </div>
             </CardContent>
           </Card>
+
+          {/* Physics Validation for Target Version */}
+          {targetVersionId && (
+            <PhysicsValidationPanel
+              validation={trpc.physicsValidation.validate.useQuery(
+                { formulationId: targetVersionId },
+                { enabled: !!targetVersionId }
+              ).data ?? null}
+              isLoading={trpc.physicsValidation.validate.useQuery(
+                { formulationId: targetVersionId },
+                { enabled: !!targetVersionId }
+              ).isLoading}
+            />
+          )}
 
           {/* Version Metadata Comparison */}
           <Card className="glass">

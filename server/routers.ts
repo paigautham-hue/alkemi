@@ -2309,6 +2309,51 @@ export const appRouter = router({
   // ==========================================================
   // LLM COST DASHBOARD
   // ==========================================================
+  // ==========================================================
+  // PHYSICS VALIDATION
+  // ==========================================================
+  physicsValidation: router({
+    validate: protectedProcedure
+      .input(z.object({
+        formulationId: z.string().uuid(),
+      }))
+      .query(async ({ ctx, input }) => {
+        const { physicsValidator } = await import("./services/physicsValidation");
+        
+        // Get formulation version
+        const version = await db.getFormulationVersionById(input.formulationId, ctx.user.organizationId);
+        if (!version) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Formulation not found",
+          });
+        }
+        
+        // Get components with material details
+        const componentsData = await db.getFormulationComponents(input.formulationId, ctx.user.organizationId);
+        
+        // Transform to format expected by physics validator
+        const formulation = {
+          id: version.id,
+          name: version.versionNumber,
+          components: componentsData.map(c => ({
+            materialId: c.component.materialId,
+            materialName: c.material.name,
+            percentage: parseFloat(c.component.percentage),
+            viscosity: c.material.viscosity ? parseFloat(c.material.viscosity) : undefined,
+            hansen_d: c.material.hansenD ? parseFloat(c.material.hansenD) : undefined,
+            hansen_p: c.material.hansenP ? parseFloat(c.material.hansenP) : undefined,
+            hansen_h: c.material.hansenH ? parseFloat(c.material.hansenH) : undefined,
+          })),
+        };
+        
+        return physicsValidator.validate(formulation);
+      }),
+  }),
+
+  // ==========================================================
+  // LLM COST MONITORING
+  // ==========================================================
   llmCost: router({
     stats: protectedProcedure
       .input(z.object({

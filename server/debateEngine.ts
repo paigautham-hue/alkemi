@@ -13,6 +13,7 @@
 import { routeLLMRequest } from "./llmRouter";
 import { invokeMultiModelDebate, invokeLLMWithFallback } from "./services/llmService";
 import type { Message } from "./_core/llm";
+import { retrieveMemories } from "./services/agentMemorySystem";
 
 export interface DebateRequest {
   organizationId: string;
@@ -40,6 +41,12 @@ export interface DebateResult {
   disagreements: string[];
   recommendations: string[];
   auditLogIds: string[];
+  memorySources?: Array<{
+    id: number;
+    fact: string;
+    confidence: number;
+    category: string;
+  }>;
 }
 
 /**
@@ -84,10 +91,67 @@ export async function conductDebate(
   // Select personas for this debate
   const selectedPersonas = selectPersonas(numParticipants, request.domain);
 
+  // Phase 0: Retrieve relevant memories for context-aware debate
+  console.log("[DebateEngine] Phase 0: Retrieving relevant memories...");
+  let relevantMemories: any[] = [];
+  let memoryContext = '';
+  try {
+    // Get formulation insights
+    const formulationMemories = await retrieveMemories({
+      organizationId: request.organizationId,
+      query: request.question,
+      category: 'formulation_insight',
+      maxResults: 5,
+      verify: false,
+    });
+    
+    // Get troubleshooting memories
+    const troubleshootingMemories = await retrieveMemories({
+      organizationId: request.organizationId,
+      query: request.question,
+      category: 'troubleshooting',
+      maxResults: 3,
+      verify: false,
+    });
+    
+    // Get trial learnings
+    const trialMemories = await retrieveMemories({
+      organizationId: request.organizationId,
+      query: request.question,
+      category: 'trial_learning',
+      maxResults: 3,
+      verify: false,
+    });
+    
+    relevantMemories = [
+      ...formulationMemories,
+      ...troubleshootingMemories,
+      ...trialMemories,
+    ];
+    
+    if (relevantMemories.length > 0) {
+      memoryContext = '\n\n## Organizational Knowledge Base\n' +
+        'The following insights have been learned from previous analyses and trials:\n\n' +
+        relevantMemories.map((m, i) => 
+          `[Knowledge ${i + 1}] (${(m.confidence * 100).toFixed(0)}% confidence, ${m.category}):\n${m.fact}`
+        ).join('\n\n');
+      console.log(`[DebateEngine] Injected ${relevantMemories.length} memories for context`);
+    }
+  } catch (error) {
+    console.warn('[DebateEngine] Failed to retrieve memories:', error);
+    // Continue without memories - non-critical
+  }
+
+  // Enhance request context with memories
+  const enhancedRequest = {
+    ...request,
+    context: (request.context || '') + memoryContext,
+  };
+
   // Phase 1: Initial responses from each persona
   console.log("[DebateEngine] Phase 1: Collecting initial responses...");
   const initialResponses = await collectInitialResponses(
-    request,
+    enhancedRequest,
     selectedPersonas
   );
 
@@ -124,6 +188,14 @@ export async function conductDebate(
     synthesis.auditLogId,
   ];
 
+  // Build memory sources for UI display
+  const memorySources = relevantMemories.map(m => ({
+    id: m.id,
+    fact: m.fact,
+    confidence: m.confidence,
+    category: m.category,
+  }));
+
   return {
     question: request.question,
     participants: finalPositions.map((fp, idx) => ({
@@ -139,6 +211,7 @@ export async function conductDebate(
     disagreements: synthesis.disagreements,
     recommendations: synthesis.recommendations,
     auditLogIds,
+    memorySources: memorySources.length > 0 ? memorySources : undefined,
   };
 }
 

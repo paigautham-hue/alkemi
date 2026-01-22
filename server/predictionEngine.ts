@@ -12,6 +12,7 @@ import { invokeLLM } from "./_core/llm";
 import { invokeLLMWithFallback } from "./services/llmService";
 import * as db from "./db";
 import * as physics from "./physicsModels";
+import { retrieveMemories, injectMemoryContext } from "./services/agentMemorySystem";
 
 export interface PredictionRequest {
   organizationId: string;
@@ -44,6 +45,11 @@ export interface PredictionResult {
   physicsBasedPredictions?: physics.PhysicsPredictionResult[];
   compatibilityAssessment?: ReturnType<typeof physics.assessCompatibility>;
   hansenParameters?: ReturnType<typeof physics.calculateFormulationHSP>;
+  memorySources?: Array<{
+    id: number;
+    fact: string;
+    confidence: number;
+  }>;
 }
 
 /**
@@ -116,11 +122,50 @@ export async function predictProperty(
     testConditions
   );
 
-  // 5. Invoke LLM for prediction with structured output
+  // 4.5 Retrieve relevant memories for context-aware predictions
+  const materialNames = materialsWithProperties.map(m => m.material?.name || '').filter(Boolean);
+  const memoryQuery = `${request.propertyName} prediction for formulation with ${materialNames.join(', ')}`;
+  
+  let relevantMemories: any[] = [];
+  let memoryContext = '';
+  try {
+    relevantMemories = await retrieveMemories({
+      organizationId: request.organizationId,
+      query: memoryQuery,
+      category: 'formulation_insight',
+      maxResults: 5,
+      verify: false, // Skip verification for speed
+    });
+    
+    // Also get material property memories
+    const materialMemories = await retrieveMemories({
+      organizationId: request.organizationId,
+      query: materialNames.join(' '),
+      category: 'material_property',
+      maxResults: 3,
+      verify: false,
+    });
+    
+    relevantMemories = [...relevantMemories, ...materialMemories];
+    
+    if (relevantMemories.length > 0) {
+      memoryContext = '\n\n## Relevant Knowledge from Previous Analyses\n' +
+        relevantMemories.map((m, i) => 
+          `[Memory ${i + 1}] (${(m.confidence * 100).toFixed(0)}% confidence): ${m.fact}`
+        ).join('\n');
+      console.log(`[PredictionEngine] Injected ${relevantMemories.length} memories for context`);
+    }
+  } catch (error) {
+    console.warn('[PredictionEngine] Failed to retrieve memories:', error);
+    // Continue without memories - non-critical
+  }
+
+  // 5. Invoke LLM for prediction with structured output (including memory context)
   const prediction = await invokeLLMForPrediction(
-    formulationContext,
+    formulationContext + memoryContext,
     request.propertyName,
-    request.targetSpec
+    request.targetSpec,
+    relevantMemories
   );
 
   // 6. Calculate probability in spec if target spec provided
@@ -202,8 +247,9 @@ ${testConditionsList}
 async function invokeLLMForPrediction(
   formulationContext: string,
   propertyName: string,
-  targetSpec?: { min?: number; max?: number; unit?: string }
-): Promise<Omit<PredictionResult, "probabilityInSpec">> {
+  targetSpec?: { min?: number; max?: number; unit?: string },
+  relevantMemories?: any[]
+): Promise<Omit<PredictionResult, "probabilityInSpec"> & { memorySources?: Array<{ id: number; fact: string; confidence: number }> }> {
   const specContext = targetSpec
     ? `\n\nTarget Specification:\n- Min: ${targetSpec.min !== undefined ? targetSpec.min : "N/A"}\n- Max: ${targetSpec.max !== undefined ? targetSpec.max : "N/A"}\n- Unit: ${targetSpec.unit || "N/A"}`
     : "";
@@ -222,8 +268,11 @@ Consider:
 - Material properties (Hansen parameters, viscosity, density, molecular weight)
 - Typical ranges for this property in the domain
 - Component percentages and their influence
+- Any relevant knowledge from previous analyses provided in the context
 
-Be conservative with uncertainty estimates - it's better to have wider bounds than overconfident narrow ones.`;
+Be conservative with uncertainty estimates - it's better to have wider bounds than overconfident narrow ones.
+
+If relevant knowledge from previous analyses is provided, incorporate those insights into your prediction and reasoning.`;
 
   const userPrompt = `${formulationContext}${specContext}
 
@@ -310,6 +359,13 @@ Provide your prediction in the following structured format.`;
 
     const parsed = JSON.parse(content);
 
+    // Build memory sources for UI display
+    const memorySources = relevantMemories?.map(m => ({
+      id: m.id,
+      fact: m.fact,
+      confidence: m.confidence,
+    }));
+
     return {
       predictedValue: parsed.predictedValue,
       unit: parsed.unit,
@@ -320,6 +376,7 @@ Provide your prediction in the following structured format.`;
       modelVersion: "1.0",
       featureImportance: parsed.featureImportance,
       reasoning: parsed.reasoning,
+      memorySources,
     };
   } catch (error) {
     console.error("[PredictionEngine] LLM invocation failed:", error);

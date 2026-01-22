@@ -2048,3 +2048,18 @@
 - [x] Add budget alert configuration UI
 - [x] Add export to CSV functionality
 - [x] Add navigation link in sidebar
+
+
+## Phase 40: Memory Integration with Predictions and AI Debate
+
+### Predictions Memory Integration
+- [x] Modify predictionEngine.ts to retrieve relevant memories
+- [x] Inject memory context into prediction prompts
+- [x] Return memory sources in prediction results (for UI display)
+- [x] Test predictions with and without memory context
+
+### AI Debate Memory Integration
+- [x] Modify debateEngine.ts to retrieve relevant memories
+- [x] Inject memory context into debate prompts for each expert
+- [x] Return memory sources in debate responses (for UI display)
+- [x] Test debate with memory-enhanced context

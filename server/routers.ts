@@ -2173,5 +2173,108 @@ export const appRouter = router({
         return db.updateImprovementAction(id, ctx.user.organizationId, data);
       }),
   }),
+
+  // ==========================================================
+  // AGENTIC MEMORY SYSTEM
+  // ==========================================================
+  memory: router({
+    store: protectedProcedure
+      .input(z.object({
+        fact: z.string().min(1),
+        rationale: z.string().optional(),
+        category: z.enum([
+          "formulation_insight", "material_property", "process_parameter",
+          "trial_learning", "supplier_intelligence", "compliance_rule",
+          "troubleshooting", "cost_optimization", "quality_insight"
+        ]),
+        citations: z.array(z.object({
+          type: z.enum(["trial", "formulation", "material", "document", "external"]),
+          id: z.string(),
+          title: z.string(),
+          url: z.string().optional(),
+        })).optional(),
+        tags: z.array(z.string()).optional(),
+        confidence: z.number().min(0).max(1).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { storeMemory } = await import("./services/agentMemorySystem");
+        return storeMemory({
+          organizationId: ctx.user.organizationId,
+          openId: ctx.user.openId,
+          ...input,
+        });
+      }),
+
+    retrieve: protectedProcedure
+      .input(z.object({
+        query: z.string(),
+        category: z.enum([
+          "formulation_insight", "material_property", "process_parameter",
+          "trial_learning", "supplier_intelligence", "compliance_rule",
+          "troubleshooting", "cost_optimization", "quality_insight"
+        ]).optional(),
+        tags: z.array(z.string()).optional(),
+        maxResults: z.number().min(1).max(50).optional(),
+        verify: z.boolean().optional(),
+      }))
+      .query(async ({ ctx, input }) => {
+        const { retrieveMemories } = await import("./services/agentMemorySystem");
+        return retrieveMemories({
+          organizationId: ctx.user.organizationId,
+          ...input,
+        });
+      }),
+
+    stats: protectedProcedure
+      .query(async ({ ctx }) => {
+        const { getMemoryStats } = await import("./services/agentMemorySystem");
+        return getMemoryStats(ctx.user.organizationId);
+      }),
+
+    cleanup: adminProcedure
+      .input(z.object({ olderThanDays: z.number().min(1).max(365).optional() }))
+      .mutation(async ({ ctx, input }) => {
+        const { cleanupInvalidMemories } = await import("./services/agentMemorySystem");
+        return cleanupInvalidMemories(ctx.user.organizationId, input.olderThanDays);
+      }),
+  }),
+
+  // ==========================================================
+  // DEEP RESEARCH
+  // ==========================================================
+  research: router({
+    conduct: protectedProcedure
+      .input(z.object({
+        question: z.string().min(1),
+        domain: z.string().optional(),
+        depth: z.enum(["quick", "standard", "deep"]).optional(),
+        maxSources: z.number().min(1).max(50).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { conductDeepResearch } = await import("./services/deepResearchAgent");
+        return conductDeepResearch(input);
+      }),
+
+    literatureReview: protectedProcedure
+      .input(z.object({ topic: z.string().min(1), maxPapers: z.number().optional() }))
+      .mutation(async ({ input }) => {
+        const { conductLiteratureReview } = await import("./services/deepResearchAgent");
+        return conductLiteratureReview(input);
+      }),
+
+    competitiveIntelligence: protectedProcedure
+      .input(z.object({ competitor: z.string().min(1), productCategory: z.string().min(1) }))
+      .mutation(async ({ input }) => {
+        const { conductCompetitiveIntelligence } = await import("./services/deepResearchAgent");
+        return conductCompetitiveIntelligence(input);
+      }),
+
+    supplierResearch: protectedProcedure
+      .input(z.object({ material: z.string().min(1), region: z.string().optional() }))
+      .mutation(async ({ input }) => {
+        const { conductSupplierResearch } = await import("./services/deepResearchAgent");
+        return conductSupplierResearch(input);
+      }),
+  }),
 });
 export type AppRouter = typeof appRouter;

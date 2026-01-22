@@ -1,0 +1,8 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS agent_memories (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  organization_id VARCHAR(255) NOT NULL,\n  open_id VARCHAR(255),\n  fact TEXT NOT NULL,\n  rationale TEXT,\n  category VARCHAR(50) NOT NULL DEFAULT 'formulation_insight',\n  confidence DECIMAL(3,2) DEFAULT 0.80,\n  citations JSON,\n  tags JSON,\n  source_hash VARCHAR(64),\n  verified_at TIMESTAMP NULL,\n  is_valid BOOLEAN DEFAULT TRUE,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n  INDEX idx_org_category (organization_id, category),\n  INDEX idx_valid (is_valid)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2w11Z6tqxKEYk6i.b24f818d37b4 --database MSgBPeo7wAzRH3Z9eLPB2M --execute CREATE TABLE IF NOT EXISTS agent_memories (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  organization_id VARCHAR(255) NOT NULL,\n  open_id VARCHAR(255),\n  fact TEXT NOT NULL,\n  rationale TEXT,\n  category VARCHAR(50) NOT NULL DEFAULT 'formulation_insight',\n  confidence DECIMAL(3,2) DEFAULT 0.80,\n  citations JSON,\n  tags JSON,\n  source_hash VARCHAR(64),\n  verified_at TIMESTAMP NULL,\n  is_valid BOOLEAN DEFAULT TRUE,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n  INDEX idx_org_category (organization_id, category),\n  INDEX idx_valid (is_valid)\n);",
+  "returncode": 1,
+  "logs": [
+    "ERROR 3780 (HY000) at line 1: Referencing column 'memory_id' and referenced column 'id' in foreign key constraint 'fk_1' are incompatible."
+  ]
+}

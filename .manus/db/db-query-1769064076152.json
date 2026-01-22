@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS memory_usage_logs (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  memory_id INT NOT NULL,\n  used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  use_case VARCHAR(100),\n  was_helpful BOOLEAN,\n  INDEX idx_memory (memory_id)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2w11Z6tqxKEYk6i.b24f818d37b4 --database MSgBPeo7wAzRH3Z9eLPB2M --execute CREATE TABLE IF NOT EXISTS memory_usage_logs (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  memory_id INT NOT NULL,\n  used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  use_case VARCHAR(100),\n  was_helpful BOOLEAN,\n  INDEX idx_memory (memory_id)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1549
+}

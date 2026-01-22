@@ -14,6 +14,7 @@
 import { invokeLLM } from "./_core/llm";
 import * as db from "./db";
 import { invokeLLMWithFallback } from "./services/llmService";
+import { storeMemory } from "./services/agentMemorySystem";
 
 export interface PerformanceTranslationResult {
   technicalParameters: Record<string, { value: string; unit: string; confidence: number }>;
@@ -640,6 +641,18 @@ export async function performCompleteAnalysis(
   // Update product status
   await db.updateCompetitorProduct(productId, product.organizationId, { analysisStatus: 'completed' });
 
+  // Auto-store key insights as memories
+  await storeReverseEngineeringMemories(
+    product.organizationId,
+    userId,
+    product.productName,
+    product.manufacturer,
+    productId,
+    performanceTranslation,
+    formulationStrategy,
+    targetProductProfile
+  );
+
   console.log('[ReverseEngineering] Analysis complete for:', product.productName);
 
   return {
@@ -658,4 +671,120 @@ function calculateOverallConfidence(
   const confidences = Object.values(technicalParameters).map(p => p.confidence);
   if (confidences.length === 0) return 0.5;
   return confidences.reduce((sum, c) => sum + c, 0) / confidences.length;
+}
+
+
+/**
+ * Auto-store key insights from reverse engineering analysis as memories
+ */
+async function storeReverseEngineeringMemories(
+  organizationId: string,
+  openId: string,
+  productName: string,
+  manufacturer: string,
+  productId: string,
+  performanceTranslation: PerformanceTranslationResult,
+  formulationStrategy: FormulationStrategyResult,
+  targetProductProfile: TargetProductProfileResult
+): Promise<void> {
+  const citation = {
+    type: "external" as const,
+    id: productId,
+    title: `${productName} by ${manufacturer} - Reverse Engineering Analysis`,
+  };
+
+  try {
+    // Store key technical parameters as memories
+    const highConfidenceParams = Object.entries(performanceTranslation.technicalParameters)
+      .filter(([_, data]) => data.confidence >= 0.7)
+      .slice(0, 5); // Top 5 high-confidence parameters
+
+    for (const [paramName, paramData] of highConfidenceParams) {
+      await storeMemory({
+        organizationId,
+        openId,
+        fact: `${productName} by ${manufacturer} achieves ${paramName}: ${paramData.value} ${paramData.unit}`,
+        rationale: `Extracted from reverse engineering analysis with ${(paramData.confidence * 100).toFixed(0)}% confidence`,
+        category: "formulation_insight",
+        citations: [citation],
+        tags: [manufacturer, productName, paramName.toLowerCase().replace(/\s+/g, '-')],
+        confidence: paramData.confidence,
+      });
+    }
+
+    // Store formulation approach as memory
+    if (formulationStrategy.recommendedApproach) {
+      await storeMemory({
+        organizationId,
+        openId,
+        fact: `To match ${productName} by ${manufacturer}, recommended approach: ${formulationStrategy.recommendedApproach}`,
+        rationale: `Generated formulation strategy based on technical parameter analysis`,
+        category: "formulation_insight",
+        citations: [citation],
+        tags: [manufacturer, productName, 'strategy'],
+        confidence: 0.85,
+      });
+    }
+
+    // Store key ingredient insights
+    for (const ingredient of formulationStrategy.keyIngredientCategories.slice(0, 3)) {
+      await storeMemory({
+        organizationId,
+        openId,
+        fact: `For ${productName}-like formulation: ${ingredient.category} (${ingredient.typicalPercentage}) - ${ingredient.purpose}`,
+        rationale: `Key ingredient category identified during reverse engineering`,
+        category: "material_property",
+        citations: [citation],
+        tags: [manufacturer, productName, ingredient.category.toLowerCase().replace(/\s+/g, '-')],
+        confidence: 0.8,
+      });
+    }
+
+    // Store potential challenges as troubleshooting memories
+    for (const challenge of formulationStrategy.potentialChallenges.slice(0, 2)) {
+      await storeMemory({
+        organizationId,
+        openId,
+        fact: `Challenge when formulating ${productName}-like product: ${challenge}`,
+        rationale: `Potential challenge identified during reverse engineering analysis`,
+        category: "troubleshooting",
+        citations: [citation],
+        tags: [manufacturer, productName, 'challenge'],
+        confidence: 0.75,
+      });
+    }
+
+    // Store competitive advantages as insights
+    for (const advantage of targetProductProfile.competitiveAdvantages.slice(0, 2)) {
+      await storeMemory({
+        organizationId,
+        openId,
+        fact: `Competitive advantage opportunity vs ${productName}: ${advantage}`,
+        rationale: `Identified from Target Product Profile analysis`,
+        category: "formulation_insight",
+        citations: [citation],
+        tags: [manufacturer, productName, 'competitive-advantage'],
+        confidence: 0.8,
+      });
+    }
+
+    // Store regulatory requirements
+    for (const requirement of targetProductProfile.regulatoryRequirements.slice(0, 2)) {
+      await storeMemory({
+        organizationId,
+        openId,
+        fact: `Regulatory requirement for ${productName}-like product: ${requirement}`,
+        rationale: `Regulatory consideration from Target Product Profile`,
+        category: "compliance_rule",
+        citations: [citation],
+        tags: [manufacturer, productName, 'regulatory'],
+        confidence: 0.9,
+      });
+    }
+
+    console.log(`[ReverseEngineering] Stored ${highConfidenceParams.length + 8} memories for ${productName}`);
+  } catch (error) {
+    console.error('[ReverseEngineering] Error storing memories:', error);
+    // Don't throw - memory storage is non-critical
+  }
 }

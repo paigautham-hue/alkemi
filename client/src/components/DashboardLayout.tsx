@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, Package, Building2, FlaskConical, TestTube, Sparkles, MessageSquare, CheckSquare, BarChart3, FileText, Settings as SettingsIcon, Microscope, Grid3x3, Shield, Search, AlertTriangle, Beaker, ScrollText, Wrench, TrendingUp, AlertCircle, BookOpen } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, Package, Building2, FlaskConical, TestTube, Sparkles, MessageSquare, CheckSquare, BarChart3, FileText, Settings as SettingsIcon, Microscope, Grid3x3, Shield, Search, AlertTriangle, Beaker, ScrollText, Wrench, TrendingUp, AlertCircle, BookOpen, Brain, DollarSign } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -55,6 +55,8 @@ const menuItems = [
   { icon: BarChart3, label: "Analytics", path: "/analytics" },
   { icon: FileText, label: "Documents", path: "/documents" },
   { icon: SettingsIcon, label: "Settings", path: "/settings" },
+  { icon: Brain, label: "AI Memory", path: "/memory" },
+  { icon: DollarSign, label: "LLM Costs", path: "/llm-costs" },
   { icon: BookOpen, label: "Features Guide", path: "/features-guide" },
 ];
 

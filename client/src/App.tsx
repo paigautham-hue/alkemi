@@ -29,6 +29,8 @@ import ScaleUpAnalyzer from "./pages/ScaleUpAnalyzer";
 import IssueTracking from "./pages/IssueTracking";
 import ManufacturingDocs from "./pages/ManufacturingDocs";
 import FeaturesGuide from "./pages/FeaturesGuide";
+import MemoryManagement from "./pages/MemoryManagement";
+import LLMCostDashboard from "./pages/LLMCostDashboard";
 
 function Router() {
   return (
@@ -58,6 +60,8 @@ function Router() {
       <Route path="/documents" component={Documents} />
       <Route path="/settings" component={Settings} />
       <Route path="/features-guide" component={FeaturesGuide} />
+      <Route path="/memory" component={MemoryManagement} />
+      <Route path="/llm-costs" component={LLMCostDashboard} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

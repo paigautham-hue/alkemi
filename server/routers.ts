@@ -2276,5 +2276,55 @@ export const appRouter = router({
         return conductSupplierResearch(input);
       }),
   }),
+
+  // ==========================================================
+  // LLM COST DASHBOARD
+  // ==========================================================
+  llmCost: router({
+    stats: protectedProcedure
+      .input(z.object({
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }).optional())
+      .query(async ({ ctx, input }) => {
+        const { getUsageStats } = await import("./services/llmCostMonitor");
+        const startDate = input?.startDate ? new Date(input.startDate) : undefined;
+        const endDate = input?.endDate ? new Date(input.endDate) : undefined;
+        return getUsageStats(ctx.user.organizationId, startDate, endDate);
+      }),
+
+    compareCosts: protectedProcedure
+      .input(z.object({
+        useCase: z.string(),
+        estimatedTokens: z.number().min(1),
+      }))
+      .query(async ({ input }) => {
+        const { compareCosts } = await import("./services/llmCostMonitor");
+        return compareCosts(input.useCase, input.estimatedTokens);
+      }),
+
+    exportCSV: adminProcedure
+      .input(z.object({
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }).optional())
+      .query(async ({ ctx, input }) => {
+        const { exportUsageCSV } = await import("./services/llmCostMonitor");
+        const startDate = input?.startDate ? new Date(input.startDate) : undefined;
+        const endDate = input?.endDate ? new Date(input.endDate) : undefined;
+        return exportUsageCSV(ctx.user.organizationId, startDate, endDate);
+      }),
+
+    setBudget: adminProcedure
+      .input(z.object({
+        monthlyBudget: z.number().min(0),
+        alertThresholds: z.array(z.number().min(0).max(1)).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { setBudgetAlert } = await import("./services/llmCostMonitor");
+        setBudgetAlert(ctx.user.organizationId, input.monthlyBudget, input.alertThresholds);
+        return { success: true };
+      }),
+  }),
 });
 export type AppRouter = typeof appRouter;

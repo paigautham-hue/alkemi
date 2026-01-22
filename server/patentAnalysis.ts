@@ -11,6 +11,7 @@ import { invokeLLM } from "./_core/llm";
  */
 
 import { invokeLLMWithFallback } from "./services/llmService";
+import { retrieveMemories, storeMemory, type MemoryCategory } from "./services/agentMemorySystem";
 
 interface ChemicalCompound {
   name: string;
@@ -387,26 +388,96 @@ Generate 2-3 practical formulation strategies that could achieve similar or bett
 }
 
 /**
- * Complete patent analysis workflow
+ * Complete patent analysis workflow with memory integration
  */
 export async function analyzePatent(
   patentId: string,
   patentTitle: string,
   patentAbstract: string,
-  patentText: string
+  patentText: string,
+  organizationId?: string
 ): Promise<{
   compounds: ChemicalCompound[];
   mechanisms: ReactionMechanism[];
   processingConditions: ProcessingConditions;
   technologyLandscape: TechnologyLandscape;
   formulationStrategies: FormulationStrategy[];
+  memorySources?: Array<{ id: number; fact: string; confidence: number; category: string }>;
 }> {
+  // Phase 0: Retrieve relevant memories for context-aware analysis
+  let relevantMemories: any[] = [];
+  let memoryContext = '';
+  
+  if (organizationId) {
+    try {
+      console.log("[PatentAnalysis] Retrieving relevant memories...");
+      
+      // Get compliance and regulatory memories
+      const complianceMemories = await retrieveMemories({
+        organizationId,
+        query: `${patentTitle} compliance regulatory requirements`,
+        category: 'compliance_rule',
+        maxResults: 5,
+        verify: false,
+      });
+      
+      // Get formulation insights related to patent topic
+      const formulationMemories = await retrieveMemories({
+        organizationId,
+        query: `${patentTitle} ${patentAbstract.slice(0, 200)}`,
+        category: 'formulation_insight',
+        maxResults: 5,
+        verify: false,
+      });
+      
+      // Get material property memories
+      const materialMemories = await retrieveMemories({
+        organizationId,
+        query: patentTitle,
+        category: 'material_property',
+        maxResults: 3,
+        verify: false,
+      });
+      
+      // Get process parameter memories
+      const processMemories = await retrieveMemories({
+        organizationId,
+        query: patentTitle,
+        category: 'process_parameter',
+        maxResults: 3,
+        verify: false,
+      });
+      
+      relevantMemories = [
+        ...complianceMemories,
+        ...formulationMemories,
+        ...materialMemories,
+        ...processMemories,
+      ];
+      
+      if (relevantMemories.length > 0) {
+        memoryContext = '\n\n## Organizational Knowledge Context\n' +
+          'The following insights from your organization may be relevant:\n\n' +
+          relevantMemories.map((m, i) => 
+            `[${m.category.replace(/_/g, ' ')}] (${(m.confidence * 100).toFixed(0)}% confidence):\n${m.fact}`
+          ).join('\n\n');
+        console.log(`[PatentAnalysis] Injected ${relevantMemories.length} memories for context`);
+      }
+    } catch (error) {
+      console.warn('[PatentAnalysis] Failed to retrieve memories:', error);
+      // Continue without memories - non-critical
+    }
+  }
+
+  // Enhance patent text with memory context for analysis
+  const enhancedPatentText = patentText + memoryContext;
+
   // Run analyses in parallel for efficiency
   const [compounds, mechanisms, processingConditions, technologyLandscape] = await Promise.all([
-    extractChemicalCompounds(patentText, patentTitle),
-    extractReactionMechanisms(patentText, patentTitle),
-    extractProcessingConditions(patentText, patentTitle),
-    analyzeTechnologyLandscape(patentText, patentTitle, patentAbstract),
+    extractChemicalCompounds(enhancedPatentText, patentTitle),
+    extractReactionMechanisms(enhancedPatentText, patentTitle),
+    extractProcessingConditions(enhancedPatentText, patentTitle),
+    analyzeTechnologyLandscape(enhancedPatentText, patentTitle, patentAbstract),
   ]);
 
   // Generate formulation strategies based on the analysis
@@ -417,11 +488,132 @@ export async function analyzePatent(
     technologyLandscape
   );
 
+  // Store key insights as new memories (if organizationId provided)
+  if (organizationId) {
+    await storePatentAnalysisMemories(organizationId, patentId, patentTitle, {
+      compounds,
+      mechanisms,
+      processingConditions,
+      technologyLandscape,
+      formulationStrategies,
+    });
+  }
+
+  // Build memory sources for UI display
+  const memorySources = relevantMemories.map(m => ({
+    id: m.id,
+    fact: m.fact,
+    confidence: m.confidence,
+    category: m.category,
+  }));
+
   return {
     compounds,
     mechanisms,
     processingConditions,
     technologyLandscape,
     formulationStrategies,
+    memorySources: memorySources.length > 0 ? memorySources : undefined,
   };
+}
+
+/**
+ * Store key insights from patent analysis as memories
+ */
+async function storePatentAnalysisMemories(
+  organizationId: string,
+  patentId: string,
+  patentTitle: string,
+  analysis: {
+    compounds: ChemicalCompound[];
+    mechanisms: ReactionMechanism[];
+    processingConditions: ProcessingConditions;
+    technologyLandscape: TechnologyLandscape;
+    formulationStrategies: FormulationStrategy[];
+  }
+): Promise<void> {
+  try {
+    const citation = {
+      type: 'document' as const,
+      id: patentId,
+      title: patentTitle,
+    };
+
+    // Store key compound insights
+    const keyCompounds = analysis.compounds.filter(c => c.role && c.concentration);
+    if (keyCompounds.length > 0) {
+      const compoundFact = `Patent ${patentTitle} uses: ${keyCompounds.slice(0, 5).map(c => 
+        `${c.name} (${c.role}${c.concentration ? `, ${c.concentration}` : ''})`
+      ).join('; ')}`;
+      
+      await storeMemory({
+        organizationId,
+        fact: compoundFact,
+        rationale: `Extracted from patent analysis of ${patentId}`,
+        category: 'material_property',
+        citations: [citation],
+        tags: ['patent', 'compounds'],
+        confidence: 0.85,
+      });
+    }
+
+    // Store process parameter insights
+    const pc = analysis.processingConditions;
+    if (pc.temperature || pc.pressure || pc.time) {
+      const processFact = `Patent ${patentTitle} processing: ${[
+        pc.temperature && `temp: ${pc.temperature}`,
+        pc.pressure && `pressure: ${pc.pressure}`,
+        pc.time && `time: ${pc.time}`,
+        pc.atmosphere && `atmosphere: ${pc.atmosphere}`,
+      ].filter(Boolean).join(', ')}`;
+      
+      await storeMemory({
+        organizationId,
+        fact: processFact,
+        rationale: `Extracted from patent analysis of ${patentId}`,
+        category: 'process_parameter',
+        citations: [citation],
+        tags: ['patent', 'process'],
+        confidence: 0.85,
+      });
+    }
+
+    // Store key innovation insights
+    const innovations = analysis.technologyLandscape.keyInnovations;
+    if (innovations && innovations.length > 0) {
+      const innovationFact = `Key innovations in ${patentTitle}: ${innovations.slice(0, 3).join('; ')}`;
+      
+      await storeMemory({
+        organizationId,
+        fact: innovationFact,
+        rationale: `Technology landscape analysis from patent ${patentId}`,
+        category: 'formulation_insight',
+        citations: [citation],
+        tags: ['patent', 'innovation'],
+        confidence: 0.8,
+      });
+    }
+
+    // Store formulation strategy recommendations
+    for (const strategy of analysis.formulationStrategies.slice(0, 2)) {
+      if (strategy.recommendations && strategy.recommendations.length > 0) {
+        const strategyFact = `${strategy.approach}: ${strategy.recommendations.slice(0, 2).join('; ')}`;
+        
+        await storeMemory({
+          organizationId,
+          fact: strategyFact,
+          rationale: `Formulation strategy from patent ${patentId}`,
+          category: 'formulation_insight',
+          citations: [citation],
+          tags: ['patent', 'strategy'],
+          confidence: 0.75,
+        });
+      }
+    }
+
+    console.log(`[PatentAnalysis] Stored memories from patent ${patentId}`);
+  } catch (error) {
+    console.warn('[PatentAnalysis] Failed to store memories:', error);
+    // Non-critical - continue without storing
+  }
 }

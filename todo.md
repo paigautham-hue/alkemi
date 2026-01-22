@@ -2063,3 +2063,21 @@
 - [x] Inject memory context into debate prompts for each expert
 - [x] Return memory sources in debate responses (for UI display)
 - [x] Test debate with memory-enhanced context
+
+
+## Phase 41: Memory Feedback Loop and Patent Analyzer Integration
+
+### Memory Feedback Loop
+- [x] Create database table for memory feedback (memory_id, user_id, rating, timestamp)
+- [x] Add tRPC procedure for submitting feedback
+- [x] Update memory confidence based on feedback (positive increases, negative decreases)
+- [x] Add thumbs up/down UI component for memory display (MemoryFeedback.tsx)
+- [x] Create MemorySourcesDisplay component for showing sources with feedback
+- [x] Test feedback affects memory confidence
+
+### Patent Analyzer Memory Integration
+- [x] Modify patentAnalysis.ts to retrieve compliance/regulatory memories
+- [x] Inject memory context into patent analysis prompts
+- [x] Return memory sources in patent analysis results
+- [x] Auto-store key insights from patent analysis as new memories
+- [x] Test patent analysis with memory-enhanced context

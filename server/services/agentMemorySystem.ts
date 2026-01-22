@@ -219,3 +219,183 @@ export async function cleanupInvalidMemories(organizationId: string, olderThanDa
   
   return (result as any).affectedRows || 0;
 }
+
+
+// ==========================================================
+// MEMORY FEEDBACK SYSTEM
+// ==========================================================
+
+export interface MemoryFeedbackParams {
+  memoryId: number;
+  openId: string;
+  organizationId: string;
+  rating: "helpful" | "not_helpful";
+  context?: string; // e.g., "prediction", "debate", "patent_analysis"
+}
+
+export interface MemoryFeedbackStats {
+  memoryId: number;
+  helpfulCount: number;
+  notHelpfulCount: number;
+  totalFeedback: number;
+  helpfulRatio: number;
+}
+
+/**
+ * Submit feedback for a memory (thumbs up/down)
+ * Updates memory confidence based on aggregate feedback
+ */
+export async function submitMemoryFeedback(params: MemoryFeedbackParams): Promise<{ success: boolean; newConfidence?: number }> {
+  const db = await getDb();
+  if (!db) return { success: false };
+
+  try {
+    // Insert or update feedback (upsert)
+    await db.execute(sql`
+      INSERT INTO memory_feedback (memory_id, open_id, organization_id, rating, context)
+      VALUES (${params.memoryId}, ${params.openId}, ${params.organizationId}, ${params.rating}, ${params.context || null})
+      ON DUPLICATE KEY UPDATE rating = ${params.rating}, context = ${params.context || null}, created_at = CURRENT_TIMESTAMP
+    `);
+
+    // Calculate new confidence based on all feedback
+    const feedbackStats = await getMemoryFeedbackStats(params.memoryId);
+    
+    // Adjust confidence: helpful increases, not_helpful decreases
+    // Base adjustment: ±0.05 per feedback, weighted by ratio
+    const confidenceAdjustment = calculateConfidenceAdjustment(feedbackStats);
+    
+    // Get current memory confidence
+    const [memoryRow] = await db.execute(sql`
+      SELECT confidence FROM agent_memories WHERE id = ${params.memoryId}
+    `) as any[];
+    
+    if (!memoryRow || memoryRow.length === 0) {
+      return { success: false };
+    }
+    
+    const currentConfidence = parseFloat(memoryRow[0].confidence) || 0.5;
+    const newConfidence = Math.max(0.1, Math.min(0.99, currentConfidence + confidenceAdjustment));
+    
+    // Update memory confidence
+    await db.execute(sql`
+      UPDATE agent_memories SET confidence = ${newConfidence}, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${params.memoryId}
+    `);
+
+    console.log(`[MemoryFeedback] Memory ${params.memoryId}: ${params.rating}, confidence ${currentConfidence.toFixed(2)} -> ${newConfidence.toFixed(2)}`);
+    
+    return { success: true, newConfidence };
+  } catch (error) {
+    console.error("[MemoryFeedback] Error submitting feedback:", error);
+    return { success: false };
+  }
+}
+
+/**
+ * Get feedback statistics for a memory
+ */
+export async function getMemoryFeedbackStats(memoryId: number): Promise<MemoryFeedbackStats> {
+  const db = await getDb();
+  if (!db) {
+    return { memoryId, helpfulCount: 0, notHelpfulCount: 0, totalFeedback: 0, helpfulRatio: 0.5 };
+  }
+
+  const [row] = await db.execute(sql`
+    SELECT 
+      SUM(CASE WHEN rating = 'helpful' THEN 1 ELSE 0 END) as helpful,
+      SUM(CASE WHEN rating = 'not_helpful' THEN 1 ELSE 0 END) as not_helpful,
+      COUNT(*) as total
+    FROM memory_feedback WHERE memory_id = ${memoryId}
+  `) as any[];
+
+  const stats = row[0] || { helpful: 0, not_helpful: 0, total: 0 };
+  const helpfulCount = parseInt(stats.helpful) || 0;
+  const notHelpfulCount = parseInt(stats.not_helpful) || 0;
+  const totalFeedback = parseInt(stats.total) || 0;
+
+  return {
+    memoryId,
+    helpfulCount,
+    notHelpfulCount,
+    totalFeedback,
+    helpfulRatio: totalFeedback > 0 ? helpfulCount / totalFeedback : 0.5,
+  };
+}
+
+/**
+ * Calculate confidence adjustment based on feedback
+ * Uses a weighted formula that considers total feedback volume
+ */
+function calculateConfidenceAdjustment(stats: MemoryFeedbackStats): number {
+  if (stats.totalFeedback === 0) return 0;
+
+  // Base adjustment per feedback point
+  const baseAdjustment = 0.03;
+  
+  // Net feedback score (positive for helpful, negative for not helpful)
+  const netScore = stats.helpfulCount - stats.notHelpfulCount;
+  
+  // Apply diminishing returns for large volumes
+  const volumeFactor = Math.log10(stats.totalFeedback + 1) + 1;
+  
+  // Calculate final adjustment
+  const adjustment = (netScore * baseAdjustment) / volumeFactor;
+  
+  // Cap adjustment to prevent extreme swings
+  return Math.max(-0.15, Math.min(0.15, adjustment));
+}
+
+/**
+ * Get user's feedback for a specific memory
+ */
+export async function getUserMemoryFeedback(
+  memoryId: number, 
+  openId: string
+): Promise<"helpful" | "not_helpful" | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  const [row] = await db.execute(sql`
+    SELECT rating FROM memory_feedback 
+    WHERE memory_id = ${memoryId} AND open_id = ${openId}
+  `) as any[];
+
+  if (!row || row.length === 0) return null;
+  return row[0].rating as "helpful" | "not_helpful";
+}
+
+/**
+ * Get all feedback for memories used in a specific context
+ */
+export async function getContextFeedbackSummary(
+  organizationId: string,
+  context: string
+): Promise<{ totalFeedback: number; helpfulRatio: number; topMemories: number[] }> {
+  const db = await getDb();
+  if (!db) {
+    return { totalFeedback: 0, helpfulRatio: 0.5, topMemories: [] };
+  }
+
+  const [rows] = await db.execute(sql`
+    SELECT 
+      memory_id,
+      SUM(CASE WHEN rating = 'helpful' THEN 1 ELSE 0 END) as helpful,
+      COUNT(*) as total
+    FROM memory_feedback 
+    WHERE organization_id = ${organizationId} AND context = ${context}
+    GROUP BY memory_id
+    ORDER BY helpful DESC
+    LIMIT 10
+  `) as any[];
+
+  const allRows = rows || [];
+  const totalFeedback = allRows.reduce((sum: number, r: any) => sum + parseInt(r.total), 0);
+  const totalHelpful = allRows.reduce((sum: number, r: any) => sum + parseInt(r.helpful), 0);
+  const topMemories = allRows.slice(0, 5).map((r: any) => r.memory_id);
+
+  return {
+    totalFeedback,
+    helpfulRatio: totalFeedback > 0 ? totalHelpful / totalFeedback : 0.5,
+    topMemories,
+  };
+}

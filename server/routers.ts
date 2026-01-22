@@ -2237,6 +2237,35 @@ export const appRouter = router({
         const { cleanupInvalidMemories } = await import("./services/agentMemorySystem");
         return cleanupInvalidMemories(ctx.user.organizationId, input.olderThanDays);
       }),
+
+    // Memory Feedback System
+    submitFeedback: protectedProcedure
+      .input(z.object({
+        memoryId: z.number(),
+        rating: z.enum(["helpful", "not_helpful"]),
+        context: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { submitMemoryFeedback } = await import("./services/agentMemorySystem");
+        return submitMemoryFeedback({
+          memoryId: input.memoryId,
+          openId: ctx.user.openId,
+          organizationId: ctx.user.organizationId,
+          rating: input.rating,
+          context: input.context,
+        });
+      }),
+
+    getFeedback: protectedProcedure
+      .input(z.object({ memoryId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const { getUserMemoryFeedback, getMemoryFeedbackStats } = await import("./services/agentMemorySystem");
+        const [userFeedback, stats] = await Promise.all([
+          getUserMemoryFeedback(input.memoryId, ctx.user.openId),
+          getMemoryFeedbackStats(input.memoryId),
+        ]);
+        return { userFeedback, stats };
+      }),
   }),
 
   // ==========================================================

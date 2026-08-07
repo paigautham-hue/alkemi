@@ -95,16 +95,25 @@ export async function enrichFromPubChem(material: { id: string; casNumber?: stri
   const cid = cidResult?.IdentifierList?.CID?.[0];
   if (!cid) return { status: "failed", detail: `no PubChem CID for CAS ${material.casNumber}` };
 
-  const propResult = await pubchemJson(
-    `/compound/cid/${cid}/property/MolecularWeight,CanonicalSMILES,InChIKey,XLogP/JSON`
+  // PubChem renamed CanonicalSMILES → SMILES/ConnectivitySMILES (2025).
+  // Try the current property set first, fall back to the legacy name, and
+  // read whichever field the response actually carries.
+  let propResult = await pubchemJson(
+    `/compound/cid/${cid}/property/MolecularWeight,SMILES,ConnectivitySMILES,InChIKey,XLogP/JSON`
   );
+  if (!propResult?.PropertyTable?.Properties?.[0]) {
+    propResult = await pubchemJson(
+      `/compound/cid/${cid}/property/MolecularWeight,CanonicalSMILES,InChIKey,XLogP/JSON`
+    );
+  }
   const props = propResult?.PropertyTable?.Properties?.[0];
   if (!props) return { status: "failed", detail: `no properties for CID ${cid}` };
 
+  const smiles = props.SMILES ?? props.CanonicalSMILES ?? props.ConnectivitySMILES ?? null;
   const mw = parseFloat(props.MolecularWeight);
   await fillBlankColumn(material.id, {
     pubchemCid: String(cid),
-    smiles: props.CanonicalSMILES ?? null,
+    smiles,
     inchiKey: props.InChIKey ?? null,
     molecularWeight: Number.isFinite(mw) ? mw : null,
   });
@@ -126,10 +135,19 @@ export async function enrichHSP(material: {
   smiles?: string | null;
   molecularWeight?: string | number | null;
   density?: string | number | null;
+  hansenD?: string | number | null;
+  hansenP?: string | number | null;
+  hansenH?: string | number | null;
 }): Promise<{ status: "ok" | "skipped" | "failed"; detail: string }> {
   const db = await getDb();
   if (!db) return { status: "failed", detail: "no database" };
   const { hspReference } = await import("../../drizzle/schema");
+
+  // Idempotency: don't re-derive (and re-append property rows) when the
+  // material already carries a full Hansen set.
+  if (material.hansenD && material.hansenP && material.hansenH) {
+    return { status: "skipped", detail: "Hansen parameters already populated" };
+  }
 
   // 2a. Reference lookup by CAS or InChIKey
   const conditions = [];

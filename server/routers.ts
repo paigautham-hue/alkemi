@@ -54,6 +54,21 @@ const materialSchema = z.object({
   hansenD: z.string().optional(),
   hansenP: z.string().optional(),
   hansenH: z.string().optional(),
+  hansenR0: z.string().optional(),
+  // Materials v2
+  materialFunction: z.string().max(50).optional(),
+  subFunction: z.string().max(100).optional(),
+  solidsContent: z.string().optional(),
+  vocContent: z.string().optional(),
+  functionality: z.string().optional(),
+  equivalentWeight: z.string().optional(),
+  particleSizeD50: z.string().optional(),
+  oilAbsorption: z.string().optional(),
+  hlb: z.string().optional(),
+  surfaceTension: z.string().optional(),
+  molarVolume: z.string().optional(),
+  smiles: z.string().optional(),
+  inchiKey: z.string().max(27).optional(),
   regulatoryStatus: z.record(z.string(), z.any()).optional(),
   costPerKg: z.string().optional(),
   currency: z.string().length(3).optional(),
@@ -169,6 +184,117 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         await db.deleteMaterial(input.id, ctx.user.organizationId);
         return { success: true };
+      }),
+
+    /** Enrich a material from PubChem + HSP reference/estimation (Materials v2) */
+    enrich: protectedProcedure
+      .input(z.object({ id: z.string().uuid() }))
+      .mutation(async ({ ctx, input }) => {
+        const { enrichMaterial } = await import("./services/materialEnrichment");
+        return enrichMaterial(input.id, ctx.user.organizationId);
+      }),
+
+    /** Extract qualified properties from pasted supplier TDS text (staged for review) */
+    extractTds: protectedProcedure
+      .input(z.object({ id: z.string().uuid(), tdsText: z.string().min(50) }))
+      .mutation(async ({ ctx, input }) => {
+        const material = await db.getMaterialById(input.id, ctx.user.organizationId);
+        if (!material) throw new TRPCError({ code: "NOT_FOUND", message: "Material not found" });
+        const { extractFromTdsText } = await import("./services/materialEnrichment");
+        return extractFromTdsText(input.id, input.tdsText);
+      }),
+
+    /** Import an HSPiP/literature CSV into the global hsp_reference table */
+    importHspCsv: adminProcedure
+      .input(z.object({ csvText: z.string().min(10) }))
+      .mutation(async ({ input }) => {
+        const { importHspReferenceCsv } = await import("./services/materialEnrichment");
+        return importHspReferenceCsv(input.csvText);
+      }),
+
+    /** List staged (llm_extracted, not yet preferred) property values for review */
+    pendingProperties: protectedProcedure
+      .input(z.object({ materialId: z.string().uuid() }))
+      .query(async ({ ctx, input }) => {
+        const material = await db.getMaterialById(input.materialId, ctx.user.organizationId);
+        if (!material) throw new TRPCError({ code: "NOT_FOUND", message: "Material not found" });
+        const dbConn = await db.getDb();
+        if (!dbConn) return [];
+        const { materialProperties } = await import("../drizzle/schema");
+        return dbConn.select().from(materialProperties).where(eq(materialProperties.materialId, input.materialId));
+      }),
+
+    /** Approve or reject a staged property value */
+    reviewProperty: protectedProcedure
+      .input(z.object({ propertyId: z.string().uuid(), approve: z.boolean() }))
+      .mutation(async ({ input }) => {
+        const dbConn = await db.getDb();
+        if (!dbConn) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+        const { materialProperties } = await import("../drizzle/schema");
+        if (input.approve) {
+          await dbConn
+            .update(materialProperties)
+            .set({ isPreferred: true })
+            .where(eq(materialProperties.id, input.propertyId));
+        } else {
+          await dbConn.delete(materialProperties).where(eq(materialProperties.id, input.propertyId));
+        }
+        return { success: true };
+      }),
+  }),
+
+  // ==========================================================
+  // DOMAIN PACKS
+  // ==========================================================
+  domainPacks: router({
+    /** Get the validated pack config for a domain (null if unpacked) */
+    get: protectedProcedure
+      .input(z.object({ domainIdOrKey: z.string() }))
+      .query(async ({ input }) => {
+        const { loadPackForDomain } = await import("./services/domainPackService");
+        return loadPackForDomain(input.domainIdOrKey);
+      }),
+
+    /** List installable packs */
+    listAvailable: protectedProcedure.query(async () => {
+      const { PACK_REGISTRY } = await import("./services/domainPackService");
+      return Object.values(PACK_REGISTRY).map(p => ({
+        key: p.key,
+        name: p.name,
+        description: p.description,
+        functions: p.functions.length,
+        properties: p.properties.length,
+        referenceMaterials: p.referenceMaterials.length,
+      }));
+    }),
+
+    /** Install a pack: domain row + reference materials + std test conditions + compliance */
+    install: adminProcedure
+      .input(z.object({ packKey: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const { installDomainPack } = await import("./services/domainPackInstaller");
+        return installDomainPack(input.packKey, ctx.user.organizationId, ctx.user.id);
+      }),
+
+    /** Pack-driven composition validation for the editor */
+    validateComposition: protectedProcedure
+      .input(
+        z.object({
+          domainIdOrKey: z.string(),
+          components: z.array(
+            z.object({
+              materialFunction: z.string().nullable().optional(),
+              percentage: z.number(),
+              materialName: z.string(),
+            })
+          ),
+        })
+      )
+      .query(async ({ input }) => {
+        const { loadPackForDomain, validateAgainstPack } = await import("./services/domainPackService");
+        const pack = await loadPackForDomain(input.domainIdOrKey);
+        if (!pack) return { errors: [], warnings: [], packed: false as const };
+        return { ...validateAgainstPack(pack, input.components), packed: true as const };
       }),
   }),
 

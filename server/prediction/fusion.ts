@@ -60,6 +60,10 @@ export const PHYSICS_MODEL_BANDS: Record<string, { rel?: number; abs?: number }>
   viscosity: { rel: 0.35 },
   refractive_index: { rel: 0.01 },
   glass_transition_temp: { abs: 8 },
+  // Extended models (Materials v2)
+  pigment_volume_concentration: { rel: 0.05 }, // deterministic given densities
+  reactive_group_concentration: { rel: 0.05 }, // deterministic given EW
+  cure_depth: { rel: 0.3 }, // screening model until calibrated
 };
 
 /**
@@ -72,6 +76,9 @@ export function matchPhysicsProperty(requestedProperty: string): string | null {
   if (/density|specific gravity/.test(name)) return "density";
   if (/refractive|\bri\b/.test(name)) return "refractive_index";
   if (/glass transition|\btg\b/.test(name)) return "glass_transition_temp";
+  if (/cure depth|depth of cure/.test(name)) return "cure_depth";
+  if (/\bpvc\b|pigment volume/.test(name)) return "pigment_volume_concentration";
+  if (/reactive group|c=c|double bond concentration/.test(name)) return "reactive_group_concentration";
   return null;
 }
 

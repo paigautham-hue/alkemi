@@ -156,7 +156,26 @@ export const materials = mysqlTable("materials", {
   hansenD: decimal("hansen_d", { precision: 10, scale: 4 }),
   hansenP: decimal("hansen_p", { precision: 10, scale: 4 }),
   hansenH: decimal("hansen_h", { precision: 10, scale: 4 }),
-  
+  hansenR0: decimal("hansen_r0", { precision: 10, scale: 4 }), // interaction radius (sphere), MPa^0.5
+
+  // Materials v2 — first-principles inputs (Phase 2)
+  // Function taxonomy key from the domain pack (binder, photoinitiator, pigment, …).
+  // Stored as varchar (not DB enum) because taxonomies are pack-defined per domain.
+  materialFunction: varchar("material_function", { length: 50 }),
+  subFunction: varchar("sub_function", { length: 100 }),
+  solidsContent: decimal("solids_content", { precision: 5, scale: 2 }),   // % non-volatile
+  vocContent: decimal("voc_content", { precision: 8, scale: 2 }),         // g/L
+  functionality: decimal("functionality", { precision: 5, scale: 2 }),    // reactive groups per molecule
+  equivalentWeight: decimal("equivalent_weight", { precision: 10, scale: 2 }), // g/eq (acrylate EW, EEW, AHEW…)
+  particleSizeD50: decimal("particle_size_d50", { precision: 10, scale: 4 }), // µm
+  oilAbsorption: decimal("oil_absorption", { precision: 6, scale: 2 }),   // g oil / 100 g pigment (CPVC input)
+  hlb: decimal("hlb", { precision: 4, scale: 1 }),
+  surfaceTension: decimal("surface_tension", { precision: 6, scale: 2 }), // mN/m at 25°C
+  molarVolume: decimal("molar_volume", { precision: 10, scale: 2 }),      // cm³/mol (volume-fraction HSP)
+  smiles: text("smiles"),
+  inchiKey: varchar("inchi_key", { length: 27 }),
+  pubchemCid: varchar("pubchem_cid", { length: 20 }),
+
   // Regulatory
   regulatoryStatus: json("regulatory_status").$type<Record<string, any>>(),
   
@@ -173,6 +192,62 @@ export const materials = mysqlTable("materials", {
   orgIdx: index("idx_materials_org").on(table.organizationId),
   domainIdx: index("idx_materials_domain").on(table.domainId),
   orgCodeIdx: uniqueIndex("idx_materials_org_code").on(table.organizationId, table.code),
+}));
+
+/**
+ * Qualified, provenance-tracked property values (Materials v2).
+ * The typed columns on `materials` are the hot-path defaults; this table
+ * holds temperature/shear-qualified values, alternative sources, and the
+ * audit trail of where every number came from.
+ */
+export const materialProperties = mysqlTable("material_properties", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  materialId: varchar("material_id", { length: 36 }).notNull().references(() => materials.id, { onDelete: "cascade" }),
+  propertyName: varchar("property_name", { length: 64 }).notNull(),
+  value: decimal("value", { precision: 20, scale: 6 }).notNull(),
+  unit: varchar("unit", { length: 32 }),
+  // Qualifiers — a viscosity without temperature/shear rate is ambiguous
+  temperatureC: decimal("temperature_c", { precision: 6, scale: 2 }),
+  shearRate: decimal("shear_rate", { precision: 10, scale: 2 }), // 1/s
+  method: varchar("method", { length: 128 }), // e.g. "ASTM D2196", "DSC 10K/min"
+  // Provenance
+  source: mysqlEnum("source", [
+    "measured",
+    "supplier_tds",
+    "pubchem",
+    "hspip",
+    "group_contribution",
+    "llm_extracted",
+    "manual",
+  ]).notNull(),
+  sourceDocumentId: varchar("source_document_id", { length: 36 }),
+  uncertainty: decimal("uncertainty", { precision: 20, scale: 6 }), // ± in the property's unit
+  confidence: decimal("confidence", { precision: 3, scale: 2 }).default("0.80"),
+  isPreferred: boolean("is_preferred").notNull().default(false), // human-approved
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  materialPropIdx: index("idx_matprops_material_prop").on(table.materialId, table.propertyName),
+}));
+
+/**
+ * Reference HSP dataset (HSPiP import + literature). Keyed by CAS/InChIKey,
+ * org-independent — enrichment joins materials to this by identifier.
+ */
+export const hspReference = mysqlTable("hsp_reference", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  casNumber: varchar("cas_number", { length: 32 }),
+  inchiKey: varchar("inchi_key", { length: 27 }),
+  name: text("name"),
+  hansenD: decimal("hansen_d", { precision: 10, scale: 4 }).notNull(),
+  hansenP: decimal("hansen_p", { precision: 10, scale: 4 }).notNull(),
+  hansenH: decimal("hansen_h", { precision: 10, scale: 4 }).notNull(),
+  r0: decimal("r0", { precision: 10, scale: 4 }),
+  molarVolume: decimal("molar_volume", { precision: 10, scale: 2 }),
+  source: varchar("source", { length: 32 }).notNull().default("hspip"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  casIdx: index("idx_hspref_cas").on(table.casNumber),
+  inchiIdx: index("idx_hspref_inchi").on(table.inchiKey),
 }));
 
 // ==========================================================

@@ -91,6 +91,23 @@ export default function FormulationEditor() {
   const totalPercentage = components.reduce((sum: number, comp: any) => sum + parseFloat(comp.component.percentage), 0);
   const isValid = Math.abs(totalPercentage - 100) < 0.01;
 
+  // Domain pack: function taxonomy + composition validation
+  const { data: domainPack } = trpc.domainPacks.get.useQuery(
+    { domainIdOrKey: (family as any)?.domainId || "" },
+    { enabled: !!(family as any)?.domainId }
+  );
+  const { data: packValidation } = trpc.domainPacks.validateComposition.useQuery(
+    {
+      domainIdOrKey: (family as any)?.domainId || "",
+      components: components.map((c: any) => ({
+        materialFunction: c.material?.materialFunction ?? c.component.role ?? null,
+        percentage: parseFloat(c.component.percentage),
+        materialName: c.material?.name || "Unknown",
+      })),
+    },
+    { enabled: !!(family as any)?.domainId && components.length > 0 && !!domainPack }
+  );
+
   // Mutations
   const utils = trpc.useUtils();
   
@@ -428,6 +445,30 @@ export default function FormulationEditor() {
                       </div>
                     </div>
                   )}
+
+                  {/* Domain-pack validation: required functions, limits, typical ranges */}
+                  {packValidation?.packed && packValidation.errors.length > 0 && (
+                    <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+                      <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+                      <div>
+                        <h4 className="font-semibold text-red-900">Domain Requirements ({domainPack?.name})</h4>
+                        {packValidation.errors.map((e: string, i: number) => (
+                          <p key={i} className="text-sm text-red-700">{e}</p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {packValidation?.packed && packValidation.warnings.length > 0 && (
+                    <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-3">
+                      <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
+                      <div>
+                        <h4 className="font-semibold text-amber-900">Domain Advisories ({domainPack?.name})</h4>
+                        {packValidation.warnings.map((w: string, i: number) => (
+                          <p key={i} className="text-sm text-amber-700">{w}</p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -562,12 +603,28 @@ export default function FormulationEditor() {
               </div>
 
               <div>
-                <Label>Purpose (Optional)</Label>
-                <Input
-                  placeholder="e.g., Binder, Pigment, Solvent"
-                  value={purpose}
-                  onChange={(e) => setPurpose(e.target.value)}
-                />
+                <Label>Function{domainPack ? "" : " (Optional)"}</Label>
+                {domainPack ? (
+                  <Select value={purpose} onValueChange={setPurpose}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select ingredient function" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {domainPack.functions.map((fn: any) => (
+                        <SelectItem key={fn.key} value={fn.key}>
+                          {fn.name}
+                          {fn.typicalRange ? ` (${fn.typicalRange[0]}–${fn.typicalRange[1]}%)` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    placeholder="e.g., Binder, Pigment, Solvent"
+                    value={purpose}
+                    onChange={(e) => setPurpose(e.target.value)}
+                  />
+                )}
               </div>
             </div>
 

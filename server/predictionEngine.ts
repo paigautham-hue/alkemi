@@ -25,6 +25,8 @@ import {
   type PhysicsAgreement,
 } from "./prediction/fusion";
 import { getSigma, type SigmaSource } from "./services/calibrationService";
+import { resolveMaterials } from "./services/materialResolver";
+import { predictExtendedProperties, parseConditions } from "./physics/index";
 
 export interface PredictionRequest {
   organizationId: string;
@@ -182,6 +184,44 @@ export async function predictProperty(
   }));
 
   const physicsResults = physics.predictAllProperties(physicsComponents);
+
+  // 3.7 Extended physics (Materials v2): suspension rheology, PVC/CPVC,
+  // crosslink density, UV cure depth. Uses the resolver so every input
+  // carries provenance; models that lack inputs simply don't run.
+  try {
+    const totalPct = materialsWithProperties.reduce(
+      (s, mp) => s + parseFloat(mp.component.percentage), 0
+    );
+    if (totalPct > 0) {
+      const views = await resolveMaterials(
+        materialsWithProperties.map(mp => mp.material).filter(Boolean)
+      );
+      const viewById = new Map(views.map(v => [v.id, v]));
+      const extendedComponents = materialsWithProperties
+        .filter(mp => mp.material && viewById.has(mp.material.id))
+        .map(mp => ({
+          massFraction: parseFloat(mp.component.percentage) / totalPct,
+          view: viewById.get(mp.material!.id)!,
+        }));
+      const extended = predictExtendedProperties(
+        extendedComponents,
+        parseConditions(testConditions.parameters || [])
+      );
+      // Extended models supersede the naive mixing rule for the same
+      // property (e.g. Krieger-Dougherty replaces log-mix when particles
+      // are present).
+      for (const p of extended.predictions) {
+        const idx = physicsResults.predictions.findIndex(existing => existing.property === p.property);
+        if (idx >= 0) physicsResults.predictions[idx] = p;
+        else physicsResults.predictions.push(p);
+      }
+      if (extended.warnings.length > 0) {
+        physicsValidation.warnings.push(...extended.warnings);
+      }
+    }
+  } catch (error) {
+    console.warn("[PredictionEngine] Extended physics failed (non-fatal):", error);
+  }
 
   // 4. Build context for LLM — INCLUDING the computed physics estimates.
   // The LLM must see the physics numbers so it can anchor to them; it

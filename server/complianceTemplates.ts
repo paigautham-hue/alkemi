@@ -461,6 +461,172 @@ export const COMPLIANCE_TEMPLATES: ComplianceTemplate[] = [
     ],
   },
   {
+    id: "eupia-exclusion-2024",
+    name: "EuPIA Exclusion Policy (Printing Inks)",
+    jurisdiction: "European Union",
+    description:
+      "EuPIA Exclusion Policy for printing inks and related products: substances excluded from ink formulations, with emphasis on food-packaging (low-migration) applications",
+    sourceUrl: "https://www.eupia.org/our-commitment/exclusion-policy/",
+    rules: [
+      {
+        ruleName: "Michler's Ketone Ban",
+        ruleType: "banned_substance",
+        ruleLogic: {
+          substanceCAS: "90-94-8",
+          substanceName: "Michler's ketone",
+        },
+        severity: "error",
+        explanation: "4,4'-Bis(dimethylamino)benzophenone is a CMR 1B carcinogen excluded under the EuPIA Exclusion Policy",
+      },
+      {
+        ruleName: "Benzidine-based Colorants Ban",
+        ruleType: "banned_substance",
+        ruleLogic: {
+          substanceName: "Benzidine",
+          substanceCAS: "92-87-5",
+        },
+        severity: "error",
+        explanation: "Benzidine and benzidine-based azo colorants are excluded (CMR; EuPIA Exclusion Policy §2)",
+      },
+      {
+        ruleName: "ITX in Food Packaging Inks",
+        ruleType: "banned_substance",
+        ruleLogic: {
+          substanceCAS: "5495-84-1",
+          substanceName: "isopropylthioxanthone",
+        },
+        severity: "warning",
+        explanation:
+          "ITX is migration-notorious (2005 Nestlé infant-milk incidents). Not formally banned, but avoid in food-packaging inks; Swiss Ordinance SML applies. Flag any use for review.",
+      },
+      {
+        ruleName: "Benzophenone in Food Packaging Inks",
+        ruleType: "concentration_limit",
+        ruleLogic: {
+          substanceCAS: "119-61-9",
+          substanceName: "Benzophenone",
+          maxConcentration: 0.1,
+          unit: "percent",
+        },
+        severity: "warning",
+        explanation:
+          "Benzophenone has an SML of 0.6 mg/kg food (with 4-MBP, EU 10/2011 + Swiss Ordinance). Screening threshold: any loading above 0.1% in food-packaging inks requires a migration assessment.",
+      },
+      {
+        ruleName: "Toluene in Food Packaging Inks",
+        ruleType: "banned_substance",
+        ruleLogic: {
+          substanceCAS: "108-88-3",
+          substanceName: "Toluene",
+        },
+        severity: "error",
+        explanation: "Toluene is banned in food-grade printing inks by FSSAI (India, 2021) and restricted under EuPIA guidance for food packaging",
+      },
+    ],
+  },
+  {
+    id: "swiss-ordinance-annex10",
+    name: "Swiss Ordinance Annex 10 (Food Packaging Inks)",
+    jurisdiction: "Switzerland / EU food packaging",
+    description:
+      "SR 817.023.21 Annex 10: the positive list regime for food-packaging ink substances. Non-listed substances must not migrate at detectable levels (0.01 mg/kg). Screening rules for the highest-risk photoinitiators.",
+    sourceUrl: "https://www.blv.admin.ch/",
+    rules: [
+      {
+        ruleName: "Non-evaluated Photoinitiator Screening (4-MBP)",
+        ruleType: "banned_substance",
+        ruleLogic: {
+          substanceCAS: "134-84-9",
+          substanceName: "4-Methylbenzophenone",
+        },
+        severity: "warning",
+        explanation: "4-MBP: 2009 cereal-packaging migration incidents; SML shared with benzophenone (0.6 mg/kg). Requires migration assessment for any food-contact use.",
+      },
+      {
+        ruleName: "EDAB Migration Screening",
+        ruleType: "concentration_limit",
+        ruleLogic: {
+          substanceCAS: "10287-53-3",
+          substanceName: "ethyl 4-dimethylaminobenzoate",
+          maxConcentration: 5,
+          unit: "percent",
+        },
+        severity: "warning",
+        explanation: "Amine synergist EDAB is Annex-10 listed with migration limits; loadings above ~5% typically fail low-migration targets without barrier",
+      },
+      {
+        ruleName: "BPA-based Materials in Food Contact",
+        ruleType: "banned_substance",
+        ruleLogic: {
+          substanceCAS: "80-05-7",
+          substanceName: "Bisphenol A",
+        },
+        severity: "error",
+        explanation: "BPA is banned in food-contact materials in several jurisdictions (EU 2024/3190 phase-out); avoid BPA-based raw materials in food-packaging coatings",
+      },
+    ],
+  },
+  {
+    id: "mocra-2024",
+    name: "US MoCRA Cosmetics Requirements",
+    jurisdiction: "United States",
+    description:
+      "Modernization of Cosmetics Regulation Act (2022): facility registration, product listing, safety substantiation, fragrance allergen labeling. Ingredient screening rules for common MoCRA/FDA concerns.",
+    sourceUrl: "https://www.fda.gov/cosmetics/cosmetics-laws-regulations/modernization-cosmetics-regulation-act-2022-mocra",
+    rules: [
+      {
+        ruleName: "Formaldehyde in Hair Products (proposed ban)",
+        ruleType: "banned_substance",
+        ruleLogic: {
+          substanceCAS: "50-00-0",
+          substanceName: "Formaldehyde",
+        },
+        severity: "warning",
+        explanation: "FDA has proposed banning formaldehyde and formaldehyde-releasing ingredients in hair-smoothing products under MoCRA authority",
+      },
+      {
+        ruleName: "Methylene Glycol Screening",
+        ruleType: "banned_substance",
+        ruleLogic: {
+          substanceCAS: "463-57-0",
+          substanceName: "Methylene glycol",
+        },
+        severity: "warning",
+        explanation: "Formaldehyde-releaser targeted by the same proposed MoCRA rule",
+      },
+      {
+        ruleName: "DBP in Cosmetics",
+        ruleType: "banned_substance",
+        ruleLogic: {
+          substanceCAS: "84-74-2",
+          substanceName: "Dibutyl phthalate",
+        },
+        severity: "error",
+        explanation: "DBP is banned in EU cosmetics and a US state-level restricted substance (e.g. CA Toxic-Free Cosmetics Act); avoid for any US/EU-market product",
+      },
+      {
+        ruleName: "Lead Acetate Ban",
+        ruleType: "banned_substance",
+        ruleLogic: {
+          substanceCAS: "301-04-2",
+          substanceName: "Lead acetate",
+        },
+        severity: "error",
+        explanation: "FDA repealed the lead acetate color-additive approval for hair dyes (2018); banned",
+      },
+      {
+        ruleName: "PFAS Screening in Cosmetics",
+        ruleType: "banned_substance",
+        ruleLogic: {
+          substanceName: "PFAS",
+          substanceClass: "fluoro",
+        },
+        severity: "warning",
+        explanation: "MoCRA mandates an FDA PFAS-in-cosmetics assessment; several states ban intentionally-added PFAS in cosmetics from 2025",
+      },
+    ],
+  },
+  {
     id: "food-contact-fda-fcn",
     name: "FDA Food Contact Notifications",
     jurisdiction: "United States",

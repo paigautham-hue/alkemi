@@ -15,6 +15,7 @@
 const pdfParse = require("pdf-parse");
 import { invokeLLM } from "./_core/llm";
 import * as db from "./db";
+import * as embeddings from "./services/embeddingService";
 
 export interface ChunkMetadata {
   pageNumber?: number;
@@ -143,83 +144,52 @@ export function chunkText(
 }
 
 /**
- * Generate embedding vector for text using LLM
- * 
- * Uses text-embedding-3-small model (1536 dimensions)
+ * Generate embedding vector for text.
+ *
+ * Delegates to the embedding service (Forge /v1/embeddings with a local
+ * MiniLM fallback). The former hash-based placeholder produced semantically
+ * meaningless vectors and has been removed.
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
   try {
-    // Use Manus LLM service for embeddings
-    // Note: This is a simplified implementation
-    // In production, you'd use a dedicated embedding model
-    
-    // For now, we'll create a simple hash-based embedding
-    // In a real implementation, you'd call an embedding API
-    const embedding = await createSimpleEmbedding(text);
-    
-    return embedding;
+    return await embeddings.generateEmbedding(text);
   } catch (error) {
     throw new Error(`Embedding generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
 /**
- * Create a simple embedding using text hashing
- * This is a placeholder - in production use proper embedding models
+ * Calculate cosine similarity between two vectors.
+ *
+ * Vectors of differing dimension (chunks embedded by a different provider
+ * before a re-embed backfill) score 0 rather than throwing.
  */
-function createSimpleEmbedding(text: string): number[] {
-  const dimensions = 384; // Standard embedding size
-  const embedding = new Array(dimensions).fill(0);
-  
-  // Simple hash-based embedding (for demonstration)
-  const words = text.toLowerCase().split(/\s+/);
-  
-  for (let i = 0; i < words.length; i++) {
-    const word = words[i];
-    for (let j = 0; j < word.length; j++) {
-      const charCode = word.charCodeAt(j);
-      const index = (charCode + i + j) % dimensions;
-      embedding[index] += 1 / (i + 1); // Weight earlier words more
-    }
-  }
-  
-  // Normalize
-  const magnitude = Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0));
-  if (magnitude > 0) {
-    for (let i = 0; i < dimensions; i++) {
-      embedding[i] /= magnitude;
-    }
-  }
-  
-  return embedding;
+export function cosineSimilarity(a: number[], b: number[]): number {
+  return embeddings.safeCosineSimilarity(a, b);
 }
 
 /**
- * Calculate cosine similarity between two vectors
+ * Re-embed every chunk whose stored vector doesn't match the current
+ * provider's dimension (or is missing). Run after switching embedding
+ * providers or to heal legacy hash-based vectors.
  */
-export function cosineSimilarity(a: number[], b: number[]): number {
-  if (a.length !== b.length) {
-    throw new Error('Vectors must have same length');
+export async function reembedAllChunks(organizationId: string): Promise<{ reembedded: number; total: number }> {
+  const chunks = await db.getDocumentChunks(organizationId);
+  if (chunks.length === 0) return { reembedded: 0, total: 0 };
+
+  // Determine the active provider's dimension from a probe embedding
+  const probe = await generateEmbedding("dimension probe");
+  const dim = probe.length;
+
+  let reembedded = 0;
+  for (const chunk of chunks) {
+    if (chunk.embedding && chunk.embedding.length === dim) continue;
+    const embedding = await generateEmbedding(chunk.content);
+    await db.updateDocumentChunkEmbedding(chunk.id, embedding);
+    reembedded++;
   }
-  
-  let dotProduct = 0;
-  let magnitudeA = 0;
-  let magnitudeB = 0;
-  
-  for (let i = 0; i < a.length; i++) {
-    dotProduct += a[i] * b[i];
-    magnitudeA += a[i] * a[i];
-    magnitudeB += b[i] * b[i];
-  }
-  
-  magnitudeA = Math.sqrt(magnitudeA);
-  magnitudeB = Math.sqrt(magnitudeB);
-  
-  if (magnitudeA === 0 || magnitudeB === 0) {
-    return 0;
-  }
-  
-  return dotProduct / (magnitudeA * magnitudeB);
+
+  return { reembedded, total: chunks.length };
 }
 
 /**

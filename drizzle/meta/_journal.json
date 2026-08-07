@@ -8,6 +8,13 @@
       "when": 1767935730553,
       "tag": "0000_elite_wilson_fisk",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1786412400000,
+      "tag": "0001_agent_memory_tables",
+      "breakpoints": true
     }
   ]
 }

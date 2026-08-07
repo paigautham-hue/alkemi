@@ -49,12 +49,28 @@ export class ContentRedactor {
     
     let redactedContent = content;
     const redactions: RedactionResult['redactions'] = [];
-    
-    // 1. Redact Material Codes (e.g., "MAT-12345", "CHEM-ABC-001")
+
+    // 1. Custom Redactions (organization-specific) — run FIRST so that
+    // org-specific rules take precedence over the generic patterns below,
+    // and their replacements aren't clobbered by e.g. material-code redaction.
+    for (const custom of customRedactions) {
+      const matches = redactedContent.match(custom.pattern) || [];
+
+      for (const original of matches) {
+        redactedContent = redactedContent.replace(original, custom.replacement);
+        redactions.push({
+          type: 'custom',
+          original,
+          replacement: custom.replacement,
+        });
+      }
+    }
+
+    // 2. Redact Material Codes (e.g., "MAT-12345", "CHEM-ABC-001")
     if (redactMaterialCodes) {
       const materialCodePattern = /\b[A-Z]{2,6}-[A-Z0-9]{3,10}\b/g;
-      const matches = content.match(materialCodePattern) || [];
-      
+      const matches = redactedContent.match(materialCodePattern) || [];
+
       for (let i = 0; i < matches.length; i++) {
         const original = matches[i];
         const replacement = `MATERIAL_${i + 1}`;
@@ -66,18 +82,18 @@ export class ContentRedactor {
         });
       }
     }
-    
-    // 2. Redact Supplier Names (common chemical suppliers)
+
+    // 3. Redact Supplier Names (common chemical suppliers)
     if (redactSupplierNames) {
       const supplierPatterns = [
         /\b(BASF|Dow|DuPont|Evonik|Clariant|Huntsman|Arkema|Solvay|Eastman|Covestro)\b/gi,
         /\b(Sigma-Aldrich|Merck|TCI|Alfa Aesar|Fisher Scientific)\b/gi,
       ];
-      
+
       let supplierIndex = 1;
       for (const pattern of supplierPatterns) {
-        const matches = content.match(pattern) || [];
-        
+        const matches = redactedContent.match(pattern) || [];
+
         for (const original of matches) {
           const replacement = `SUPPLIER_${supplierIndex++}`;
           redactedContent = redactedContent.replace(new RegExp(original, 'g'), replacement);
@@ -90,7 +106,7 @@ export class ContentRedactor {
       }
     }
     
-    // 3. Redact Pricing (currency amounts)
+    // 4. Redact Pricing (currency amounts)
     if (redactPricing) {
       const pricingPatterns = [
         /\$\s*\d+(?:,\d{3})*(?:\.\d{2})?/g, // $1,234.56
@@ -113,10 +129,10 @@ export class ContentRedactor {
       }
     }
     
-    // 4. Redact CAS Numbers (e.g., "123-45-6")
+    // 5. Redact CAS Numbers (e.g., "123-45-6")
     if (redactCASNumbers) {
       const casPattern = /\b\d{2,7}-\d{2}-\d\b/g;
-      const matches = content.match(casPattern) || [];
+      const matches = redactedContent.match(casPattern) || [];
       
       for (let i = 0; i < matches.length; i++) {
         const original = matches[i];
@@ -126,20 +142,6 @@ export class ContentRedactor {
           type: 'cas_number',
           original,
           replacement,
-        });
-      }
-    }
-    
-    // 5. Custom Redactions (organization-specific)
-    for (const custom of customRedactions) {
-      const matches = content.match(custom.pattern) || [];
-      
-      for (const original of matches) {
-        redactedContent = redactedContent.replace(original, custom.replacement);
-        redactions.push({
-          type: 'custom',
-          original,
-          replacement: custom.replacement,
         });
       }
     }

@@ -125,7 +125,7 @@ describe('PhysicsValidator', () => {
       const result = await physicsValidator.validate(formulation);
       
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain(expect.stringContaining('Mass balance error'));
+      expect(result.errors).toEqual(expect.arrayContaining([expect.stringContaining('Mass balance error')]));
       expect(result.calculations?.totalPercentage).toBe(90);
     });
     
@@ -141,7 +141,7 @@ describe('PhysicsValidator', () => {
       const result = await physicsValidator.validate(formulation);
       
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain(expect.stringContaining('too high'));
+      expect(result.errors).toEqual(expect.arrayContaining([expect.stringContaining('too high')]));
     });
     
     it('should warn for moderately high viscosity', async () => {
@@ -156,7 +156,7 @@ describe('PhysicsValidator', () => {
       const result = await physicsValidator.validate(formulation);
       
       expect(result.isValid).toBe(true);
-      expect(result.warnings).toContain(expect.stringContaining('high'));
+      expect(result.warnings).toEqual(expect.arrayContaining([expect.stringContaining('high')]));
     });
     
     it('should warn for incompatible Hansen parameters', async () => {
@@ -205,7 +205,7 @@ describe('PhysicsValidator', () => {
       
       const result = await physicsValidator.validate(formulation);
       
-      expect(result.warnings).toContain(expect.stringContaining('complex'));
+      expect(result.warnings).toEqual(expect.arrayContaining([expect.stringContaining('complex')]));
     });
   });
 });

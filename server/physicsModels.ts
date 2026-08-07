@@ -23,6 +23,33 @@ export interface Material {
   molecularWeight?: number | null; // g/mol
 }
 
+/**
+ * Convert mass fractions to volume fractions using component densities.
+ *
+ * φi = (wi/ρi) / Σ(wj/ρj)
+ *
+ * Returns null when any component in the list lacks a positive density —
+ * callers then fall back to mass fractions and should downgrade confidence.
+ */
+function volumeFractions(components: FormulationComponent[]): number[] | null {
+  if (components.some(c => !c.material?.density || c.material.density <= 0)) {
+    return null;
+  }
+  const specificVolumes = components.map(c => c.percentage / c.material!.density!);
+  const total = specificVolumes.reduce((sum, v) => sum + v, 0);
+  if (total === 0) return null;
+  return specificVolumes.map(v => v / total);
+}
+
+/**
+ * Mass fractions renormalized over the given (data-complete) components.
+ */
+function massFractions(components: FormulationComponent[]): number[] | null {
+  const total = components.reduce((sum, c) => sum + c.percentage, 0);
+  if (total === 0) return null;
+  return components.map(c => c.percentage / total);
+}
+
 export interface FormulationComponent {
   materialId: string;
   percentage: number; // 0-100
@@ -39,14 +66,21 @@ export interface PhysicsPredictionResult {
 }
 
 /**
+ * Single source of truth for the Hansen distance above which a component pair
+ * is flagged as an incompatibility risk (Hansen 2007, "Hansen Solubility
+ * Parameters: A User's Handbook"). Shared with physicsValidation.
+ */
+export const HSP_INCOMPATIBILITY_THRESHOLD = 8;
+
+/**
  * Calculate Hansen Solubility Parameter (HSP) distance between two materials
  * 
  * Formula: Ra = sqrt(4*(δD1-δD2)² + (δP1-δP2)² + (δH1-δH2)²)
  * 
- * Interpretation:
+ * Interpretation (Hansen 2007):
  * - Ra < 5: Highly compatible (will dissolve/mix well)
- * - Ra 5-10: Moderately compatible
- * - Ra > 10: Incompatible (likely phase separation)
+ * - Ra 5-8: Borderline compatibility
+ * - Ra > 8: Incompatible (risk of phase separation)
  */
 export function calculateHSPDistance(materialA: Material, materialB: Material): number | null {
   if (!materialA.hansenD || !materialA.hansenP || !materialA.hansenH ||
@@ -63,15 +97,18 @@ export function calculateHSPDistance(materialA: Material, materialB: Material): 
 
 /**
  * Calculate average Hansen Solubility Parameters for a formulation
- * 
- * Uses weighted average based on volume fractions
+ *
+ * Hansen's convention is a VOLUME-fraction weighted average. Volume fractions
+ * are derived from component densities when all HSP-bearing components have
+ * density data; otherwise falls back to mass fractions (flagged in `basis`).
  */
 export function calculateFormulationHSP(components: FormulationComponent[]): {
   hansenD: number;
   hansenP: number;
   hansenH: number;
+  basis: 'volume_fraction' | 'mass_fraction';
 } | null {
-  const validComponents = components.filter(c => 
+  const validComponents = components.filter(c =>
     c.material?.hansenD && c.material?.hansenP && c.material?.hansenH
   );
 
@@ -79,25 +116,20 @@ export function calculateFormulationHSP(components: FormulationComponent[]): {
     return null;
   }
 
-  const totalPercentage = validComponents.reduce((sum, c) => sum + c.percentage, 0);
+  const volFractions = volumeFractions(validComponents);
+  const fractions = volFractions ?? massFractions(validComponents);
+  if (!fractions) return null;
 
-  if (totalPercentage === 0) {
-    return null;
-  }
+  const hansenD = validComponents.reduce((sum, c, i) => sum + c.material!.hansenD! * fractions[i], 0);
+  const hansenP = validComponents.reduce((sum, c, i) => sum + c.material!.hansenP! * fractions[i], 0);
+  const hansenH = validComponents.reduce((sum, c, i) => sum + c.material!.hansenH! * fractions[i], 0);
 
-  const hansenD = validComponents.reduce((sum, c) => 
-    sum + (c.material!.hansenD! * c.percentage / totalPercentage), 0
-  );
-
-  const hansenP = validComponents.reduce((sum, c) => 
-    sum + (c.material!.hansenP! * c.percentage / totalPercentage), 0
-  );
-
-  const hansenH = validComponents.reduce((sum, c) => 
-    sum + (c.material!.hansenH! * c.percentage / totalPercentage), 0
-  );
-
-  return { hansenD, hansenP, hansenH };
+  return {
+    hansenD,
+    hansenP,
+    hansenH,
+    basis: volFractions ? 'volume_fraction' : 'mass_fraction',
+  };
 }
 
 /**
@@ -109,7 +141,7 @@ export function calculateFormulationHSP(components: FormulationComponent[]): {
  * This is more accurate than linear mixing for viscosity
  */
 export function predictViscosityLogMixing(components: FormulationComponent[]): PhysicsPredictionResult | null {
-  const validComponents = components.filter(c => 
+  const validComponents = components.filter(c =>
     c.material?.viscosity && c.material.viscosity > 0
   );
 
@@ -117,42 +149,50 @@ export function predictViscosityLogMixing(components: FormulationComponent[]): P
     return null;
   }
 
-  const totalPercentage = validComponents.reduce((sum, c) => sum + c.percentage, 0);
+  // The log-mixing rule is defined on VOLUME fractions. Convert via density
+  // when available; a mass-fraction fallback conflates the two, which for
+  // dense-pigment systems (e.g. TiO₂ ρ≈4.2 vs solvent ρ≈0.9) is a large
+  // error — so the fallback downgrades confidence.
+  const volFractions = volumeFractions(validComponents);
+  const fractions = volFractions ?? massFractions(validComponents);
+  if (!fractions) return null;
 
-  if (totalPercentage === 0) {
-    return null;
-  }
-
-  // Calculate log-weighted average
-  const logViscositySum = validComponents.reduce((sum, c) => {
-    const fraction = c.percentage / totalPercentage;
-    return sum + fraction * Math.log(c.material!.viscosity!);
+  const logViscositySum = validComponents.reduce((sum, c, i) => {
+    return sum + fractions[i] * Math.log(c.material!.viscosity!);
   }, 0);
 
   const predictedViscosity = Math.exp(logViscositySum);
 
-  // Confidence based on data completeness
-  const confidence = validComponents.length === components.length ? 'high' : 'medium';
+  const complete = validComponents.length === components.length;
+  const confidence: 'high' | 'medium' | 'low' =
+    volFractions ? (complete ? 'high' : 'medium') : (complete ? 'medium' : 'low');
 
   return {
     property: 'viscosity',
     value: Math.round(predictedViscosity * 10) / 10,
     unit: 'mPa·s at 25°C',
-    method: 'Log-mixing rule',
+    method: volFractions
+      ? 'Log-mixing rule (volume fraction)'
+      : 'Log-mixing rule (mass-fraction approximation — density data incomplete)',
     confidence,
     notes: `Based on ${validComponents.length} of ${components.length} components`
   };
 }
 
 /**
- * Predict formulation density using volume-weighted mixing
- * 
- * Formula: ρ_mix = Σ(wi * ρi) where wi is weight fraction
- * 
- * Assumes ideal mixing (no volume change on mixing)
+ * Predict formulation density from mass fractions, assuming ideal mixing
+ * (additive specific volumes, no volume change on mixing).
+ *
+ * Formula: 1/ρ_mix = Σ(wi / ρi) where wi is weight fraction
+ *
+ * Note: the arithmetic form ρ_mix = Σ(wi·ρi) is only correct for VOLUME
+ * fractions. With the weight fractions we have, the harmonic form is the
+ * thermodynamically consistent one — the arithmetic form overpredicts
+ * density for mixtures of dissimilar-density components (e.g. TiO₂ in
+ * solvent) by several percent.
  */
 export function predictDensity(components: FormulationComponent[]): PhysicsPredictionResult | null {
-  const validComponents = components.filter(c => 
+  const validComponents = components.filter(c =>
     c.material?.density && c.material.density > 0
   );
 
@@ -160,17 +200,15 @@ export function predictDensity(components: FormulationComponent[]): PhysicsPredi
     return null;
   }
 
-  const totalPercentage = validComponents.reduce((sum, c) => sum + c.percentage, 0);
+  const fractions = massFractions(validComponents);
+  if (!fractions) return null;
 
-  if (totalPercentage === 0) {
-    return null;
-  }
-
-  // Weight-weighted average (assuming weight percentages)
-  const predictedDensity = validComponents.reduce((sum, c) => {
-    const fraction = c.percentage / totalPercentage;
-    return sum + fraction * c.material!.density!;
+  // Harmonic (specific-volume-additive) mixing on weight fractions
+  const specificVolume = validComponents.reduce((sum, c, i) => {
+    return sum + fractions[i] / c.material!.density!;
   }, 0);
+  if (specificVolume === 0) return null;
+  const predictedDensity = 1 / specificVolume;
 
   const confidence = validComponents.length === components.length ? 'high' : 'medium';
 
@@ -178,7 +216,7 @@ export function predictDensity(components: FormulationComponent[]): PhysicsPredi
     property: 'density',
     value: Math.round(predictedDensity * 1000) / 1000,
     unit: 'g/cm³',
-    method: 'Weight-weighted mixing',
+    method: 'Ideal mixing (harmonic mean over weight fractions)',
     confidence,
     notes: `Based on ${validComponents.length} of ${components.length} components`
   };
@@ -193,7 +231,7 @@ export function predictDensity(components: FormulationComponent[]): PhysicsPredi
  * More accurate than linear mixing for optical properties
  */
 export function predictRefractiveIndex(components: FormulationComponent[]): PhysicsPredictionResult | null {
-  const validComponents = components.filter(c => 
+  const validComponents = components.filter(c =>
     c.material?.refractiveIndex && c.material.refractiveIndex > 0
   );
 
@@ -201,18 +239,17 @@ export function predictRefractiveIndex(components: FormulationComponent[]): Phys
     return null;
   }
 
-  const totalPercentage = validComponents.reduce((sum, c) => sum + c.percentage, 0);
-
-  if (totalPercentage === 0) {
-    return null;
-  }
+  // Lorentz-Lorenz is defined on volume fractions; fall back to mass fractions
+  // when density data is incomplete.
+  const volFractions = volumeFractions(validComponents);
+  const fractions = volFractions ?? massFractions(validComponents);
+  if (!fractions) return null;
 
   // Calculate Lorentz-Lorenz weighted average
-  const llSum = validComponents.reduce((sum, c) => {
-    const fraction = c.percentage / totalPercentage;
+  const llSum = validComponents.reduce((sum, c, i) => {
     const n = c.material!.refractiveIndex!;
     const ll = (n ** 2 - 1) / (n ** 2 + 2);
-    return sum + fraction * ll;
+    return sum + fractions[i] * ll;
   }, 0);
 
   // Solve for n: n² = (1 + 2*LL) / (1 - LL)
@@ -314,8 +351,10 @@ export function assessCompatibility(components: FormulationComponent[]): {
       );
       if (distance !== null) {
         distances.push(distance);
-        
-        if (distance > 10) {
+
+        // Threshold unified with physicsValidation: Ra > 8 = incompatibility
+        // risk (Hansen 2007), 5–8 = borderline.
+        if (distance > HSP_INCOMPATIBILITY_THRESHOLD) {
           warnings.push(
             `High HSP distance (${distance.toFixed(1)}) between ${componentsWithHSP[i].material!.name} and ${componentsWithHSP[j].material!.name} - risk of phase separation`
           );
@@ -348,10 +387,10 @@ export function assessCompatibility(components: FormulationComponent[]): {
   // Score: 100 for avgDistance=0, 0 for avgDistance=15
   let score = Math.max(0, Math.min(100, 100 - (avgDistance / 15) * 100));
 
-  // Penalize heavily if any pair has very high distance
-  if (maxDistance > 15) {
+  // Penalize heavily if any pair exceeds the incompatibility threshold
+  if (maxDistance > 12) {
     score = Math.min(score, 30);
-  } else if (maxDistance > 10) {
+  } else if (maxDistance > HSP_INCOMPATIBILITY_THRESHOLD) {
     score = Math.min(score, 60);
   }
 

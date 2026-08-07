@@ -1482,6 +1482,18 @@ export async function createDocumentChunk(chunk: {
   });
 }
 
+export async function updateDocumentChunkEmbedding(chunkId: string, embedding: number[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const { documentChunks } = await import("../drizzle/schema");
+
+  await db
+    .update(documentChunks)
+    .set({ embedding })
+    .where(eq(documentChunks.id, chunkId));
+}
+
 export async function getDocumentChunks(organizationId: string, documentIds?: string[]) {
   const db = await getDb();
   if (!db) return [];

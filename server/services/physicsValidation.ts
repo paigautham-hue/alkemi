@@ -1,11 +1,22 @@
 /**
  * Physics Validation Service
- * 
+ *
  * Validates formulations against physical laws and chemistry principles.
  * Prevents LLM hallucinations by enforcing physics constraints.
- * 
+ *
  * Based on Claude Opus 4.5 recommendations (Critical Issue #2)
+ *
+ * All physics math delegates to the canonical implementations in
+ * ../physicsModels — this file owns validation policy (thresholds, error
+ * vs warning), not equations.
  */
+
+import {
+  calculateHSPDistance,
+  predictViscosityLogMixing,
+  HSP_INCOMPATIBILITY_THRESHOLD,
+  type FormulationComponent,
+} from "../physicsModels";
 
 export interface PhysicsValidationResult {
   isValid: boolean;
@@ -35,72 +46,64 @@ export interface Formulation {
 }
 
 /**
- * Physics Models Service
- * Implements chemistry physics calculations
+ * Map a validation Component onto the canonical physicsModels shapes.
+ */
+function toFormulationComponent(c: Component): FormulationComponent {
+  return {
+    materialId: c.materialId,
+    percentage: c.percentage,
+    material: {
+      id: c.materialId,
+      name: c.materialName,
+      code: c.materialId,
+      hansenD: c.hansen_d ?? null,
+      hansenP: c.hansen_p ?? null,
+      hansenH: c.hansen_h ?? null,
+      viscosity: c.viscosity ?? null,
+    },
+  };
+}
+
+/**
+ * Physics Models Service — thin adapter over the canonical implementations
+ * in ../physicsModels (single source of truth for equations and thresholds).
  */
 export class PhysicsModels {
   /**
-   * Log-Mixing Rule for Viscosity Prediction
-   * 
-   * Formula: log(η_mix) = Σ(x_i * log(η_i))
-   * where x_i = volume fraction, η_i = component viscosity
-   * 
-   * Reference: "Viscosity of Liquid Mixtures" - Kendall & Monroe (1917)
+   * Log-Mixing Rule for Viscosity Prediction (delegates to physicsModels).
+   *
+   * Keeps this service's coverage rule: returns null when components with
+   * viscosity data account for < 50% of the formulation mass, because a
+   * prediction from a minority of the mass is not reliable enough to gate on.
    */
   logMixingViscosity(components: Component[]): number | null {
-    const componentsWithViscosity = components.filter(c => c.viscosity && c.viscosity > 0);
-    
-    if (componentsWithViscosity.length === 0) {
-      return null; // Cannot calculate without viscosity data
+    const withViscosity = components.filter(c => c.viscosity && c.viscosity > 0);
+    const coverage = withViscosity.reduce((sum, c) => sum + c.percentage, 0) / 100;
+    if (coverage < 0.5) {
+      return null;
     }
-    
-    // Assume mass fraction ≈ volume fraction for simplicity
-    // (In production, would use density to convert)
-    let logViscositySum = 0;
-    let totalFraction = 0;
-    
-    for (const comp of componentsWithViscosity) {
-      const fraction = comp.percentage / 100;
-      logViscositySum += fraction * Math.log10(comp.viscosity!);
-      totalFraction += fraction;
-    }
-    
-    if (totalFraction < 0.5) {
-      return null; // Not enough data for reliable prediction
-    }
-    
-    const predictedLogViscosity = logViscositySum / totalFraction;
-    return Math.pow(10, predictedLogViscosity);
+    const result = predictViscosityLogMixing(components.map(toFormulationComponent));
+    return result ? result.value : null;
   }
-  
+
   /**
-   * Hansen Solubility Parameter Distance
-   * 
-   * Formula: Ra = √(4(δD1-δD2)² + (δP1-δP2)² + (δH1-δH2)²)
-   * 
-   * Interpretation:
-   * - Ra < 5: Highly compatible (will mix)
-   * - Ra 5-8: Borderline compatibility
-   * - Ra > 8: Incompatible (will separate)
-   * 
-   * Reference: Hansen, C.M. (2007). "Hansen Solubility Parameters: A User's Handbook"
+   * Hansen Solubility Parameter Distance (delegates to physicsModels).
    */
   hansenDistance(
     comp1: { hansen_d?: number; hansen_p?: number; hansen_h?: number },
     comp2: { hansen_d?: number; hansen_p?: number; hansen_h?: number }
   ): number | null {
-    if (!comp1.hansen_d || !comp1.hansen_p || !comp1.hansen_h ||
-        !comp2.hansen_d || !comp2.hansen_p || !comp2.hansen_h) {
-      return null; // Missing Hansen parameters
-    }
-    
-    const dD = comp1.hansen_d - comp2.hansen_d;
-    const dP = comp1.hansen_p - comp2.hansen_p;
-    const dH = comp1.hansen_h - comp2.hansen_h;
-    
-    return Math.sqrt(4 * dD * dD + dP * dP + dH * dH);
+    const asMaterial = (c: typeof comp1) => ({
+      id: '',
+      name: '',
+      code: '',
+      hansenD: c.hansen_d ?? null,
+      hansenP: c.hansen_p ?? null,
+      hansenH: c.hansen_h ?? null,
+    });
+    return calculateHSPDistance(asMaterial(comp1), asMaterial(comp2));
   }
-  
+
   /**
    * Check all pairwise Hansen distances in formulation
    */
@@ -110,17 +113,17 @@ export class PhysicsModels {
   } {
     const incompatiblePairs: Array<{ comp1: string; comp2: string; distance: number }> = [];
     let maxDistance: number | null = null;
-    
+
     for (let i = 0; i < components.length; i++) {
       for (let j = i + 1; j < components.length; j++) {
         const distance = this.hansenDistance(components[i], components[j]);
-        
+
         if (distance !== null) {
           if (maxDistance === null || distance > maxDistance) {
             maxDistance = distance;
           }
-          
-          if (distance > 8) {
+
+          if (distance > HSP_INCOMPATIBILITY_THRESHOLD) {
             incompatiblePairs.push({
               comp1: components[i].materialName,
               comp2: components[j].materialName,
@@ -130,7 +133,7 @@ export class PhysicsModels {
         }
       }
     }
-    
+
     return { maxDistance, incompatiblePairs };
   }
 }
@@ -195,7 +198,7 @@ export class PhysicsValidator {
     for (const pair of compatibility.incompatiblePairs) {
       warnings.push(
         `Solubility warning: ${pair.comp1} and ${pair.comp2} may be incompatible ` +
-        `(Hansen distance ${pair.distance} > 8). Risk of phase separation.`
+        `(Hansen distance ${pair.distance} > ${HSP_INCOMPATIBILITY_THRESHOLD}). Risk of phase separation.`
       );
     }
     

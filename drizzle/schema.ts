@@ -1083,3 +1083,70 @@ export const improvement_actions = mysqlTable("improvement_actions", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
 });
+
+// ==========================================================
+// AGENTIC MEMORY SYSTEM (Phase 38/40)
+// Previously created via ad-hoc SQL in .manus/db — folded into the schema
+// so it is reproducible. Column types match the production DDL exactly;
+// `embedding` is new (semantic retrieval) and added by migration 0001.
+// Note: agentMemorySystem.ts accesses these via raw SQL; the definitions
+// here are the source of truth for fresh databases and drizzle-kit.
+// ==========================================================
+
+export const agentMemories = mysqlTable("agent_memories", {
+  id: int("id").autoincrement().primaryKey(),
+  organizationId: varchar("organization_id", { length: 255 }).notNull(),
+  openId: varchar("open_id", { length: 255 }),
+  fact: text("fact").notNull(),
+  rationale: text("rationale"),
+  category: varchar("category", { length: 50 }).notNull().default("formulation_insight"),
+  confidence: decimal("confidence", { precision: 3, scale: 2 }).default("0.80"),
+  citations: json("citations").$type<Array<{ type: string; id: string; title: string; url?: string }>>(),
+  tags: json("tags").$type<string[]>(),
+  sourceHash: varchar("source_hash", { length: 64 }),
+  // Semantic embedding of fact+rationale for relevance-ranked retrieval
+  embedding: json("embedding").$type<number[]>(),
+  verifiedAt: timestamp("verified_at"),
+  isValid: boolean("is_valid").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+}, (table) => ({
+  orgCategoryIdx: index("idx_org_category").on(table.organizationId, table.category),
+  validIdx: index("idx_valid").on(table.isValid),
+}));
+
+export const memoryVerificationLogs = mysqlTable("memory_verification_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  memoryId: int("memory_id").notNull(),
+  verifiedAt: timestamp("verified_at").defaultNow(),
+  verificationResult: varchar("verification_result", { length: 20 }).notNull(),
+  oldConfidence: decimal("old_confidence", { precision: 3, scale: 2 }),
+  newConfidence: decimal("new_confidence", { precision: 3, scale: 2 }),
+  verificationNotes: text("verification_notes"),
+}, (table) => ({
+  memoryIdx: index("idx_memory").on(table.memoryId),
+}));
+
+export const memoryUsageLogs = mysqlTable("memory_usage_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  memoryId: int("memory_id").notNull(),
+  usedAt: timestamp("used_at").defaultNow(),
+  useCase: varchar("use_case", { length: 100 }),
+  wasHelpful: boolean("was_helpful"),
+}, (table) => ({
+  memoryIdx: index("idx_memory").on(table.memoryId),
+}));
+
+export const memoryFeedback = mysqlTable("memory_feedback", {
+  id: int("id").autoincrement().primaryKey(),
+  memoryId: int("memory_id").notNull(),
+  openId: varchar("open_id", { length: 255 }).notNull(),
+  organizationId: varchar("organization_id", { length: 255 }).notNull(),
+  rating: mysqlEnum("rating", ["helpful", "not_helpful"]).notNull(),
+  context: varchar("context", { length: 500 }),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  memoryIdIdx: index("idx_memory_id").on(table.memoryId),
+  orgMemoryIdx: index("idx_org_memory").on(table.organizationId, table.memoryId),
+  userMemoryUnique: uniqueIndex("unique_user_memory").on(table.memoryId, table.openId),
+}));

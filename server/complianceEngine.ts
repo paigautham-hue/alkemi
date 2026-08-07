@@ -128,8 +128,11 @@ export async function checkFormulationCompliance(
 
 /**
  * Evaluate a single compliance rule
+ *
+ * Exported for testing: the template↔engine contract test in
+ * complianceEngine.test.ts evaluates every shipped template rule through this.
  */
-function evaluateRule(
+export function evaluateRule(
   rule: any,
   dataset: any,
   formulation: any,
@@ -159,20 +162,47 @@ function evaluateRule(
 }
 
 /**
+ * Read a component's concentration (wt%) from the formulation_components row.
+ * The schema column is `percentage`; returns NaN-safe number or null when absent.
+ */
+function componentPercentage(c: any): number | null {
+  const raw = c.formulation_components?.percentage;
+  if (raw === undefined || raw === null) return null;
+  const value = parseFloat(raw);
+  return Number.isFinite(value) ? value : null;
+}
+
+/**
  * Check for banned substances
+ *
+ * Accepts both rule vocabularies:
+ * - legacy engine form: { bannedCAS: string[], bannedNames: string[] }
+ * - template form: { substanceCAS: string, substanceName: string, casPattern?: string, substanceClass?: string }
  */
 function checkBannedSubstance(
   rule: any,
   ruleLogic: any,
   components: any[]
 ): ComplianceViolation | null {
-  const bannedCAS = ruleLogic.bannedCAS || [];
-  const bannedNames = ruleLogic.bannedNames || [];
+  const bannedCAS: string[] = [
+    ...(Array.isArray(ruleLogic.bannedCAS) ? ruleLogic.bannedCAS : []),
+    ...(typeof ruleLogic.substanceCAS === "string" ? [ruleLogic.substanceCAS] : []),
+    ...(typeof ruleLogic.casPattern === "string" ? [ruleLogic.casPattern] : []),
+  ];
+  const bannedNames: string[] = [
+    ...(Array.isArray(ruleLogic.bannedNames) ? ruleLogic.bannedNames : []),
+    ...(typeof ruleLogic.substanceName === "string" ? [ruleLogic.substanceName] : []),
+    ...(typeof ruleLogic.substanceClass === "string" ? [ruleLogic.substanceClass] : []),
+  ];
+
+  // Rule shapes with no material-level identifier (e.g. cmrCategory) cannot be
+  // evaluated against component data — skip rather than silently pass/fail.
+  if (bannedCAS.length === 0 && bannedNames.length === 0) return null;
 
   const violatingComponents = components.filter(c => {
     const material = c.materials;
-    return bannedCAS.includes(material.casNumber) || 
-           bannedNames.some((name: string) => material.name.toLowerCase().includes(name.toLowerCase()));
+    return (material.casNumber && bannedCAS.includes(material.casNumber)) ||
+           bannedNames.some((name: string) => material.name?.toLowerCase().includes(name.toLowerCase()));
   });
 
   if (violatingComponents.length > 0) {
@@ -196,15 +226,24 @@ function checkConcentrationLimit(
   ruleLogic: any,
   components: any[]
 ): ComplianceViolation | null {
-  const { substanceCAS, maxConcentration, unit } = ruleLogic;
+  const { substanceCAS, substanceName, substanceClass, maxConcentration } = ruleLogic;
+
+  // Without a numeric limit or any substance identifier the rule cannot be evaluated.
+  if (maxConcentration === undefined || maxConcentration === null) return null;
+  if (!substanceCAS && !substanceName && !substanceClass) return null;
 
   const violatingComponents = components.filter(c => {
     const material = c.materials;
-    if (material.casNumber === substanceCAS) {
-      const concentration = parseFloat(c.formulation_components.weightPercent);
-      return concentration > maxConcentration;
-    }
-    return false;
+    const matches =
+      (substanceCAS && material.casNumber === substanceCAS) ||
+      (substanceName && material.name?.toLowerCase().includes(substanceName.toLowerCase())) ||
+      (substanceClass && (
+        material.name?.toLowerCase().includes(substanceClass.toLowerCase()) ||
+        material.category?.toLowerCase().includes(substanceClass.toLowerCase())
+      ));
+    if (!matches) return false;
+    const concentration = componentPercentage(c);
+    return concentration !== null && concentration > maxConcentration;
   });
 
   if (violatingComponents.length > 0) {
@@ -212,8 +251,8 @@ function checkConcentrationLimit(
       ruleId: rule.id,
       ruleName: rule.ruleName,
       severity: rule.severity,
-      message: `Concentration limit exceeded: ${violatingComponents.map((c: any) => 
-        `${c.materials.name} (${c.formulation_components.weightPercent}% > ${maxConcentration}%)`
+      message: `Concentration limit exceeded: ${violatingComponents.map((c: any) =>
+        `${c.materials.name} (${c.formulation_components.percentage}% > ${maxConcentration}%)`
       ).join(", ")}`,
       affectedComponents: violatingComponents.map((c: any) => c.materials.name),
     };
@@ -230,17 +269,24 @@ function checkTotalLimit(
   ruleLogic: any,
   components: any[]
 ): ComplianceViolation | null {
-  const { substanceClass, maxTotalConcentration } = ruleLogic;
+  const { substanceClass } = ruleLogic;
+  const maxTotalConcentration = ruleLogic.maxTotalConcentration ?? ruleLogic.maxConcentration;
+
+  // Product-level total limits (e.g. VOC g/L, migration mg/kg) carry no
+  // substanceClass and cannot be evaluated as a component wt% sum — skip.
+  if (!substanceClass || maxTotalConcentration === undefined || maxTotalConcentration === null) {
+    return null;
+  }
 
   const matchingComponents = components.filter(c => {
     const material = c.materials;
     // Simple keyword matching for substance class
-    return material.name.toLowerCase().includes(substanceClass.toLowerCase()) ||
+    return material.name?.toLowerCase().includes(substanceClass.toLowerCase()) ||
            (material.category && material.category.toLowerCase().includes(substanceClass.toLowerCase()));
   });
 
   const totalConcentration = matchingComponents.reduce((sum, c) => {
-    return sum + parseFloat(c.formulation_components.weightPercent);
+    return sum + (componentPercentage(c) ?? 0);
   }, 0);
 
   if (totalConcentration > maxTotalConcentration) {
@@ -266,16 +312,20 @@ function checkRequiredComponent(
 ): ComplianceViolation | null {
   const { requiredCAS, requiredName, minConcentration } = ruleLogic;
 
+  // Property-check shapes (requiredProperty/propertyCheck) reference measured
+  // product properties, not components — not evaluable here, skip.
+  if (!requiredCAS && !requiredName) return null;
+
   const hasRequired = components.some(c => {
     const material = c.materials;
     const matches = (requiredCAS && material.casNumber === requiredCAS) ||
-                   (requiredName && material.name.toLowerCase().includes(requiredName.toLowerCase()));
-    
+                   (requiredName && material.name?.toLowerCase().includes(requiredName.toLowerCase()));
+
     if (matches && minConcentration) {
-      const concentration = parseFloat(c.formulation_components.weightPercent);
-      return concentration >= minConcentration;
+      const concentration = componentPercentage(c);
+      return concentration !== null && concentration >= minConcentration;
     }
-    
+
     return matches;
   });
 
@@ -299,19 +349,27 @@ function checkIncompatibleCombination(
   ruleLogic: any,
   components: any[]
 ): ComplianceViolation | null {
-  const { incompatiblePairs } = ruleLogic;
+  // Accept legacy pair-array form and the template scalar form
+  // ({ substanceClass, incompatibleWith }).
+  let incompatiblePairs: Array<[string, string]> = [];
+  if (Array.isArray(ruleLogic.incompatiblePairs)) {
+    incompatiblePairs = ruleLogic.incompatiblePairs;
+  } else if (ruleLogic.substanceClass && ruleLogic.incompatibleWith) {
+    incompatiblePairs = [[ruleLogic.substanceClass, ruleLogic.incompatibleWith]];
+  }
+  if (incompatiblePairs.length === 0) return null;
 
   for (const pair of incompatiblePairs) {
     const [substance1, substance2] = pair;
     
-    const has1 = components.some(c => 
-      c.materials.casNumber === substance1 || 
-      c.materials.name.toLowerCase().includes(substance1.toLowerCase())
+    const has1 = components.some(c =>
+      c.materials.casNumber === substance1 ||
+      c.materials.name?.toLowerCase().includes(substance1.toLowerCase())
     );
-    
-    const has2 = components.some(c => 
-      c.materials.casNumber === substance2 || 
-      c.materials.name.toLowerCase().includes(substance2.toLowerCase())
+
+    const has2 = components.some(c =>
+      c.materials.casNumber === substance2 ||
+      c.materials.name?.toLowerCase().includes(substance2.toLowerCase())
     );
 
     if (has1 && has2) {

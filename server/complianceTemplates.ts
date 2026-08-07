@@ -305,7 +305,7 @@ export const COMPLIANCE_TEMPLATES: ComplianceTemplate[] = [
     ],
   },
   {
-    id: "reach-svhc-2024",
+    id: "reach-svhc-restrictions",
     name: "REACH SVHC Restrictions",
     jurisdiction: "European Union",
     description: "REACH Regulation (EC) 1907/2006 - Substances of Very High Concern (SVHC) restrictions",

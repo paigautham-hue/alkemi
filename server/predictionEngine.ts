@@ -459,52 +459,6 @@ Provide your prediction in the following structured format.`;
 }
 
 /**
- * Calculate probability that the predicted value falls within specification
- * 
- * Assumes normal distribution of prediction uncertainty
- */
-function calculateProbabilityInSpec(
-  predictedValue: number,
-  uncertaintyLower: number,
-  uncertaintyUpper: number,
-  targetSpec: { min?: number; max?: number }
-): number {
-  // Estimate standard deviation from 95% confidence interval
-  // For normal distribution: 95% CI = mean ± 1.96 * σ
-  const sigma = (uncertaintyUpper - uncertaintyLower) / (2 * 1.96);
-
-  // Calculate z-scores for spec limits
-  const calculateZScore = (x: number) => (x - predictedValue) / sigma;
-
-  // Standard normal CDF approximation
-  const normalCDF = (z: number): number => {
-    const t = 1 / (1 + 0.2316419 * Math.abs(z));
-    const d = 0.3989423 * Math.exp((-z * z) / 2);
-    const p =
-      d *
-      t *
-      (0.3193815 +
-        t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
-    return z > 0 ? 1 - p : p;
-  };
-
-  let probability = 1.0;
-
-  if (targetSpec.min !== undefined) {
-    const zMin = calculateZScore(targetSpec.min);
-    probability *= 1 - normalCDF(zMin);
-  }
-
-  if (targetSpec.max !== undefined) {
-    const zMax = calculateZScore(targetSpec.max);
-    probability *= normalCDF(zMax);
-  }
-
-  // Clamp to [0, 1] and round to 4 decimal places
-  return Math.max(0, Math.min(1, probability));
-}
-
-/**
  * Store prediction result in database
  */
 export async function storePrediction(

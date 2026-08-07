@@ -2,6 +2,11 @@ import { getDb } from "../db";
 import { sql } from "drizzle-orm";
 import { invokeLLM } from "../_core/llm";
 import crypto from "crypto";
+import {
+  generateEmbedding,
+  safeCosineSimilarity,
+  lexicalOverlapScore,
+} from "./embeddingService";
 
 /**
  * Agentic Memory System - MULTI_LLM_PLAYBOOK_v3_2
@@ -65,16 +70,40 @@ function generateSourceHash(citations: Citation[]): string {
 export async function storeMemory(params: StoreMemoryParams): Promise<Memory> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   const sourceHash = params.citations ? generateSourceHash(params.citations) : null;
-  
-  const result = await db.execute(sql`
-    INSERT INTO agent_memories (organization_id, open_id, fact, rationale, category, confidence, citations, tags, source_hash, is_valid)
-    VALUES (${params.organizationId}, ${params.openId || null}, ${params.fact}, ${params.rationale || null}, 
-            ${params.category}, ${params.confidence || 0.8}, ${JSON.stringify(params.citations || [])}, 
-            ${JSON.stringify(params.tags || [])}, ${sourceHash}, TRUE)
-  `);
-  
+
+  // Embed at write time so retrieval can rank semantically. Non-fatal on
+  // failure (or pre-migration schema) — retrieval falls back to lexical.
+  let embedding: number[] | null = null;
+  try {
+    embedding = await generateEmbedding(`${params.fact} ${params.rationale || ""}`);
+  } catch (error) {
+    console.warn("[Memory] Embedding at store time failed:", error);
+  }
+
+  let result: any;
+  try {
+    result = await db.execute(sql`
+      INSERT INTO agent_memories (organization_id, open_id, fact, rationale, category, confidence, citations, tags, source_hash, embedding, is_valid)
+      VALUES (${params.organizationId}, ${params.openId || null}, ${params.fact}, ${params.rationale || null},
+              ${params.category}, ${params.confidence || 0.8}, ${JSON.stringify(params.citations || [])},
+              ${JSON.stringify(params.tags || [])}, ${sourceHash}, ${embedding ? JSON.stringify(embedding) : null}, TRUE)
+    `);
+  } catch (error: any) {
+    if (error?.code === "ER_BAD_FIELD_ERROR" || /Unknown column/i.test(String(error?.message))) {
+      // Pre-migration schema without the embedding column
+      result = await db.execute(sql`
+        INSERT INTO agent_memories (organization_id, open_id, fact, rationale, category, confidence, citations, tags, source_hash, is_valid)
+        VALUES (${params.organizationId}, ${params.openId || null}, ${params.fact}, ${params.rationale || null},
+                ${params.category}, ${params.confidence || 0.8}, ${JSON.stringify(params.citations || [])},
+                ${JSON.stringify(params.tags || [])}, ${sourceHash}, TRUE)
+      `);
+    } else {
+      throw error;
+    }
+  }
+
   const insertId = (result as any).insertId || (result as any)[0]?.insertId;
   
   return {
@@ -94,26 +123,21 @@ export async function storeMemory(params: StoreMemoryParams): Promise<Memory> {
   };
 }
 
-export async function retrieveMemories(params: RetrieveMemoryParams): Promise<Memory[]> {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  
-  let query = sql`
-    SELECT * FROM agent_memories 
-    WHERE organization_id = ${params.organizationId} 
-    AND is_valid = TRUE
-  `;
-  
-  if (params.category) {
-    query = sql`${query} AND category = ${params.category}`;
+/** How many candidate rows to pull for relevance ranking */
+const RETRIEVAL_CANDIDATE_POOL = 200;
+/** Max memories to lazily embed-and-persist per retrieval call */
+const LAZY_EMBED_BUDGET = 20;
+
+function rowToMemory(row: any): Memory & { embedding?: number[] | null } {
+  let embedding: number[] | null = null;
+  if (row.embedding) {
+    try {
+      embedding = typeof row.embedding === "string" ? JSON.parse(row.embedding) : row.embedding;
+    } catch {
+      embedding = null;
+    }
   }
-  
-  query = sql`${query} ORDER BY confidence DESC, updated_at DESC LIMIT ${params.maxResults || 10}`;
-  
-  const results = await db.execute(query);
-  const rows = (results as any)[0] || results;
-  
-  const memories: Memory[] = Array.isArray(rows) ? rows.map((row: any) => ({
+  return {
     id: row.id,
     organizationId: row.organization_id,
     openId: row.open_id,
@@ -128,16 +152,136 @@ export async function retrieveMemories(params: RetrieveMemoryParams): Promise<Me
     isValid: Boolean(row.is_valid),
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
-  })) : [];
-  
+    embedding,
+  };
+}
+
+/**
+ * Retrieve memories ranked by RELEVANCE to the query (embedding similarity
+ * with a lexical-overlap fallback), then by confidence.
+ *
+ * Previously this ignored `query` and `tags` entirely and returned the org's
+ * top-N memories by confidence — presenting unrelated facts to the prediction
+ * engine as if they were relevant evidence.
+ *
+ * Memories without a stored embedding are scored lexically and lazily
+ * embedded-and-persisted (bounded per call) so the store heals over time.
+ * If the `embedding` column doesn't exist yet (pre-migration DB), retrieval
+ * still works — ranking just uses the lexical signal.
+ */
+export async function retrieveMemories(params: RetrieveMemoryParams): Promise<Memory[]> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  let query = sql`
+    SELECT * FROM agent_memories
+    WHERE organization_id = ${params.organizationId}
+    AND is_valid = TRUE
+  `;
+
+  if (params.category) {
+    query = sql`${query} AND category = ${params.category}`;
+  }
+
+  query = sql`${query} ORDER BY confidence DESC, updated_at DESC LIMIT ${RETRIEVAL_CANDIDATE_POOL}`;
+
+  const results = await db.execute(query);
+  const rows = (results as any)[0] || results;
+  const candidates = Array.isArray(rows) ? rows.map(rowToMemory) : [];
+
+  const maxResults = params.maxResults || 10;
+  if (candidates.length === 0) return [];
+
+  const trimmedQuery = params.query?.trim();
+  let ranked: Array<Memory & { embedding?: number[] | null }>;
+
+  if (!trimmedQuery) {
+    ranked = candidates;
+  } else {
+    let queryEmbedding: number[] | null = null;
+    try {
+      queryEmbedding = await generateEmbedding(trimmedQuery);
+    } catch (error) {
+      console.warn("[Memory] Query embedding failed, using lexical ranking only:", error);
+    }
+
+    const tagSet = new Set((params.tags || []).map(t => t.toLowerCase()));
+
+    const scored = candidates.map(memory => {
+      const memoryText = `${memory.fact} ${memory.rationale || ""}`;
+
+      // Semantic signal when both sides have comparable embeddings,
+      // otherwise lexical overlap.
+      let relevance: number;
+      if (queryEmbedding && memory.embedding) {
+        relevance = safeCosineSimilarity(queryEmbedding, memory.embedding);
+        if (relevance === 0 && memory.embedding.length !== queryEmbedding.length) {
+          relevance = lexicalOverlapScore(trimmedQuery, memoryText);
+        }
+      } else {
+        relevance = lexicalOverlapScore(trimmedQuery, memoryText);
+      }
+
+      // Tag filter boost (tags param was previously accepted and unused)
+      let tagBoost = 0;
+      if (tagSet.size > 0 && memory.tags?.length) {
+        const overlap = memory.tags.filter(t => tagSet.has(t.toLowerCase())).length;
+        tagBoost = 0.1 * (overlap / tagSet.size);
+      }
+
+      // Relevance dominates; confidence breaks ties
+      return { memory, score: relevance + tagBoost + memory.confidence * 0.05 };
+    });
+
+    scored.sort((a, b) => b.score - a.score);
+    ranked = scored.map(s => s.memory);
+
+    // Lazily persist embeddings for candidates missing them (fire-and-forget)
+    if (queryEmbedding) {
+      const missing = candidates.filter(m => !m.embedding).slice(0, LAZY_EMBED_BUDGET);
+      if (missing.length > 0) {
+        void backfillMemoryEmbeddings(missing).catch(err =>
+          console.warn("[Memory] Embedding backfill failed:", err)
+        );
+      }
+    }
+  }
+
+  const memories = ranked.slice(0, maxResults).map(({ embedding: _e, ...memory }) => memory as Memory);
+
   // JIT Verification if requested
   if (params.verify && memories.length > 0) {
     for (const memory of memories) {
       await verifyMemory(memory);
     }
   }
-  
+
   return memories;
+}
+
+/**
+ * Persist embeddings for memories that lack them. Tolerates a pre-migration
+ * schema (missing `embedding` column) by downgrading to a no-op.
+ */
+async function backfillMemoryEmbeddings(memories: Array<Memory & { embedding?: number[] | null }>): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  for (const memory of memories) {
+    try {
+      const embedding = await generateEmbedding(`${memory.fact} ${memory.rationale || ""}`);
+      await db.execute(sql`
+        UPDATE agent_memories SET embedding = ${JSON.stringify(embedding)} WHERE id = ${memory.id}
+      `);
+    } catch (error: any) {
+      // ER_BAD_FIELD_ERROR → embedding column not migrated yet; stop trying
+      if (error?.code === "ER_BAD_FIELD_ERROR" || /Unknown column/i.test(String(error?.message))) {
+        console.warn("[Memory] embedding column missing — run the agent_memories migration to enable semantic ranking persistence");
+        return;
+      }
+      console.warn(`[Memory] Failed to backfill embedding for memory ${memory.id}:`, error);
+    }
+  }
 }
 
 async function verifyMemory(memory: Memory): Promise<void> {

@@ -343,6 +343,12 @@ export const predictions = mysqlTable("predictions", {
   // Model metadata
   modelName: varchar("model_name", { length: 255 }),
   modelVersion: varchar("model_version", { length: 64 }),
+  // Provenance — where the number and its σ came from (Phase 1 fusion)
+  predictionBasis: varchar("prediction_basis", { length: 32 }),
+  physicsValue: decimal("physics_value", { precision: 20, scale: 6 }),
+  llmRawValue: decimal("llm_raw_value", { precision: 20, scale: 6 }),
+  sigmaSource: varchar("sigma_source", { length: 32 }),
+  provenance: text("provenance"),
   // Audit
   requestedBy: varchar("requested_by", { length: 36 }).notNull().references(() => users.id, { onDelete: "restrict" }),
   createdAt: timestamp("created_at").notNull().defaultNow(),

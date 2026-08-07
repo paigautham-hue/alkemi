@@ -80,6 +80,36 @@ export default function Predictions() {
   );
 }
 
+/**
+ * Provenance badge config — every prediction is labeled with where its
+ * number came from. "Trust by construction": no unlabeled numbers.
+ */
+const BASIS_BADGES: Record<string, { label: string; variant: "default" | "secondary" | "outline"; className?: string; tooltip: string }> = {
+  physics_anchored: {
+    label: "Physics-anchored",
+    variant: "default",
+    className: "bg-emerald-600 hover:bg-emerald-600/90",
+    tooltip: "Deterministic mixing-rule value; LLM applied only a bounded residual correction",
+  },
+  llm_physics_informed: {
+    label: "LLM + physics context",
+    variant: "secondary",
+    tooltip: "LLM estimate made with computed physics in context; clamped to physical bounds",
+  },
+  llm_only: {
+    label: "LLM estimate — unvalidated",
+    variant: "outline",
+    className: "border-amber-500 text-amber-600",
+    tooltip: "No physics model covers this property; treat as a hypothesis, not a measurement",
+  },
+};
+
+const SIGMA_LABELS: Record<string, string> = {
+  physics_band: "σ from documented physics model error band",
+  llm_heuristic: "σ from LLM heuristic (floor-widened, not empirically calibrated)",
+  conformal: "σ calibrated from measured trial residuals",
+};
+
 function PredictionCard({ prediction }: { prediction: any }) {
   const predictedValue = parseFloat(prediction.predictedValue);
   const uncertaintyLower = prediction.uncertaintyLower
@@ -91,6 +121,12 @@ function PredictionCard({ prediction }: { prediction: any }) {
   const probabilityInSpec = prediction.probabilityInSpec
     ? parseFloat(prediction.probabilityInSpec)
     : undefined;
+  const basisBadge = prediction.predictionBasis
+    ? BASIS_BADGES[prediction.predictionBasis]
+    : undefined;
+  const sigmaLabel = prediction.sigmaSource ? SIGMA_LABELS[prediction.sigmaSource] : undefined;
+  const physicsValue = prediction.physicsValue ? parseFloat(prediction.physicsValue) : undefined;
+  const llmRawValue = prediction.llmRawValue ? parseFloat(prediction.llmRawValue) : undefined;
 
   const getProbabilityColor = (prob: number) => {
     if (prob >= 0.9) return "text-green-600";
@@ -108,7 +144,14 @@ function PredictionCard({ prediction }: { prediction: any }) {
               {new Date(prediction.createdAt).toLocaleString()}
             </CardDescription>
           </div>
-          <Badge variant="secondary">{prediction.modelName}</Badge>
+          <div className="flex items-center gap-2">
+            {basisBadge && (
+              <Badge variant={basisBadge.variant} className={basisBadge.className} title={basisBadge.tooltip}>
+                {basisBadge.label}
+              </Badge>
+            )}
+            <Badge variant="secondary">{prediction.modelName}</Badge>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -131,8 +174,25 @@ function PredictionCard({ prediction }: { prediction: any }) {
                   </span>
                 </div>
                 {uncertaintyLower !== undefined && uncertaintyUpper !== undefined && (
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="text-sm text-muted-foreground mt-1" title={sigmaLabel}>
                     95% CI: [{uncertaintyLower.toFixed(2)}, {uncertaintyUpper.toFixed(2)}]
+                    {prediction.sigmaSource === "llm_heuristic" && (
+                      <span className="ml-1 text-amber-600">(uncalibrated)</span>
+                    )}
+                  </p>
+                )}
+                {prediction.predictionBasis === "physics_anchored" &&
+                  physicsValue !== undefined &&
+                  llmRawValue !== undefined && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Physics: {physicsValue.toFixed(2)} · LLM raw: {llmRawValue.toFixed(2)}
+                    </p>
+                  )}
+                {prediction.provenance && (
+                  <p className="text-xs text-muted-foreground mt-1 italic" title={prediction.provenance}>
+                    {String(prediction.provenance).length > 140
+                      ? `${String(prediction.provenance).slice(0, 140)}…`
+                      : prediction.provenance}
                   </p>
                 )}
               </div>

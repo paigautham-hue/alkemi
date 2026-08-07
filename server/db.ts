@@ -807,6 +807,12 @@ export async function createPrediction(data: {
     importance: number;
     contribution: number;
   }>;
+  // Provenance (Phase 1 physics fusion)
+  predictionBasis?: string;
+  physicsValue?: number;
+  llmRawValue?: number;
+  sigmaSource?: string;
+  provenance?: string;
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -830,6 +836,11 @@ export async function createPrediction(data: {
     probabilityInSpec: data.probabilityInSpec?.toString() || null,
     modelName: data.modelName || null,
     modelVersion: data.modelVersion || null,
+    predictionBasis: data.predictionBasis || null,
+    physicsValue: data.physicsValue?.toString() || null,
+    llmRawValue: data.llmRawValue?.toString() || null,
+    sigmaSource: data.sigmaSource || null,
+    provenance: data.provenance || null,
     requestedBy: data.requestedBy,
     createdAt: now,
   });

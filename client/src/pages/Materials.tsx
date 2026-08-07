@@ -19,11 +19,25 @@ export default function Materials() {
   const [alternativesDialogOpen, setAlternativesDialogOpen] = useState(false);
   const [selectedMaterialId, setSelectedMaterialId] = useState<string | null>(null);
   const [selectedMaterials, setSelectedMaterials] = useState<Set<string>>(new Set());
+  const [substitutesDialogOpen, setSubstitutesDialogOpen] = useState(false);
   const { data: materials, isLoading } = trpc.materials.list.useQuery({ search });
   const { data: alternatives, isLoading: alternativesLoading } = trpc.supplierIntelligence.findAlternatives.useQuery(
     { materialId: selectedMaterialId! },
     { enabled: !!selectedMaterialId && alternativesDialogOpen }
   );
+  const { data: substitutes, isLoading: substitutesLoading } = trpc.substitution.findSubstitutes.useQuery(
+    { materialId: selectedMaterialId! },
+    { enabled: !!selectedMaterialId && substitutesDialogOpen }
+  );
+  const utils = trpc.useUtils();
+  const enrich = trpc.materials.enrich.useMutation({
+    onSuccess: (report) => {
+      const summary = report.steps.map((s: any) => `${s.step}: ${s.status}`).join(", ");
+      toast.success(`Enrichment done — ${summary}`);
+      utils.materials.list.invalidate();
+    },
+    onError: (e) => toast.error(`Enrichment failed: ${e.message}`),
+  });
 
   return (
     <DashboardLayout>
@@ -213,18 +227,31 @@ export default function Materials() {
                             size="sm"
                             onClick={() => {
                               setSelectedMaterialId(material.id);
-                              setAlternativesDialogOpen(true);
+                              setSubstitutesDialogOpen(true);
                             }}
+                            title="Ranked substitutes: HSP + properties + cost + supply risk"
                           >
                             <GitBranch className="h-4 w-4 mr-1" />
-                            Alternatives
+                            Substitutes
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => toast.info("Edit functionality coming soon")}
+                            onClick={() => enrich.mutate({ id: material.id })}
+                            disabled={enrich.isPending}
+                            title="Enrich from PubChem + Hansen reference data"
                           >
-                            Edit
+                            Enrich
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedMaterialId(material.id);
+                              setAlternativesDialogOpen(true);
+                            }}
+                          >
+                            Alternatives
                           </Button>
                         </div>
                       </TableCell>
@@ -250,6 +277,64 @@ export default function Materials() {
         </Card>
 
         <MaterialCreateDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
+
+        {/* Substitution Advisor Dialog */}
+        <Dialog open={substitutesDialogOpen} onOpenChange={setSubstitutesDialogOpen}>
+          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>RM Substitution Advisor</DialogTitle>
+              <DialogDescription>
+                Ranked by HSP compatibility (35%), property distance (35%), cost (15%) and
+                supply-risk relief (15%). Screening only — every substitute needs lab validation.
+              </DialogDescription>
+            </DialogHeader>
+            {substitutesLoading ? (
+              <div className="py-8 text-center text-muted-foreground">Scoring candidates…</div>
+            ) : !substitutes || substitutes.candidates.length === 0 ? (
+              <div className="py-8 text-center text-muted-foreground">
+                No candidates found — candidates need the same material function (set it via the
+                domain pack) or category, and benefit from enriched HSP/property data.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {substitutes.candidates.map((c: any) => (
+                  <div key={c.materialId} className="border rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <span className="font-medium">{c.name}</span>
+                        <span className="ml-2 text-sm text-muted-foreground">({c.code})</span>
+                        {c.supplierCountry && (
+                          <Badge variant="outline" className="ml-2">{c.supplierCountry}</Badge>
+                        )}
+                      </div>
+                      <Badge variant={c.compositeScore >= 0.7 ? "default" : c.compositeScore >= 0.5 ? "secondary" : "outline"}>
+                        {(c.compositeScore * 100).toFixed(0)}%
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
+                      {c.factors.map((f: any) => (
+                        <div key={f.name}>
+                          <span className="font-medium">{f.name.replace(/_/g, " ")}:</span>{" "}
+                          {(f.score * 100).toFixed(0)}% — {f.detail}
+                        </div>
+                      ))}
+                    </div>
+                    {c.cautions.length > 0 && (
+                      <div className="mt-2 space-y-0.5">
+                        {c.cautions.map((caution: string, i: number) => (
+                          <p key={i} className="text-xs text-amber-600 flex items-start gap-1">
+                            <AlertTriangle className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                            {caution}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
 
         {/* Alternatives Dialog */}
         <Dialog open={alternativesDialogOpen} onOpenChange={setAlternativesDialogOpen}>

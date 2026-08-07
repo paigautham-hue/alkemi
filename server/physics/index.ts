@@ -13,6 +13,8 @@ import { suspensionViscosity, particleVolumeFraction, PARTICLE_FUNCTIONS } from 
 import { computePVC } from "./pvc";
 import { uvCureDepth } from "./uvCure";
 import { crosslinkAnalysis } from "./crosslink";
+import { hlbMatch, stokesVelocity } from "./emulsion";
+import { viscosityAtTemperature } from "./thermal";
 
 export interface ExtendedComponent {
   massFraction: number; // 0–1
@@ -183,6 +185,94 @@ export function predictExtendedProperties(
         confidence: "low", // screening model until calibrated against working curves
         notes: `Penetration depth ${cure.penetrationDepthUm.toFixed(1)} µm; ${cure.throughCure ? "through-cure OK" : "UNDER-CURE RISK"} at ${conditions.filmThicknessUm} µm film`,
       });
+    }
+  }
+
+  // --- HLB matching (emulsion systems) ---
+  const emulsifiers = components
+    .filter(c => c.view.materialFunction === "surfactant_emulsifier" && c.view.hlb)
+    .map(c => ({ name: c.view.name, massFraction: c.massFraction, hlb: c.view.hlb! }));
+  if (emulsifiers.length > 0) {
+    // Required HLB: mass-weighted over oil-phase components carrying an
+    // hlb value used as required-HLB (emollient convention in the pack)
+    const oils = components.filter(c => c.view.materialFunction === "emollient");
+    const oilsWithReq = oils.filter(c => c.view.hlb);
+    let requiredHlb: number | undefined;
+    if (oilsWithReq.length > 0) {
+      const totalOil = oilsWithReq.reduce((s, c) => s + c.massFraction, 0);
+      requiredHlb = oilsWithReq.reduce((s, c) => s + c.massFraction * c.view.hlb!, 0) / totalOil;
+    }
+    const hlb = hlbMatch({ emulsifiers, requiredHlb });
+    if (hlb) {
+      warnings.push(...hlb.warnings);
+      predictions.push({
+        property: "hlb_blend",
+        value: hlb.blendHlb,
+        unit: "HLB",
+        method: "Mass-weighted emulsifier HLB",
+        confidence: "high",
+        notes: `${hlb.emulsionTypeHint.toUpperCase()} system hint${hlb.requiredHlb !== undefined ? `; required HLB ${hlb.requiredHlb.toFixed(1)} (Δ=${hlb.deltaHlb})` : "; oil-phase required HLB unknown"}`,
+      });
+    }
+  }
+
+  // --- Stokes creaming/settling (screening; needs particle size + densities) ---
+  const dispersed = components.find(
+    c => c.view.materialFunction && PARTICLE_FUNCTIONS.has(c.view.materialFunction) && c.view.particleSizeD50 && c.view.density
+  );
+  if (dispersed) {
+    const continuous = components.filter(
+      c => c !== dispersed && c.view.density && c.view.viscosity
+    );
+    if (continuous.length > 0) {
+      const totalMass = continuous.reduce((s, c) => s + c.massFraction, 0);
+      const contDensity = 1 / continuous.reduce((s, c) => s + c.massFraction / totalMass / c.view.density!, 0);
+      const contViscosity = Math.exp(
+        continuous.reduce((s, c) => s + (c.massFraction / totalMass) * Math.log(c.view.viscosity!), 0)
+      );
+      const stokes = stokesVelocity({
+        radiusUm: dispersed.view.particleSizeD50! / 2,
+        dispersedDensity: dispersed.view.density!,
+        continuousDensity: contDensity,
+        continuousViscosity: contViscosity,
+      });
+      if (stokes) {
+        warnings.push(...stokes.warnings);
+        predictions.push({
+          property: "stokes_velocity",
+          value: stokes.velocityUmPerDay,
+          unit: "µm/day",
+          method: "Stokes law (screening)",
+          confidence: "low",
+          notes: `${stokes.mode}${stokes.daysPerCm ? `; 1 cm in ${stokes.daysPerCm} days` : ""} — ${dispersed.view.name} in vehicle (η=${contViscosity.toFixed(0)} mPa·s)`,
+        });
+      }
+    }
+  }
+
+  // --- Viscosity at test temperature (Arrhenius/WLF) ---
+  if (conditions.temperatureC !== undefined && Math.abs(conditions.temperatureC - 25) > 2) {
+    const visc25 = predictions.find(p => p.property === "viscosity");
+    if (visc25) {
+      const tgPred = components.every(c => c.view.glassTransitionTemp === undefined)
+        ? undefined
+        : undefined; // formulation Tg handled upstream by Fox; conservative: Arrhenius only
+      const atT = viscosityAtTemperature({
+        viscosityAtRef: visc25.value,
+        refTempC: 25,
+        targetTempC: conditions.temperatureC,
+        glassTransitionC: tgPred,
+      });
+      if (atT) {
+        predictions.push({
+          property: "viscosity_at_test_temp",
+          value: atT.viscosity,
+          unit: `mPa·s at ${conditions.temperatureC}°C`,
+          method: atT.note,
+          confidence: "medium",
+          notes: `Derived from 25°C prediction ${visc25.value} mPa·s`,
+        });
+      }
     }
   }
 

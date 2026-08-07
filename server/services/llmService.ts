@@ -127,8 +127,12 @@ export async function invokeLLMWithFallback(
     }
 
     try {
+      // Pass the selected model — previously computed and then discarded,
+      // so every call silently used the default fallback chain and the cost
+      // log billed against a model that was never used.
       const response = await invokeLLM({
         messages: request.messages,
+        model,
         temperature: request.temperature,
         max_tokens: request.maxTokens,
       });

@@ -29,6 +29,13 @@
       "when": 1786412600000,
       "tag": "0003_materials_v2",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1786412700000,
+      "tag": "0004_calibration_and_ingestion",
+      "breakpoints": true
     }
   ]
 }

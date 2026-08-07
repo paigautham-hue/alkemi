@@ -24,7 +24,8 @@ import {
   type PredictionBasis,
   type PhysicsAgreement,
 } from "./prediction/fusion";
-import { getSigma, type SigmaSource } from "./services/calibrationService";
+import { getSigmaCalibrated, type SigmaSource } from "./services/calibrationService";
+import { detectExtrapolation } from "./services/extrapolationDetector";
 import { resolveMaterials } from "./services/materialResolver";
 import { predictExtendedProperties, parseConditions } from "./physics/index";
 
@@ -56,6 +57,11 @@ export interface PredictionResult {
   sigmaSource?: SigmaSource;
   sigmaNote?: string;
   provenance?: string;
+  extrapolation?: {
+    isExtrapolation: boolean;
+    severity: "none" | "moderate" | "severe";
+    note: string;
+  };
   uncertaintyBreakdown?: {
     sources: {
       model: number;
@@ -303,16 +309,26 @@ export async function predictProperty(
     hardBounds
   );
 
+  // 6.5 Extrapolation: how far is this composition from anything trialed?
+  let extrapolation: Awaited<ReturnType<typeof detectExtrapolation>> | undefined;
+  try {
+    extrapolation = await detectExtrapolation(request.organizationId, request.formulationVersionId);
+  } catch (error) {
+    console.warn("[PredictionEngine] extrapolation detection failed (non-fatal):", error);
+  }
+
   // 7. Honest σ from the calibration service — NOT reverse-engineered from
-  // LLM-asserted bounds. Physics-anchored predictions carry the model's
-  // documented error band; LLM predictions carry a floor-widened interval
-  // labeled as uncalibrated.
-  const sigmaResult = getSigma({
+  // LLM-asserted bounds. Ladder: physics band / floored LLM interval (cold
+  // start) → conformal residual quantiles as matched trials accumulate.
+  // Widened when the formulation is outside trialed composition space.
+  const sigmaResult = await getSigmaCalibrated({
     propertyName: request.propertyName,
     predictedValue: fusion.finalValue,
     basis: fusion.basis,
     llmUncertaintyLower: prediction.uncertaintyLower,
     llmUncertaintyUpper: prediction.uncertaintyUpper,
+    organizationId: request.organizationId,
+    extrapolationInflation: extrapolation?.sigmaInflation,
   });
   const uncertaintyLower = fusion.finalValue - 1.96 * sigmaResult.sigma;
   const uncertaintyUpper = fusion.finalValue + 1.96 * sigmaResult.sigma;
@@ -332,8 +348,8 @@ export async function predictProperty(
       },
       {
         modelConfidence: prediction.confidenceLevel,
-        dataQuality: 0.85, // Heuristic - replaced by calibration stats in Phase 4
-        isExtrapolation: false, // Extrapolation detector lands in Phase 4
+        dataQuality: 0.85, // Heuristic — future: derive from resolver provenance coverage
+        isExtrapolation: extrapolation?.isExtrapolation ?? true,
       }
     );
 
@@ -359,6 +375,13 @@ export async function predictProperty(
     sigmaSource: sigmaResult.sigmaSource,
     sigmaNote: sigmaResult.note,
     provenance: fusion.provenance,
+    extrapolation: extrapolation
+      ? {
+          isExtrapolation: extrapolation.isExtrapolation,
+          severity: extrapolation.severity,
+          note: extrapolation.note,
+        }
+      : undefined,
     physicsBasedPredictions: physicsResults.predictions,
     compatibilityAssessment: physicsResults.compatibility,
     hansenParameters: physicsResults.hsp,

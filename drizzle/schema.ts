@@ -1166,6 +1166,100 @@ export const improvement_actions = mysqlTable("improvement_actions", {
 });
 
 // ==========================================================
+// CALIBRATION & FEEDBACK LOOP (Phase 4)
+// ==========================================================
+
+/**
+ * One row per matched (prediction, measurement) pair — the raw evidence the
+ * calibration ladder is built on.
+ */
+export const predictionResiduals = mysqlTable("prediction_residuals", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  organizationId: varchar("organization_id", { length: 36 }).notNull(),
+  domainId: varchar("domain_id", { length: 36 }),
+  propertyName: varchar("property_name", { length: 255 }).notNull(),
+  predictionId: varchar("prediction_id", { length: 36 }).notNull(),
+  trialMeasurementId: varchar("trial_measurement_id", { length: 36 }).notNull(),
+  formulationVersionId: varchar("formulation_version_id", { length: 36 }).notNull(),
+  predictedValue: decimal("predicted_value", { precision: 20, scale: 6 }).notNull(),
+  measuredValue: decimal("measured_value", { precision: 20, scale: 6 }).notNull(),
+  /** (predicted − measured) / |measured| */
+  relResidual: decimal("rel_residual", { precision: 12, scale: 6 }).notNull(),
+  predictionBasis: varchar("prediction_basis", { length: 32 }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  orgPropIdx: index("idx_residuals_org_prop").on(table.organizationId, table.propertyName),
+  pairIdx: uniqueIndex("idx_residuals_pair").on(table.predictionId, table.trialMeasurementId),
+}));
+
+/**
+ * Aggregated residual quantiles per (org, property, domain, basis) —
+ * the conformal-style intervals σ is derived from once n ≥ 8.
+ */
+export const calibrationStats = mysqlTable("calibration_stats", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  organizationId: varchar("organization_id", { length: 36 }).notNull(),
+  propertyName: varchar("property_name", { length: 255 }).notNull(),
+  domainId: varchar("domain_id", { length: 36 }),
+  predictionBasis: varchar("prediction_basis", { length: 32 }),
+  n: int("n").notNull(),
+  medianAbsRel: decimal("median_abs_rel", { precision: 12, scale: 6 }),
+  q80AbsRel: decimal("q80_abs_rel", { precision: 12, scale: 6 }),
+  q95AbsRel: decimal("q95_abs_rel", { precision: 12, scale: 6 }),
+  /** signed median relative residual (systematic bias) */
+  bias: decimal("bias", { precision: 12, scale: 6 }),
+  updatedAt: timestamp("updated_at").notNull().defaultNow().onUpdateNow(),
+}, (table) => ({
+  keyIdx: uniqueIndex("idx_calstats_key").on(table.organizationId, table.propertyName, table.predictionBasis),
+}));
+
+// ==========================================================
+// HISTORICAL DATA INGESTION (staged, human-validated)
+// ==========================================================
+
+export const ingestionJobs = mysqlTable("ingestion_jobs", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  organizationId: varchar("organization_id", { length: 36 }).notNull(),
+  createdBy: varchar("created_by", { length: 36 }).notNull(),
+  sourceType: mysqlEnum("source_type", ["batch_card", "lab_notebook", "qc_log", "trial_report", "spreadsheet", "other"]).notNull(),
+  sourceDescription: text("source_description"),
+  status: mysqlEnum("status", ["extracting", "pending_review", "partially_committed", "committed", "rejected", "failed"]).notNull().default("extracting"),
+  rawText: text("raw_text"),
+  error: text("error"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow().onUpdateNow(),
+}, (table) => ({
+  orgIdx: index("idx_ingestion_org").on(table.organizationId, table.status),
+}));
+
+/**
+ * One extracted record = one candidate formulation (with components and/or
+ * measured results). NEVER auto-committed: a human approves each record in
+ * the validation gate, which then writes real formulation/trial rows with
+ * provenance metadata.
+ */
+export const extractedRecords = mysqlTable("extracted_records", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  jobId: varchar("job_id", { length: 36 }).notNull(),
+  organizationId: varchar("organization_id", { length: 36 }).notNull(),
+  recordType: mysqlEnum("record_type", ["formulation", "trial_results", "formulation_with_results"]).notNull(),
+  /** LLM-extracted payload: {name, components: [{materialName, casNumber?, percentage}], measurements: [{propertyName, value, unit, conditions?}], date?} */
+  payload: json("payload").$type<Record<string, any>>().notNull(),
+  /** per-field extraction confidence from the LLM */
+  confidence: decimal("confidence", { precision: 3, scale: 2 }),
+  status: mysqlEnum("status", ["pending_review", "approved", "rejected", "committed", "commit_failed"]).notNull().default("pending_review"),
+  reviewedBy: varchar("reviewed_by", { length: 36 }),
+  reviewNotes: text("review_notes"),
+  /** ids created on commit, for traceability */
+  committedRefs: json("committed_refs").$type<Record<string, string>>(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow().onUpdateNow(),
+}, (table) => ({
+  jobIdx: index("idx_extracted_job").on(table.jobId),
+  orgStatusIdx: index("idx_extracted_org_status").on(table.organizationId, table.status),
+}));
+
+// ==========================================================
 // AGENTIC MEMORY SYSTEM (Phase 38/40)
 // Previously created via ad-hoc SQL in .manus/db — folded into the schema
 // so it is reproducible. Column types match the production DDL exactly;

@@ -244,6 +244,258 @@ export const appRouter = router({
   }),
 
   // ==========================================================
+  // BRIEF → SAMPLE (Primacy CDMO workflow)
+  // ==========================================================
+  briefIntake: router({
+    process: protectedProcedure
+      .input(
+        z.object({
+          domainId: z.string().uuid(),
+          category: z.string().min(3),
+          claims: z.array(z.string().min(2)).min(1),
+          benchmarkProduct: z.string().optional(),
+          costTargetPerKg: z.number().positive().optional(),
+          regulatoryMarkets: z.array(z.string()).optional(),
+          additionalNotes: z.string().optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const { processBrief } = await import("./services/briefIntake");
+        return processBrief({ ...input, organizationId: ctx.user.organizationId, userId: ctx.user.id });
+      }),
+  }),
+
+  // ==========================================================
+  // VARIANT MATRIX (base + variant logic)
+  // ==========================================================
+  variants: router({
+    /** n-way component matrix across all versions of a family, diff-oriented */
+    matrix: protectedProcedure
+      .input(z.object({ familyId: z.string().uuid() }))
+      .query(async ({ ctx, input }) => {
+        const dbConn = await db.getDb();
+        if (!dbConn) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+        const schema = await import("../drizzle/schema");
+        const { and: andOp, inArray, asc } = await import("drizzle-orm");
+
+        const versions = await dbConn
+          .select()
+          .from(schema.formulationVersions)
+          .where(
+            andOp(
+              eq(schema.formulationVersions.familyId, input.familyId),
+              eq(schema.formulationVersions.organizationId, ctx.user.organizationId)
+            )
+          )
+          .orderBy(asc(schema.formulationVersions.createdAt));
+        if (versions.length === 0) return { versions: [], rows: [] };
+
+        const componentRows = await dbConn
+          .select({ component: schema.formulationComponents, material: schema.materials })
+          .from(schema.formulationComponents)
+          .innerJoin(schema.materials, eq(schema.formulationComponents.materialId, schema.materials.id))
+          .where(inArray(schema.formulationComponents.versionId, versions.map(v => v.id)));
+
+        // Rows: one per material; columns: percentage per version
+        const byMaterial = new Map<string, { materialId: string; materialName: string; materialCode: string; materialFunction: string | null; cells: Record<string, number> }>();
+        for (const { component, material } of componentRows) {
+          if (!byMaterial.has(material.id)) {
+            byMaterial.set(material.id, {
+              materialId: material.id,
+              materialName: material.name,
+              materialCode: material.code,
+              materialFunction: material.materialFunction,
+              cells: {},
+            });
+          }
+          byMaterial.get(material.id)!.cells[component.versionId] = parseFloat(String(component.percentage));
+        }
+
+        const rows = Array.from(byMaterial.values()).map(row => {
+          const values = versions.map(v => row.cells[v.id] ?? 0);
+          const min = Math.min(...values);
+          const max = Math.max(...values);
+          return { ...row, varies: max - min > 0.001, minPct: min, maxPct: max };
+        });
+        // Varying rows first, then by max percentage
+        rows.sort((a, b) => Number(b.varies) - Number(a.varies) || b.maxPct - a.maxPct);
+
+        return {
+          versions: versions.map(v => ({
+            id: v.id,
+            versionNumber: v.versionNumber,
+            branchType: v.branchType,
+            status: v.status,
+            parentVersionId: v.parentVersionId,
+            variantAxis: (v.metadata as any)?.variantAxis ?? null,
+          })),
+          rows,
+        };
+      }),
+  }),
+
+  // ==========================================================
+  // HISTORICAL DATA INGESTION (staged, human-validated)
+  // ==========================================================
+  ingestion: router({
+    start: protectedProcedure
+      .input(
+        z.object({
+          sourceType: z.enum(["batch_card", "lab_notebook", "qc_log", "trial_report", "spreadsheet", "other"]),
+          sourceDescription: z.string().optional(),
+          rawText: z.string().min(50),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const { startIngestionJob } = await import("./services/ingestionService");
+        return startIngestionJob({ ...input, organizationId: ctx.user.organizationId, userId: ctx.user.id });
+      }),
+
+    listJobs: protectedProcedure.query(async ({ ctx }) => {
+      const dbConn = await db.getDb();
+      if (!dbConn) return [];
+      const { ingestionJobs } = await import("../drizzle/schema");
+      const { desc: descOrder } = await import("drizzle-orm");
+      return dbConn
+        .select()
+        .from(ingestionJobs)
+        .where(eq(ingestionJobs.organizationId, ctx.user.organizationId))
+        .orderBy(descOrder(ingestionJobs.createdAt))
+        .limit(50);
+    }),
+
+    listRecords: protectedProcedure
+      .input(z.object({ jobId: z.string().uuid().optional(), status: z.string().optional() }))
+      .query(async ({ ctx, input }) => {
+        const dbConn = await db.getDb();
+        if (!dbConn) return [];
+        const { extractedRecords } = await import("../drizzle/schema");
+        const { and: andOp } = await import("drizzle-orm");
+        const conditions = [eq(extractedRecords.organizationId, ctx.user.organizationId)];
+        if (input.jobId) conditions.push(eq(extractedRecords.jobId, input.jobId));
+        if (input.status) conditions.push(eq(extractedRecords.status, input.status as any));
+        return dbConn.select().from(extractedRecords).where(andOp(...conditions)).limit(200);
+      }),
+
+    /** The validation gate: approve/reject a staged record */
+    review: protectedProcedure
+      .input(z.object({ recordId: z.string().uuid(), approve: z.boolean(), notes: z.string().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        const dbConn = await db.getDb();
+        if (!dbConn) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+        const { extractedRecords } = await import("../drizzle/schema");
+        const { and: andOp } = await import("drizzle-orm");
+        await dbConn
+          .update(extractedRecords)
+          .set({
+            status: input.approve ? "approved" : "rejected",
+            reviewedBy: ctx.user.id,
+            reviewNotes: input.notes ?? null,
+          })
+          .where(
+            andOp(eq(extractedRecords.id, input.recordId), eq(extractedRecords.organizationId, ctx.user.organizationId))
+          );
+        return { success: true };
+      }),
+
+    /** Commit an approved record into real formulation/trial rows */
+    commit: protectedProcedure
+      .input(
+        z.object({
+          recordId: z.string().uuid(),
+          domainId: z.string().uuid(),
+          testConditionSetId: z.string().uuid(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const { commitExtractedRecord } = await import("./services/ingestionService");
+        return commitExtractedRecord({ ...input, organizationId: ctx.user.organizationId, userId: ctx.user.id });
+      }),
+  }),
+
+  // ==========================================================
+  // CALIBRATION STATUS
+  // ==========================================================
+  calibration: router({
+    /** Per-property calibration status: n trials, residual quantiles, bias */
+    status: protectedProcedure.query(async ({ ctx }) => {
+      const dbConn = await db.getDb();
+      if (!dbConn) return [];
+      const { calibrationStats } = await import("../drizzle/schema");
+      const rows = await dbConn
+        .select()
+        .from(calibrationStats)
+        .where(eq(calibrationStats.organizationId, ctx.user.organizationId));
+      return rows.map(r => ({
+        propertyName: r.propertyName,
+        predictionBasis: r.predictionBasis,
+        n: r.n,
+        medianAbsRelPct: r.medianAbsRel ? Math.round(parseFloat(String(r.medianAbsRel)) * 1000) / 10 : null,
+        q95AbsRelPct: r.q95AbsRel ? Math.round(parseFloat(String(r.q95AbsRel)) * 1000) / 10 : null,
+        biasPct: r.bias ? Math.round(parseFloat(String(r.bias)) * 1000) / 10 : null,
+        maturity: r.n >= 30 ? "calibrated" : r.n >= 8 ? "blending" : "cold_start",
+        updatedAt: r.updatedAt,
+      }));
+    }),
+  }),
+
+  // ==========================================================
+  // RM SUBSTITUTION ADVISOR
+  // ==========================================================
+  substitution: router({
+    /** Ranked substitutes for a material (HSP + properties + cost + supply risk) */
+    findSubstitutes: protectedProcedure
+      .input(z.object({ materialId: z.string().uuid(), maxResults: z.number().min(1).max(25).optional() }))
+      .query(async ({ ctx, input }) => {
+        const { findSubstitutes } = await import("./services/substitutionAdvisor");
+        return findSubstitutes(input.materialId, ctx.user.organizationId, { maxResults: input.maxResults });
+      }),
+
+    /** Clone a formulation version with one material swapped (experimental branch) */
+    swapAndClone: protectedProcedure
+      .input(
+        z.object({
+          sourceVersionId: z.string().uuid(),
+          originalMaterialId: z.string().uuid(),
+          substituteMaterialId: z.string().uuid(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const { swapAndClone } = await import("./services/substitutionAdvisor");
+        return swapAndClone({
+          organizationId: ctx.user.organizationId,
+          userId: ctx.user.id,
+          ...input,
+        });
+      }),
+  }),
+
+  // ==========================================================
+  // BENCHMARK MATCHING (reverse-engineering loop closure)
+  // ==========================================================
+  benchmark: router({
+    /** TPP → persisted starting formulation drafted from the org's material library */
+    generateStartingFormulation: protectedProcedure
+      .input(z.object({ competitorProductId: z.string().uuid() }))
+      .mutation(async ({ ctx, input }) => {
+        const { generateStartingFormulation } = await import("./services/benchmarkMatching");
+        return generateStartingFormulation({
+          competitorProductId: input.competitorProductId,
+          organizationId: ctx.user.organizationId,
+          userId: ctx.user.id,
+        });
+      }),
+
+    /** Per-property gap dashboard: benchmark target vs measured vs predicted */
+    gap: protectedProcedure
+      .input(z.object({ competitorProductId: z.string().uuid(), formulationVersionId: z.string().uuid() }))
+      .query(async ({ ctx, input }) => {
+        const { benchmarkGap } = await import("./services/benchmarkMatching");
+        return benchmarkGap({ ...input, organizationId: ctx.user.organizationId });
+      }),
+  }),
+
+  // ==========================================================
   // DOMAIN PACKS
   // ==========================================================
   domainPacks: router({
@@ -1381,7 +1633,39 @@ export const appRouter = router({
           notes: input.notes,
           measurements: input.measurements,
         });
-        return { success: true, trialId };
+
+        // Feedback loop: residuals → calibration stats → memory → DOE
+        // suggestions. Failure-isolated — never blocks trial recording.
+        let feedback: any[] = [];
+        try {
+          const { onMeasurementRecorded } = await import("./services/feedbackLoop");
+          const recorded = await db.getTrialMeasurements(trialId);
+          for (const m of recorded) {
+            const measuredValue = parseFloat(String(m.measuredValue));
+            if (!Number.isFinite(measuredValue)) continue;
+            feedback.push(
+              await onMeasurementRecorded({
+                organizationId: ctx.user.organizationId,
+                trialId,
+                measurementId: m.id,
+                propertyName: m.propertyName,
+                measuredValue,
+              })
+            );
+          }
+        } catch (error) {
+          console.warn("[Trials] feedback loop failed (non-fatal):", error);
+        }
+
+        return { success: true, trialId, feedback };
+      }),
+
+    /** Active-learning: suggested next experiments for a formulation version */
+    suggestedExperiments: protectedProcedure
+      .input(z.object({ formulationVersionId: z.string().uuid() }))
+      .query(async ({ ctx, input }) => {
+        const { suggestNextExperiments } = await import("./services/feedbackLoop");
+        return suggestNextExperiments(ctx.user.organizationId, input.formulationVersionId);
       }),
     get: protectedProcedure
       .input(z.object({ trialId: z.string() }))

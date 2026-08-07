@@ -92,12 +92,23 @@ export async function invokeWithIntelligentRouting(params: {
   
   const routing = routeToOptimalModel(query, budgetMode);
   console.log(`[Intelligent Routing] Selected ${routing.model}: ${routing.reason}`);
-  
+
+  // Map routing shorthand to gateway model ids; unknown ids fall back to the
+  // default chain inside invokeLLM.
+  const MODEL_ID_MAP: Record<string, string> = {
+    "claude-opus": "claude-opus-4-5",
+    "claude-sonnet": "claude-sonnet-4-5",
+    "gemini-flash": "gemini-2.5-flash",
+    "gpt-mini": "gpt-4.1-mini",
+    "gpt-5.2": "gpt-5.2",
+  };
+
   const response = await invokeLLM({
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: query }
     ],
+    model: MODEL_ID_MAP[routing.model] ?? routing.model,
     temperature,
   });
   

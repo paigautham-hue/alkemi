@@ -41,6 +41,86 @@ export interface GetSigmaParams {
   /** LLM-asserted 95% bounds, used (floored) for LLM-based predictions */
   llmUncertaintyLower?: number;
   llmUncertaintyUpper?: number;
+  /** enables the conformal ladder when provided */
+  organizationId?: string;
+  /** σ multiplier from the extrapolation detector (≥1) */
+  extrapolationInflation?: number;
+}
+
+/**
+ * Async σ with the full maturity ladder:
+ *   n < 8   → cold-start (physics band / floored LLM interval)
+ *   8–29    → conformal blend: max(empirical q95, cold-start band)
+ *   n ≥ 30  → pure empirical q95 quantile (+ bias note)
+ * Falls back to cold start when the DB/stats are unavailable.
+ */
+export async function getSigmaCalibrated(params: GetSigmaParams): Promise<SigmaResult> {
+  const coldStart = getSigma(params);
+  if (!params.organizationId) return inflate(coldStart, params.extrapolationInflation);
+
+  try {
+    const { getDb } = await import("../db");
+    const { and, eq } = await import("drizzle-orm");
+    const db = await getDb();
+    if (!db) return inflate(coldStart, params.extrapolationInflation);
+    const { calibrationStats } = await import("../../drizzle/schema");
+
+    const [stats] = await db
+      .select()
+      .from(calibrationStats)
+      .where(
+        and(
+          eq(calibrationStats.organizationId, params.organizationId),
+          eq(calibrationStats.propertyName, params.propertyName.toLowerCase()),
+          eq(calibrationStats.predictionBasis, params.basis)
+        )
+      );
+
+    if (!stats || stats.n < 8 || !stats.q95AbsRel) {
+      return inflate(coldStart, params.extrapolationInflation);
+    }
+
+    const q95 = parseFloat(String(stats.q95AbsRel));
+    const empiricalHalfWidth = Math.abs(params.predictedValue) * q95;
+    const bias = stats.bias ? parseFloat(String(stats.bias)) : 0;
+
+    if (stats.n < 30) {
+      // Conformal blend: never narrower than the cold-start band at low n
+      const halfWidth = Math.max(empiricalHalfWidth, coldStart.halfWidth95);
+      return inflate(
+        {
+          sigma: halfWidth / Z_95,
+          sigmaSource: "conformal",
+          halfWidth95: halfWidth,
+          note: `Conformal blend from ${stats.n} matched trials (q95 |rel residual| ${(q95 * 100).toFixed(1)}%), floored at the cold-start band`,
+        },
+        params.extrapolationInflation
+      );
+    }
+
+    return inflate(
+      {
+        sigma: empiricalHalfWidth / Z_95,
+        sigmaSource: "conformal",
+        halfWidth95: empiricalHalfWidth,
+        note: `Empirical q95 interval from ${stats.n} matched trials${Math.abs(bias) > 0.05 ? `; systematic bias ${(bias * 100).toFixed(1)}% — investigate` : ""}`,
+      },
+      params.extrapolationInflation
+    );
+  } catch (error) {
+    console.warn("[Calibration] stats lookup failed, using cold start:", error);
+    return inflate(coldStart, params.extrapolationInflation);
+  }
+}
+
+function inflate(result: SigmaResult, factor?: number): SigmaResult {
+  if (!factor || factor <= 1) return result;
+  return {
+    ...result,
+    sigma: result.sigma * factor,
+    halfWidth95: result.halfWidth95 * factor,
+    note: `${result.note}; widened ×${factor.toFixed(1)} (extrapolation beyond trialed composition space)`,
+  };
 }
 
 export function getSigma(params: GetSigmaParams): SigmaResult {
